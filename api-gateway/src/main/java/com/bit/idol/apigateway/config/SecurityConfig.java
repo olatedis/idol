@@ -1,0 +1,26 @@
+package com.bit.idol.apigateway.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+
+@Configuration
+@EnableWebFluxSecurity
+public class SecurityConfig {
+    @Bean
+    public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+        http
+            .cors(ServerHttpSecurity.CorsSpec::disable) // CORS 비활성화.
+            .csrf(ServerHttpSecurity.CsrfSpec::disable) // CSRF 비활성화.
+            .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
+            .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
+            .authorizeExchange(exchanges -> exchanges
+                .pathMatchers("/eureka/**").permitAll() // Eureka 관련 경로는 인증 없이 허용
+                .anyExchange().authenticated() // 그 외 모든 요청은 인증 필요
+            );
+        return http.build();
+    }
+
+}
