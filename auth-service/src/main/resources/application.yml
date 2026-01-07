@@ -1,0 +1,22 @@
+server:
+  port: 8081 # Auth ???
+
+spring:
+  application:
+    name: auth-service
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: your-very-long-and-secure-random-string-idol-link-project
+  access-expiration: 3600000
+  refresh-expiration: 1209600000

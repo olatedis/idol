@@ -1,0 +1,43 @@
+server:
+  port: 8000
+
+spring:
+  application:
+    name: apigateway-service
+
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/auth/**
+        
+        - id: user-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/users/**, /internal/**
+
+      discovery:
+        locator:
+          enabled: true # 자동 라우팅도 유지 (필요 시 /auth-service/** 로도 접근 가능)
+          lower-case-service-id: true
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: your-very-long-and-secure-random-string-idol-link-project
+  white-list-path: /auth/login, /auth/reissue, /users/signup
+
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE
+    org.springframework.http.server.reactive: DEBUG
+    org.springframework.web.reactive: DEBUG
