@@ -12,15 +12,13 @@ public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
         http
-            .cors(ServerHttpSecurity.CorsSpec::disable) // CORS 비활성화.
-            .csrf(ServerHttpSecurity.CsrfSpec::disable) // CSRF 비활성화.
+            .cors(ServerHttpSecurity.CorsSpec::disable)
+            .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
             .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
             .authorizeExchange(exchanges -> exchanges
-                .pathMatchers("/eureka/**").permitAll() // Eureka 관련 경로는 인증 없이 허용
-                .anyExchange().authenticated() // 그 외 모든 요청은 인증 필요
+                .anyExchange().permitAll() // 모든 요청 허용 (인증은 JwtAuthenticationFilter에서 처리)
             );
         return http.build();
     }
-
 }

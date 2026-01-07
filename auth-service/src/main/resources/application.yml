@@ -17,6 +17,6 @@ eureka:
     prefer-ip-address: true
 
 jwt:
-  secret: "SUPER-STRONG-HYPER-ULTRA-SECRET-KEY"
+  secret: your-very-long-and-secure-random-string-idol-link-project
   access-expiration: 3600000
   refresh-expiration: 1209600000
