@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.2' // 사용 중인 부트 버전으로 조정 가능
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.bit.idol'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+// Spring Cloud 버전 관리
+ext {
+    set('springCloudVersion', "2023.0.3")
+}
+
+dependencies {
+    // 1. 핵심: 유레카 서버 의존성
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
+
+    // 2. 모니터링 및 관리를 위한 Actuator
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Spring Cloud 라이브러리들의 버전을 한 번에 관리해주는 설정
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
