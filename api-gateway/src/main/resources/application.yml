@@ -1,1 +1,35 @@
-spring.application.name=api-gateway
+server:
+  port: 8000 # 게이트웨이 기본 포트
+
+spring:
+  application:
+    name: apigateway-service # 유레카에 등록될 서비스 이름
+
+  cloud:
+    gateway:
+      # 유레카와 연동하여 서비스 이름으로 라우팅 가능하게 설정
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+# 유레카 클라이언트 설정
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: your-very-long-and-secure-random-string-idol-link-project
+  white-list-path: /auth/login, /auth/register, /auth/refresh
+
+# 로깅 설정 (디버깅용)
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE
+    org.springframework.http.server.reactive: DEBUG
+    org.springframework.web.reactive: DEBUG
