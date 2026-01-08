@@ -1,6 +1,7 @@
 package com.bit.idol.userservice.service;
 
 import com.bit.idol.userservice.dto.UserDto;
+import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
 import com.bit.idol.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +42,7 @@ public class UserService {
                 .email(userDto.getEmail())
                 .phone(userDto.getPhone())
                 .address(userDto.getAddress())
-                .role("ROLE_USER") // 기본 권한 설정
+                .role(userDto.getRole() != null ? userDto.getRole() : Role.USER) // 기본 권한 설정
                 .imgUrl(userDto.getImgUrl())
                 .build();
 

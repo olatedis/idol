@@ -4,6 +4,7 @@ import com.bit.idol.authservice.client.UserFeignClient;
 import com.bit.idol.authservice.model.UserDto;
 import com.bit.idol.authservice.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -54,9 +55,15 @@ public class AuthService {
     }
 
     public void logout(String token) {
-        // 1. 토큰 검증 및 파싱
-        Claims claims = jwtTokenProvider.parseClaims(token);
-        String userId = claims.getSubject();
+        String userId;
+        try {
+            // 1. 토큰 검증 및 파싱
+            Claims claims = jwtTokenProvider.parseClaims(token);
+            userId = claims.getSubject();
+        } catch (ExpiredJwtException e) {
+            // 만료된 토큰이어도 로그아웃 진행 (Claims 복구)
+            userId = e.getClaims().getSubject();
+        }
 
         // 2. Redis에서 Refresh Token 삭제
         if (redisTemplate.opsForValue().get("RT:" + userId) != null) {

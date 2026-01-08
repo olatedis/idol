@@ -16,11 +16,11 @@ spring:
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
-            - Path=/users/**, /internal/**
+            - Path=/users/**
 
       discovery:
         locator:
-          enabled: true # 자동 라우팅도 유지 (필요 시 /auth-service/** 로도 접근 가능)
+          enabled: true
           lower-case-service-id: true
 
 eureka:
@@ -34,7 +34,7 @@ eureka:
 
 jwt:
   secret: your-very-long-and-secure-random-string-idol-link-project
-  white-list-path: /auth/login, /auth/reissue, /users/signup
+  white-list-path: /auth/login, /auth/reissue, /users/register
 
 logging:
   level:

@@ -1,5 +1,6 @@
 package com.bit.idol.userservice.dto;
 
+import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,7 +19,7 @@ public class UserDto {
     private String email;
     private String phone;
     private String address;
-    private String role;
+    private Role role;
     private String imgUrl;
 
     public static UserDto fromEntity(User user) {
