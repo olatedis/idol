@@ -1,5 +1,6 @@
 package com.bit.idol.authservice.security;
 
+import com.bit.idol.authservice.model.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -27,8 +28,8 @@ public class JwtTokenProvider {
         this.refreshTokenValidity = refreshTokenValidity;
     }
 
-    public String createAccessToken(String userId, String username, String nickname, String role) {
-        return createToken(userId, username, nickname, role, accessTokenValidity);
+    public String createAccessToken(String userId, String username, String nickname, Role role) {
+        return createToken(userId, username, nickname, role.name(), accessTokenValidity);
     }
 
     public String createRefreshToken(String userId) {

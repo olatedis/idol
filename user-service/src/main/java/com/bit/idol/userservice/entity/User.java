@@ -35,6 +35,7 @@ public class User {
 
     private String imgUrl;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String role; // ROLE_USER, ROLE_ADMIN 등
+    private Role role;
 }

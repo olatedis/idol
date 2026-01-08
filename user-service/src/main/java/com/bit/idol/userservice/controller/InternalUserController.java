@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InternalUserController {
     private final UserService userService;
 
-    @GetMapping("/login-info/{username}")
+    @GetMapping("/info/{username}")
     public ResponseEntity<UserDto> getUserInfo(@PathVariable("username") String username) {
         return ResponseEntity.ok(userService.getUserByUsername(username));
     }
