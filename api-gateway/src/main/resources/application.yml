@@ -34,7 +34,7 @@ eureka:
 
 jwt:
   secret: your-very-long-and-secure-random-string-idol-link-project
-  white-list-path: /auth/login, /auth/reissue, /users/signup
+  white-list-path: /auth/login, /auth/reissue, /users/register
 
 logging:
   level:
