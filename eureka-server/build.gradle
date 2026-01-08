@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.3.2' // 사용 중인 부트 버전으로 조정 가능
-    id 'io.spring.dependency-management' version '1.1.6'
+    id 'org.springframework.boot' version '3.4.1'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'com.bit.idol'
@@ -9,7 +9,7 @@ version = '0.0.1-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -19,7 +19,7 @@ repositories {
 
 // Spring Cloud 버전 관리
 ext {
-    set('springCloudVersion', "2023.0.3")
+    set('springCloudVersion', "2024.0.0")
 }
 
 dependencies {
