@@ -29,27 +29,43 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserInfoResponse> getUserInfo(@RequestHeader("X-User-Id") int userId) {
+    public ResponseEntity<UserInfoResponse> getUserInfo(@RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Role") String role) {
+        if (!"USER".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(userService.getUserInfo(userId));
     }
 
     @PostMapping("/me/update")
     public ResponseEntity<String> updateUserInfo(@RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Role") String role,
             @RequestBody UserUpdateDto userUpdateDto) {
+        if (!"USER".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("접근 권한이 없습니다.");
+        }
         userService.updateUserInfo(userId, userUpdateDto);
         return ResponseEntity.ok("회원정보 수정 완료");
     }
 
     @PostMapping("/password/change")
     public ResponseEntity<String> changePassword(@RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Role") String role,
             @RequestBody PasswordChangeDto passwordChangeDto) {
+        if (!"USER".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("접근 권한이 없습니다.");
+        }
         userService.changePassword(userId, passwordChangeDto);
         return ResponseEntity.ok("비밀번호 변경 완료");
     }
 
     @PostMapping("/withdraw")
     public ResponseEntity<String> withdrawUser(@RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Role") String role,
             @RequestBody UserWithdrawDto userWithdrawDto) {
+        if (!"USER".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("접근 권한이 없습니다.");
+        }
         userService.withdrawUser(userId, userWithdrawDto.getPassword());
         return ResponseEntity.ok("회원 탈퇴 완료");
     }
