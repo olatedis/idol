@@ -31,6 +31,15 @@
         </option>
       </GradleProjectSettings>
       <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/openApi-service" />
+        <option name="gradleJvm" value="25" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/openApi-service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/user-service" />
         <option name="gradleJvm" value="25" />
         <option name="modules">

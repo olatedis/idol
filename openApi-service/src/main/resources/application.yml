@@ -1,0 +1,14 @@
+cors:
+  allowed-origins:
+    - http://localhost:5173
+  allowed-methods:
+    - GET
+    - POST
+  allowed-headers:
+    - "*"
+  allow-credentials: true
+
+
+kopis:
+  api:
+    key:  7e21753301314c82933de706da7a7bf5

@@ -5,6 +5,8 @@
     <file type="web" url="file://$PROJECT_DIR$/api-gateway" />
     <file type="web" url="file://$PROJECT_DIR$/auth-service" />
     <file type="web" url="file://$PROJECT_DIR$/eureka-server" />
+    <file type="web" url="file://$PROJECT_DIR$/openApi-service" />
     <file type="web" url="file://$PROJECT_DIR$/user-service" />
   </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="ms-21" project-jdk-type="JavaSDK" />
 </project>
