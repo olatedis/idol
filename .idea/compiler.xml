@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Gradle Imported" enabled="true">
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.36/5a30490a6e14977d97d9c73c924c1f1b5311ea95/lombok-1.18.36.jar" />
+        </processorPath>
+        <module name="vote-service.main" />
+      </profile>
+    </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="config-server" target="21" />
       <module name="config-server.main" target="21" />
@@ -27,6 +36,9 @@
       <module name="user-service" options="-parameters" />
       <module name="user-service.main" options="-parameters" />
       <module name="user-service.test" options="-parameters" />
+      <module name="vote-service" options="-parameters" />
+      <module name="vote-service.main" options="-parameters" />
+      <module name="vote-service.test" options="-parameters" />
     </option>
   </component>
 </project>
