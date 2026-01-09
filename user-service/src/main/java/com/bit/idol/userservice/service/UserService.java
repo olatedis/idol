@@ -15,17 +15,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@lombok.extern.slf4j.Slf4j
 public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
     public UserDto getUserByUsername(String username) {
+        log.info("사용자 조회 (Username): username={}", username);
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
         return UserDto.fromEntity(user);
     }
 
     public UserDto getUserById(int userId) {
+        log.info("사용자 조회 (ID): userId={}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
         return UserDto.fromEntity(user);
@@ -50,6 +53,7 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
+        log.info("회원가입 완료: username={}, userId={}", user.getUsername(), user.getId());
     }
 
     public UserInfoResponse getUserInfo(int userId) {
@@ -73,6 +77,8 @@ public class UserService {
             user.setAddress(userUpdateDto.getAddress());
         if (userUpdateDto.getImgUrl() != null)
             user.setImgUrl(userUpdateDto.getImgUrl());
+
+        log.info("사용자 정보 업데이트 완료: userId={}", userId);
     }
 
     @Transactional
@@ -85,6 +91,7 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(passwordChangeDto.getNewPassword()));
+        log.info("비밀번호 변경 완료: userId={}", userId);
     }
 
     @Transactional
@@ -97,5 +104,6 @@ public class UserService {
         }
 
         userRepository.delete(user);
+        log.info("회원 탈퇴 처리 완료: userId={}", userId);
     }
 }
