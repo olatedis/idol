@@ -6,6 +6,9 @@ import com.bit.idol.voteservice.dto.VoteInfo;
 import com.bit.idol.voteservice.dto.VoteRequestDto;
 import com.bit.idol.voteservice.service.VoteReader;
 import com.bit.idol.voteservice.service.VoteService;
+import com.bit.idol.voteservice.util.IpUtils;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +30,7 @@ public class VoteController {
     @PostMapping
     public ResponseEntity<?> createVote(
             @RequestHeader("X-Role") String role,
-            @RequestBody CreateVoteRequestDto requestDto) {
+            @RequestBody @Valid CreateVoteRequestDto requestDto) { // @Valid 추가
 
         // 권한 체크 (IDOL 또는 AGENCY만 가능)
         if (!"IDOL".equals(role) && !"AGENCY".equals(role)) {
@@ -39,11 +42,13 @@ public class VoteController {
         return ResponseEntity.ok(voteInfo);
     }
 
-    // 투표 목록 조회 (페이징)
+    // 투표 목록 조회 (페이징 + 검색)
     @GetMapping
     public ResponseEntity<Page<VoteInfo>> getVoteList(
+            @RequestParam(required = false) String keyword, // 검색어 파라미터
             @PageableDefault(size = 10, sort = "startDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<VoteInfo> voteList = voteReader.getVoteList(pageable);
+        
+        Page<VoteInfo> voteList = voteReader.getVoteList(keyword, pageable);
         return ResponseEntity.ok(voteList);
     }
 
@@ -69,7 +74,8 @@ public class VoteController {
             @PathVariable int voteId,
             @RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
-            @RequestBody VoteRequestDto requestDto) {
+            @RequestBody @Valid VoteRequestDto requestDto, // @Valid 추가
+            HttpServletRequest request) {
 
         // 1. 권한 체크: 'USER'가 아니면 투표 불가
         if (!"USER".equalsIgnoreCase(role)) {
@@ -77,13 +83,27 @@ public class VoteController {
                     .body("투표 권한이 없습니다. 일반 유저만 투표 가능합니다.");
         }
 
-        // 2. 권한 통과 시 서비스 호출
+        // 2. IP 추출 (유틸 클래스 사용)
+        String clientIp = IpUtils.getClientIp(request);
+
+        // 3. 권한 통과 시 서비스 호출
         String result = voteService.castVote(
                 voteId,
                 userId,
-                requestDto.getCandidateNumber()
+                requestDto.getCandidateNumber(),
+                clientIp
         );
 
         return ResponseEntity.ok(result);
+    }
+
+    // 투표 취소 (POST로 변경)
+    @PostMapping("/{voteId}/cancel")
+    public ResponseEntity<String> cancelVote(
+            @PathVariable int voteId,
+            @RequestHeader("X-User-Id") int userId) {
+        
+        voteService.cancelVote(voteId, userId);
+        return ResponseEntity.ok("투표가 취소되었습니다.");
     }
 }

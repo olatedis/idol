@@ -17,4 +17,8 @@ public interface CandidateRepository extends JpaRepository<Candidate, Integer> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Candidate c SET c.voteCount = c.voteCount + 1 WHERE c.id = :id")
     void incrementVoteCount(@Param("id") int id);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Candidate c SET c.voteCount = c.voteCount - 1 WHERE c.id = :id AND c.voteCount > 0")
+    void decrementVoteCount(@Param("id") int id);
 }

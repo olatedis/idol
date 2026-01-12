@@ -29,9 +29,13 @@ public class VoteReader {
         return VoteInfo.from(vote);
     }
 
-    // 투표 목록 조회 (페이징)
-    public Page<VoteInfo> getVoteList(Pageable pageable) {
-        return voteRepository.findAll(pageable)
+    // 투표 목록 조회 (페이징 + 검색)
+    public Page<VoteInfo> getVoteList(String keyword, Pageable pageable) {
+        if (keyword == null || keyword.isBlank()) {
+            return voteRepository.findAll(pageable)
+                    .map(VoteInfo::from);
+        }
+        return voteRepository.findByTitleContaining(keyword, pageable)
                 .map(VoteInfo::from);
     }
 
