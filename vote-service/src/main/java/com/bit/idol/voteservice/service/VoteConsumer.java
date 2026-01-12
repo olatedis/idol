@@ -26,18 +26,18 @@ public class VoteConsumer {
         log.info("받은 메세지: {}", message);
 
         // 메세지 파싱
-
         String[] parts = message.split(":");
 
         int voteId = Integer.parseInt(parts[0]);
         int userId = Integer.parseInt(parts[1]);
         int candidateNumber = Integer.parseInt(parts[2]);
 
-        // DB 저장
-        Candidate candidate = candidateRepository.findByVoteIdAndCandidateNumber(voteId,candidateNumber)
-                .orElseThrow(()-> new RuntimeException("해당 투표에 존재하지 않는 투표 번호입니다."));
+        // 후보자 조회 (ID를 알기 위해 필요)
+        Candidate candidate = candidateRepository.findByVoteIdAndCandidateNumber(voteId, candidateNumber)
+                .orElseThrow(() -> new RuntimeException("해당 투표에 존재하지 않는 투표 번호입니다."));
 
-        candidate.setVoteCount(candidate.getVoteCount() + 1);
+        // 투표 수 증가 (직접 Update 쿼리 사용으로 동시성 문제 해결)
+        candidateRepository.incrementVoteCount(candidate.getId());
 
         // 투표 이력 저장
         VoteRecord record = new VoteRecord();
@@ -46,7 +46,5 @@ public class VoteConsumer {
         record.setCandidateId(candidate.getId());
 
         voteRecordRepository.save(record);
-
     }
-
 }
