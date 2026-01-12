@@ -14,6 +14,7 @@ public class Candidate {
 
     private int candidateNumber;
     private String name;
+    private String imageUrl;
     private Integer voteCount = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
