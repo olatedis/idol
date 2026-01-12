@@ -8,6 +8,8 @@ cors:
     - "*"
   allow-credentials: true
 
+server:
+  port: 8083
 
 kopis:
   api:

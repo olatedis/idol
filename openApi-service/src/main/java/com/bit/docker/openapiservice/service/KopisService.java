@@ -23,7 +23,7 @@ public class KopisService {
     private String apiKey;
 
     private static final URI BASE_URL =
-            URI.create("http://www.kopis.or.kr/openApi/restful/pblprfr");
+            URI.create("http://www.kopis.or.kr/openApi/restful/Prfplc");
 
     public List<ConcertResponse> getIdolConcerts(String startDate, String endDate, String pageNum) {
 
