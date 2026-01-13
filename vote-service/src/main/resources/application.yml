@@ -34,3 +34,12 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+
+# Spring Boot 3.x (Micrometer Tracing) 설정
+management:
+  tracing:
+    sampling:
+      probability: 1.0 # 모든 요청 추적 (100%)
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans # Zipkin 서버 주소

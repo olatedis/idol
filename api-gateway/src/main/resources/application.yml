@@ -18,6 +18,16 @@ spring:
           predicates:
             - Path=/users/**
 
+        - id: voting-service
+          uri: lb://VOTING-SERVICE
+          predicates:
+            - Path=/api/votes/**
+
+        - id: ranking-service
+          uri: lb://RANKING-SERVICE
+          predicates:
+            - Path=/ws-ranking/**
+
       discovery:
         locator:
           enabled: true
@@ -34,10 +44,18 @@ eureka:
 
 jwt:
   secret: your-very-long-and-secure-random-string-idol-link-project
-  white-list-path: /auth/login, /auth/reissue, /users/register
+  white-list-path: /auth/login, /auth/reissue, /users/register, /ws-ranking/**
 
 logging:
   level:
     org.springframework.cloud.gateway: TRACE
     org.springframework.http.server.reactive: DEBUG
     org.springframework.web.reactive: DEBUG
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans

@@ -63,3 +63,9 @@ services:
     volumes:
       - ./data/mysql/data:/var/lib/mysql
       - ./data/mysql/init:/docker-entrypoint-initdb.d
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: idol-zipkin
+    ports:
+      - "9411:9411"
