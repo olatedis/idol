@@ -17,7 +17,6 @@ public class NotificationEventDto {
     private String eventType;
     private String occurredAt;
     private String producer;
-    private int version;
     private NotificationData data;
 
     @Data

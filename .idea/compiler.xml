@@ -7,7 +7,7 @@
         <processorPath useClasspath="false">
           <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.36/5a30490a6e14977d97d9c73c924c1f1b5311ea95/lombok-1.18.36.jar" />
         </processorPath>
-        <module name="vote-service.main" />
+        <module name="auth-service.main" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -33,6 +33,9 @@
       <module name="openApi-service" options="-parameters" />
       <module name="openApi-service.main" options="-parameters" />
       <module name="openApi-service.test" options="-parameters" />
+      <module name="ranking-service" options="-parameters" />
+      <module name="ranking-service.main" options="-parameters" />
+      <module name="ranking-service.test" options="-parameters" />
       <module name="user-service" options="-parameters" />
       <module name="user-service.main" options="-parameters" />
       <module name="user-service.test" options="-parameters" />
