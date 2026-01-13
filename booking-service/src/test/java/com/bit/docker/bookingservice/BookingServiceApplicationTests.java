@@ -1,10 +1,10 @@
-package com.bit.docker.openapiservice;
+package com.bit.docker.bookingservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class OpenApiServiceApplicationTests {
+class BookingServiceApplicationTests {
 
     @Test
     void contextLoads() {
