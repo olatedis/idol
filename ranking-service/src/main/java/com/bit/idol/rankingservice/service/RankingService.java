@@ -30,13 +30,13 @@ public class RankingService {
         
         log.info("랭킹 업데이트 완료: voteId={}, candidate={}, score=+1", voteId, candidateNumber);
 
-        // 2. 변경된 랭킹 정보 조회 (Top 3)
-        // 0부터 2까지 조회 (0, 1, 2 = 총 3개)
-        Set<ZSetOperations.TypedTuple<String>> top3 = redisTemplate.opsForZSet().reverseRangeWithScores(key, 0, 2);
+        // 2. 랭킹 정보 조회 (전체 순위)
+        // 0부터 -1까지 조회 (전체)
+        Set<ZSetOperations.TypedTuple<String>> allRankings = redisTemplate.opsForZSet().reverseRangeWithScores(key, 0, -1);
         
-        if (top3 == null) return;
+        if (allRankings == null) return;
 
-        List<RankingDto> rankingList = top3.stream()
+        List<RankingDto> rankingList = allRankings.stream()
                 .map(tuple -> new RankingDto(Integer.parseInt(tuple.getValue()), tuple.getScore().intValue()))
                 .collect(Collectors.toList());
 
