@@ -43,7 +43,8 @@ eureka:
     prefer-ip-address: true
 
 jwt:
-  secret: your-very-long-and-secure-random-string-idol-link-project
+  # 기본값 설정
+  secret: ${JWT_SECRET:your-very-long-and-secure-random-string-idol-link-project}
   white-list-path: /auth/login, /auth/reissue, /users/register, /ws-ranking/**
 
 logging:

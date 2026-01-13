@@ -1,5 +1,5 @@
 server:
-  port: 8081 # Auth ???
+  port: 8081
 
 spring:
   application:
@@ -17,7 +17,8 @@ eureka:
     prefer-ip-address: true
 
 jwt:
-  secret: your-very-long-and-secure-random-string-idol-link-project
+  # 기본값 설정 (주의: 실제 운영 시에는 반드시 환경 변수로 덮어씌워야 함)
+  secret: ${JWT_SECRET:your-very-long-and-secure-random-string-idol-link-project}
   access-expiration: 3600000
   refresh-expiration: 1209600000
 
