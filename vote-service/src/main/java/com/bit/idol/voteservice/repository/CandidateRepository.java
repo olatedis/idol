@@ -11,6 +11,10 @@ import java.util.Optional;
 
 public interface CandidateRepository extends JpaRepository<Candidate, Integer> {
     List<Candidate> findByVoteId(int voteId);
+    
+    // 워밍업용 (findByVoteId와 동일하지만 명시적으로 추가)
+    List<Candidate> findAllByVoteId(int voteId);
+
     Optional<Candidate> findByCandidateNumber(int candidateNumber);
     Optional<Candidate> findByVoteIdAndCandidateNumber(int voteId, int candidateNumber);
 

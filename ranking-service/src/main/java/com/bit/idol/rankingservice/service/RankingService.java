@@ -8,6 +8,7 @@ import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -18,30 +19,46 @@ import java.util.stream.Collectors;
 public class RankingService {
 
     private final RedisTemplate<String, String> redisTemplate;
-    private final SimpMessagingTemplate messagingTemplate; // WebSocket 전송 도구
+    private final SimpMessagingTemplate messagingTemplate;
 
-    // 랭킹 업데이트
+    // 랭킹 업데이트 (Kafka Consumer가 호출)
     public void updateRanking(int voteId, int candidateNumber) {
         String key = "vote:ranking:" + voteId;
         String member = String.valueOf(candidateNumber);
 
-        // 1. Redis ZSET 점수 증가 (Score + 1)
+        // 1. Redis ZSET 점수 증가
         redisTemplate.opsForZSet().incrementScore(key, member, 1);
         
-        log.info("랭킹 업데이트 완료: voteId={}, candidate={}, score=+1", voteId, candidateNumber);
-
-        // 2. 변경된 랭킹 정보 조회 (Top 3)
-        // 0부터 2까지 조회 (0, 1, 2 = 총 3개)
-        Set<ZSetOperations.TypedTuple<String>> top3 = redisTemplate.opsForZSet().reverseRangeWithScores(key, 0, 2);
+        // 2. 활성 투표 목록에 추가 (스케줄러가 확인하도록)
+        redisTemplate.opsForSet().add("vote:active-list", String.valueOf(voteId));
         
-        if (top3 == null) return;
+        log.info("랭킹 점수 반영 완료: voteId={}, candidate={}", voteId, candidateNumber);
+    }
 
-        List<RankingDto> rankingList = top3.stream()
+    // 랭킹 조회 (API 호출용)
+    public List<RankingDto> getRanking(int voteId) {
+        String key = "vote:ranking:" + voteId;
+        
+        // 전체 순위 조회
+        Set<ZSetOperations.TypedTuple<String>> allRankings = redisTemplate.opsForZSet().reverseRangeWithScores(key, 0, -1);
+        
+        if (allRankings == null || allRankings.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return allRankings.stream()
                 .map(tuple -> new RankingDto(Integer.parseInt(tuple.getValue()), tuple.getScore().intValue()))
                 .collect(Collectors.toList());
+    }
 
-        // 3. WebSocket으로 구독자들에게 전송
-        // 경로: /topic/votes/{voteId}/ranking
+    // 랭킹 전송 (스케줄러가 호출)
+    public void broadcastRanking(int voteId) {
+        // getRanking 메서드 재사용
+        List<RankingDto> rankingList = getRanking(voteId);
+        
+        if (rankingList.isEmpty()) return;
+
+        // WebSocket 전송
         String destination = "/topic/votes/" + voteId + "/ranking";
         messagingTemplate.convertAndSend(destination, rankingList);
     }

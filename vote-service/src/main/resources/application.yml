@@ -42,3 +42,17 @@ management:
   zipkin:
     tracing:
       endpoint: http://localhost:9411/api/v2/spans
+
+# Resilience4j 설정
+resilience4j:
+  circuitbreaker:
+    instances:
+      redis-vote: # 서킷 브레이커 이름
+        registerHealthIndicator: true
+        slidingWindowSize: 10 # 최근 10개 요청 기준
+        minimumNumberOfCalls: 5 # 최소 5번 호출 후 판단
+        permittedNumberOfCallsInHalfOpenState: 3 # 반열림 상태에서 3번 테스트
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s # 차단 후 10초 대기
+        failureRateThreshold: 50 # 실패율 50% 이상이면 차단
+        eventConsumerBufferSize: 10

@@ -9,11 +9,13 @@ import com.bit.idol.voteservice.repository.VoteRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -26,7 +28,8 @@ public class VoteConsumer {
     private final CandidateRepository candidateRepository;
     private final VoteRecordRepository voteRecordRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final ObjectMapper objectMapper; // JSON 변환용
+    private final ObjectMapper objectMapper;
+    private final RedisTemplate<String, String> redisTemplate; // Redis 추가
 
     @Transactional
     @KafkaListener(topics = "vote-topic", groupId = "vote-group")
@@ -34,21 +37,35 @@ public class VoteConsumer {
 
         log.info("받은 메세지: {}", message);
 
-        // 메세지 파싱
+        // 1. 메세지 파싱 (uuid:voteId:userId:candidateNumber)
         String[] parts = message.split(":");
+        if (parts.length < 4) {
+            log.error("잘못된 메시지 형식: {}", message);
+            return;
+        }
 
-        int voteId = Integer.parseInt(parts[0]);
-        int userId = Integer.parseInt(parts[1]);
-        int candidateNumber = Integer.parseInt(parts[2]);
+        String uuid = parts[0];
+        int voteId = Integer.parseInt(parts[1]);
+        int userId = Integer.parseInt(parts[2]);
+        int candidateNumber = Integer.parseInt(parts[3]);
 
-        // 후보자 조회 (ID를 알기 위해 필요)
+        // 2. 멱등성 검사 (Redis 중복 체크)
+        String processedKey = "processed:vote-msg:" + uuid;
+        Boolean isNew = redisTemplate.opsForValue().setIfAbsent(processedKey, "1", Duration.ofMinutes(10));
+
+        if (Boolean.FALSE.equals(isNew)) {
+            log.warn("중복된 투표 메시지 감지 (처리 건너뜀): uuid={}", uuid);
+            return;
+        }
+
+        // 3. 후보자 조회
         Candidate candidate = candidateRepository.findByVoteIdAndCandidateNumber(voteId, candidateNumber)
                 .orElseThrow(() -> new RuntimeException("해당 투표에 존재하지 않는 투표 번호입니다."));
 
-        // 투표 수 증가 (직접 Update 쿼리 사용으로 동시성 문제 해결)
+        // 4. 투표 수 증가
         candidateRepository.incrementVoteCount(candidate.getId());
 
-        // 투표 이력 저장
+        // 5. 투표 이력 저장
         VoteRecord record = new VoteRecord();
         record.setVoteId(voteId);
         record.setUserId(userId);
@@ -56,9 +73,8 @@ public class VoteConsumer {
 
         voteRecordRepository.save(record);
         
-        // 1. 투표 완료 이벤트 발행 (랭킹 서비스용)
-        // 토픽: vote-complete-topic
-        // 메시지: voteId:userId:candidateNumber (기존 포맷 재사용)
+        // 6. 투표 완료 이벤트 발행 (랭킹 서비스용)
+        // 받은 메시지(UUID 포함)를 그대로 전달하여 랭킹 서비스도 멱등성 체크 가능하게 함
         try {
             kafkaTemplate.send("vote-complete-topic", message);
             log.info("랭킹 업데이트 이벤트 발행 성공: {}", message);
@@ -66,9 +82,7 @@ public class VoteConsumer {
             log.error("랭킹 업데이트 이벤트 발행 실패", e);
         }
 
-        // 2. 알림 이벤트 발행 (알림 서비스용)
-        // 토픽: notification-topic
-        // 메시지: JSON String (NotificationEventDto)
+        // 7. 알림 이벤트 발행 (알림 서비스용)
         try {
             NotificationEventDto notificationEvent = NotificationEventDto.builder()
                     .eventId(UUID.randomUUID().toString())
