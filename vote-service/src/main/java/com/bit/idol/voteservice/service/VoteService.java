@@ -1,5 +1,6 @@
 package com.bit.idol.voteservice.service;
 
+import com.bit.idol.voteservice.dto.MyVoteRecordDto;
 import com.bit.idol.voteservice.dto.VoteInfo;
 import com.bit.idol.voteservice.entity.Vote;
 import com.bit.idol.voteservice.entity.VoteRecord;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -148,5 +150,11 @@ public class VoteService {
         } catch (Exception e) {
             log.error("Redis 키 삭제 실패 (투표 취소): {}", e.getMessage());
         }
+    }
+
+    // 내 투표 기록 조회 (QueryDSL)
+    @Transactional(readOnly = true)
+    public List<MyVoteRecordDto> getMyVoteRecords(int userId) {
+        return voteRecordRepository.findMyVoteRecords(userId);
     }
 }

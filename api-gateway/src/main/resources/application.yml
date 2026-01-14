@@ -26,7 +26,7 @@ spring:
         - id: ranking-service
           uri: lb://RANKING-SERVICE
           predicates:
-            - Path=/ws-ranking/**
+            - Path=/ws-ranking/**, /api/rankings/** # HTTP API 경로 추가
 
       discovery:
         locator:
@@ -45,7 +45,8 @@ eureka:
 jwt:
   # 기본값 설정
   secret: ${JWT_SECRET:your-very-long-and-secure-random-string-idol-link-project}
-  white-list-path: /auth/login, /auth/reissue, /users/register, /ws-ranking/**
+  # 랭킹 조회 API도 인증 없이 접근 가능하도록 화이트리스트 추가
+  white-list-path: /auth/login, /auth/reissue, /users/register, /ws-ranking/**, /api/rankings/**
 
 logging:
   level:

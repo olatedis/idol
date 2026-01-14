@@ -1,6 +1,7 @@
 package com.bit.idol.rankingservice.scheduler;
 
 import com.bit.idol.rankingservice.service.RankingService;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -21,6 +22,7 @@ public class RankingScheduler {
 
     // 1초마다 실행 (1000ms)
     @Scheduled(fixedRate = 1000)
+    @SchedulerLock(name = "broadcastRankings", lockAtLeastFor = "PT0.5S", lockAtMostFor = "PT0.9S")
     public void broadcastRankings() {
         // 1. 현재 활성화된(투표가 발생한) 투표 목록 조회
         Set<String> activeVoteIds = redisTemplate.opsForSet().members("vote:active-list");

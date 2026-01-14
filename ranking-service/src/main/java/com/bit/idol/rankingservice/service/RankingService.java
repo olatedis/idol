@@ -8,9 +8,7 @@ import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,11 +33,10 @@ public class RankingService {
         log.info("랭킹 점수 반영 완료: voteId={}, candidate={}", voteId, candidateNumber);
     }
 
-    // 랭킹 조회 (API 호출용)
+    // 랭킹 조회 (API 호출용 - Delta 계산 없음)
     public List<RankingDto> getRanking(int voteId) {
         String key = "vote:ranking:" + voteId;
         
-        // 전체 순위 조회
         Set<ZSetOperations.TypedTuple<String>> allRankings = redisTemplate.opsForZSet().reverseRangeWithScores(key, 0, -1);
         
         if (allRankings == null || allRankings.isEmpty()) {
@@ -47,18 +44,52 @@ public class RankingService {
         }
 
         return allRankings.stream()
-                .map(tuple -> new RankingDto(Integer.parseInt(tuple.getValue()), tuple.getScore().intValue()))
+                .map(tuple -> new RankingDto(Integer.parseInt(tuple.getValue()), tuple.getScore().intValue(), 0)) // 초기 조회 시 Delta는 0
                 .collect(Collectors.toList());
     }
 
-    // 랭킹 전송 (스케줄러가 호출)
+    // 랭킹 전송 (스케줄러가 호출 - Delta 계산 포함)
     public void broadcastRanking(int voteId) {
-        // getRanking 메서드 재사용
-        List<RankingDto> rankingList = getRanking(voteId);
-        
-        if (rankingList.isEmpty()) return;
+        String key = "vote:ranking:" + voteId;
+        String prevScoreKey = "vote:ranking:prev:" + voteId;
 
-        // WebSocket 전송
+        // 1. 현재 랭킹 조회
+        Set<ZSetOperations.TypedTuple<String>> allRankings = redisTemplate.opsForZSet().reverseRangeWithScores(key, 0, -1);
+        
+        if (allRankings == null || allRankings.isEmpty()) return;
+
+        // 2. 이전 점수 조회 (Redis Hash)
+        // Key: candidateNumber, Value: score
+        Map<Object, Object> prevScores = redisTemplate.opsForHash().entries(prevScoreKey);
+
+        List<RankingDto> rankingList = new ArrayList<>();
+        Map<String, String> currentScoresToSave = new HashMap<>();
+
+        for (ZSetOperations.TypedTuple<String> tuple : allRankings) {
+            int candidateNum = Integer.parseInt(tuple.getValue());
+            int currentScore = tuple.getScore().intValue();
+            
+            // 이전 점수 가져오기 (없으면 0)
+            int prevScore = 0;
+            if (prevScores.containsKey(String.valueOf(candidateNum))) {
+                prevScore = Integer.parseInt((String) prevScores.get(String.valueOf(candidateNum)));
+            }
+
+            // Delta 계산
+            int delta = currentScore - prevScore;
+
+            rankingList.add(new RankingDto(candidateNum, currentScore, delta));
+            
+            // 다음 계산을 위해 현재 점수 저장 준비
+            currentScoresToSave.put(String.valueOf(candidateNum), String.valueOf(currentScore));
+        }
+
+        // 3. 현재 점수를 Redis에 저장 (다음 1초 뒤 비교용)
+        if (!currentScoresToSave.isEmpty()) {
+            redisTemplate.opsForHash().putAll(prevScoreKey, currentScoresToSave);
+        }
+
+        // 4. WebSocket 전송
         String destination = "/topic/votes/" + voteId + "/ranking";
         messagingTemplate.convertAndSend(destination, rankingList);
     }

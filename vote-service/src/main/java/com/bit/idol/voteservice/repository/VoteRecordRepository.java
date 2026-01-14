@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface VoteRecordRepository extends JpaRepository<VoteRecord,Integer> {
+public interface VoteRecordRepository extends JpaRepository<VoteRecord, Integer>, VoteRecordRepositoryCustom {
     boolean existsByVoteIdAndUserId(Integer voteId, Integer userId);
     Optional<VoteRecord> findByVoteIdAndUserId(Integer voteId, Integer userId);
 }
