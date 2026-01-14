@@ -3,6 +3,7 @@ package com.bit.idol.voteservice.scheduler;
 import com.bit.idol.voteservice.entity.Vote;
 import com.bit.idol.voteservice.entity.VoteStatus;
 import com.bit.idol.voteservice.repository.VoteRepository;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -19,10 +20,11 @@ import java.util.List;
 public class VoteScheduler {
 
     private final VoteRepository voteRepository;
-    private final RedisTemplate<String, Object> redisTemplate; // RedisTemplate 주입
+    private final RedisTemplate<String, Object> redisTemplate;
 
     // 1분마다 실행 (초 분 시 일 월 요일)
     @Scheduled(cron = "0 * * * * *")
+    @SchedulerLock(name = "closeExpiredVotes", lockAtLeastFor = "PT30S", lockAtMostFor = "PT50S")
     @Transactional
     public void closeExpiredVotes() {
         LocalDateTime now = LocalDateTime.now();
@@ -38,13 +40,10 @@ public class VoteScheduler {
                 vote.setStatus(VoteStatus.CLOSED);
                 
                 // 2. Redis 랭킹 데이터 삭제 (메모리 확보)
-                // 키 패턴: vote:ranking:{voteId}
                 String rankingKey = "vote:ranking:" + vote.getId();
                 redisTemplate.delete(rankingKey);
                 
                 log.info("투표 종료 및 Redis 정리 완료: ID={}, 제목={}", vote.getId(), vote.getTitle());
-                
-                // 추후 Kafka 이벤트 발행 등 후처리 로직 추가 가능
             }
         }
     }
