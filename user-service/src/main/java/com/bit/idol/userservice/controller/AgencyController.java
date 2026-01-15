@@ -21,13 +21,15 @@ public class AgencyController {
 
     private final AgencyService agencyService;
 
+    // 소속사 등록
     @PostMapping
     public ResponseEntity<AgencyDto> createAgency(
             @RequestHeader("X-Role") String role,
             @Valid @RequestBody AgencyCreateRequest request
     ) {
         Role requesterRole = Role.valueOf(role);
-        if (!(requesterRole == Role.ADMIN || requesterRole == Role.AGENCY)) {
+        //ADMIN만 가능
+        if (!(requesterRole == Role.ADMIN)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -35,11 +37,7 @@ public class AgencyController {
                 .body(agencyService.createAgency(request));
     }
 
-    @GetMapping("/{agencyId}")
-    public ResponseEntity<AgencyDto> getAgency(@PathVariable int agencyId) {
-        return ResponseEntity.ok(agencyService.getAgency(agencyId));
-    }
-
+    // 소속사 전체 목록
     @GetMapping
     public ResponseEntity<List<AgencyDto>> getAllAgencies() {
         return ResponseEntity.ok(agencyService.getAllAgencies());

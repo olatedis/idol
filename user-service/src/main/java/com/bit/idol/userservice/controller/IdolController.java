@@ -22,11 +22,13 @@ public class IdolController {
 
     private final IdolService idolService;
 
+    //아이돌 등록
     @PostMapping
     public ResponseEntity<IdolDto> registerIdol(
             @RequestHeader("X-Role") String role,
             @Valid @RequestBody IdolRegisterRequest request
     ) {
+        //권한 확인. ADMIN과 AGENCY만 등록할 수 있다.
         Role requesterRole = Role.valueOf(role);
         if (!(requesterRole == Role.ADMIN || requesterRole == Role.AGENCY)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -36,16 +38,19 @@ public class IdolController {
                 .body(idolService.registerIdol(request));
     }
 
+    //아이돌 검색
     @GetMapping("/{idolId}")
     public ResponseEntity<IdolDto> getIdol(@PathVariable int idolId) {
         return ResponseEntity.ok(idolService.getIdol(idolId));
     }
 
+    //아이돌 전체 목록
     @GetMapping
     public ResponseEntity<List<IdolDto>> getAllIdols() {
         return ResponseEntity.ok(idolService.getAllIdols());
     }
 
+    //아이돌 상태 변경
     @PostMapping("/status/{idolId}")
     public ResponseEntity<Void> changeIdolStatus(
             @PathVariable int idolId,
@@ -53,6 +58,7 @@ public class IdolController {
             @RequestBody IdolStatusChangeRequest request
     ) {
         Role requesterRole = Role.valueOf(role);
+        //ADMIN과 AGENCY만 가능
         if (!(requesterRole == Role.ADMIN || requesterRole == Role.AGENCY)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }

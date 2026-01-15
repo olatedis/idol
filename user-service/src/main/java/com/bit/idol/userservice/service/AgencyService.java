@@ -31,12 +31,6 @@ public class AgencyService {
         return AgencyDto.fromEntity(agency);
     }
 
-    public AgencyDto getAgency(int agencyId) {
-        Agency agency = agencyRepository.findById(agencyId)
-                .orElseThrow(() -> new RuntimeException("Agency not found"));
-        return AgencyDto.fromEntity(agency);
-    }
-
     public List<AgencyDto> getAllAgencies() {
         return agencyRepository.findAll().stream()
                 .map(AgencyDto::fromEntity)
