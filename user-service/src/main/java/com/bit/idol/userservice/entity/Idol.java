@@ -1,10 +1,7 @@
 package com.bit.idol.userservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "idols")
@@ -16,7 +13,7 @@ public class Idol {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
@@ -28,6 +25,7 @@ public class Idol {
 
     private String stageName;
 
+    @Setter
     @Enumerated(EnumType.STRING)
     private IdolStatus status;
 }
