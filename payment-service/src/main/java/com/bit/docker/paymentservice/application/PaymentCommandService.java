@@ -38,9 +38,7 @@ public class PaymentCommandService {
 
     private void processPayment(Payment payment) {
 
-        PaymentPolicy.validatePayable(payment);
-
-        boolean success = true; // 외부 PG 연동 위치
+        boolean success = PaymentPolicy.validatePayable(payment);
 
         if (success) {
             payment.complete();

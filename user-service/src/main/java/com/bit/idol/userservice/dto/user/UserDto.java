@@ -1,4 +1,4 @@
-package com.bit.idol.userservice.dto;
+package com.bit.idol.userservice.dto.user;
 
 import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
