@@ -1,6 +1,6 @@
 package com.bit.idol.userservice.controller;
 
-import com.bit.idol.userservice.dto.UserDto;
+import com.bit.idol.userservice.dto.user.UserDto;
 import com.bit.idol.userservice.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

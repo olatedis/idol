@@ -1,15 +1,15 @@
 package com.bit.idol.userservice.controller;
 
-import com.bit.idol.userservice.dto.UserDto;
+import com.bit.idol.userservice.dto.user.UserDto;
 import com.bit.idol.userservice.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.bit.idol.userservice.dto.PasswordChangeDto;
-import com.bit.idol.userservice.dto.UserInfoResponse;
-import com.bit.idol.userservice.dto.UserUpdateDto;
-import com.bit.idol.userservice.dto.UserWithdrawDto;
+import com.bit.idol.userservice.dto.user.PasswordChangeDto;
+import com.bit.idol.userservice.dto.user.UserInfoResponse;
+import com.bit.idol.userservice.dto.user.UserUpdateDto;
+import com.bit.idol.userservice.dto.user.UserWithdrawDto;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

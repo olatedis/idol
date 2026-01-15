@@ -1,9 +1,9 @@
 package com.bit.idol.userservice.service;
 
-import com.bit.idol.userservice.dto.PasswordChangeDto;
-import com.bit.idol.userservice.dto.UserDto;
-import com.bit.idol.userservice.dto.UserInfoResponse;
-import com.bit.idol.userservice.dto.UserUpdateDto;
+import com.bit.idol.userservice.dto.user.PasswordChangeDto;
+import com.bit.idol.userservice.dto.user.UserDto;
+import com.bit.idol.userservice.dto.user.UserInfoResponse;
+import com.bit.idol.userservice.dto.user.UserUpdateDto;
 import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
 import com.bit.idol.userservice.repository.UserRepository;

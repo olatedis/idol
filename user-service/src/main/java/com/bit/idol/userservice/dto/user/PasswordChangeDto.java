@@ -1,4 +1,4 @@
-package com.bit.idol.userservice.dto;
+package com.bit.idol.userservice.dto.user;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
