@@ -1,4 +1,4 @@
-package com.bit.docker.fanoutservice;
+package com.bit.idol.fanoutservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -1,0 +1,44 @@
+server:
+  port: 8095
+
+spring:
+  application:
+    name: fanout-service
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: fanout-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.bit.idol.fanoutservice.dto"
+        spring.json.value.default.type: "com.bit.idol.fanoutservice.dto.NotifyEvent"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+fanout:
+  topics:
+    request: notify-request-topic
+    fanout: notify-fanout-topic
+
+clients:
+  user-service:
+    url: http://localhost:8080
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
