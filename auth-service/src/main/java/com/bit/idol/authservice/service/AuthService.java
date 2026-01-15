@@ -6,6 +6,7 @@ import com.bit.idol.authservice.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
     private final UserFeignClient userFeignClient;
     private final JwtTokenProvider jwtTokenProvider;
@@ -71,7 +73,8 @@ public class AuthService {
         }
     }
 
-    public String reissue(String refreshToken) {
+    // Refresh Token Rotation (RTR) 적용
+    public Map<String, String> reissue(String refreshToken) {
         // 1. Refresh Token 검증
         Claims claims = jwtTokenProvider.parseClaims(refreshToken);
         String userId = claims.getSubject();
@@ -80,8 +83,17 @@ public class AuthService {
         String storedRefreshToken = redisTemplate.opsForValue().get("RT:" + userId);
 
         // 3. 토큰 일치 여부 확인
-        if (storedRefreshToken == null || !storedRefreshToken.equals(refreshToken)) {
-            throw new RuntimeException("Invalid Refresh Token");
+        if (storedRefreshToken == null) {
+            // 이미 로그아웃되었거나 만료된 경우
+            throw new RuntimeException("Refresh Token expired or not found");
+        }
+
+        if (!storedRefreshToken.equals(refreshToken)) {
+            // ★ 토큰 탈취 감지! (저장된 것과 다른 토큰으로 요청함)
+            log.warn("토큰 탈취 감지! userId={}", userId);
+            // 해당 유저의 모든 Refresh Token 삭제 (강제 로그아웃)
+            redisTemplate.delete("RT:" + userId);
+            throw new RuntimeException("Invalid Refresh Token (Token Theft Detected)");
         }
 
         // 4. 사용자 정보 조회 (Feign)
@@ -90,12 +102,27 @@ public class AuthService {
             throw new RuntimeException("User not found");
         }
 
-        // 5. 새로운 Access Token 발급
-        return jwtTokenProvider.createAccessToken(
+        // 5. 새로운 토큰 쌍 발급 (Access + Refresh)
+        String newAccessToken = jwtTokenProvider.createAccessToken(
                 String.valueOf(user.getUserId()),
                 user.getUsername(),
                 user.getNickname(),
                 user.getRole()
         );
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
+
+        // 6. Redis 업데이트 (RTR)
+        redisTemplate.opsForValue().set(
+                "RT:" + userId,
+                newRefreshToken,
+                jwtTokenProvider.getRefreshTokenValidity(),
+                TimeUnit.MILLISECONDS
+        );
+
+        Map<String, String> tokens = new HashMap<>();
+        tokens.put("accessToken", newAccessToken);
+        tokens.put("refreshToken", newRefreshToken);
+
+        return tokens;
     }
 }

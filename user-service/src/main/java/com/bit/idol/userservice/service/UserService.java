@@ -8,6 +8,8 @@ import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
 import com.bit.idol.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,15 +22,19 @@ public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
+    // 캐싱 적용: username으로 조회 시 Redis 캐시 사용
+    @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
     public UserDto getUserByUsername(String username) {
-        log.info("사용자 조회 (Username): username={}", username);
+        log.info("사용자 조회 (Username) - DB 접근: username={}", username);
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
         return UserDto.fromEntity(user);
     }
 
+    // 캐싱 적용: userId로 조회 시 Redis 캐시 사용
+    @Cacheable(value = "user:info:id", key = "#userId", unless = "#result == null")
     public UserDto getUserById(int userId) {
-        log.info("사용자 조회 (ID): userId={}", userId);
+        log.info("사용자 조회 (ID) - DB 접근: userId={}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
         return UserDto.fromEntity(user);
@@ -43,12 +49,12 @@ public class UserService {
 
         User user = User.builder()
                 .username(userDto.getUsername())
-                .password(passwordEncoder.encode(userDto.getPassword())) // 비밀번호 암호화
+                .password(passwordEncoder.encode(userDto.getPassword()))
                 .nickname(userDto.getNickname())
                 .email(userDto.getEmail())
                 .phone(userDto.getPhone())
                 .address(userDto.getAddress())
-                .role(userDto.getRole() != null ? userDto.getRole() : Role.USER) // 기본 권한 설정
+                .role(userDto.getRole() != null ? userDto.getRole() : Role.USER)
                 .imgUrl(userDto.getImgUrl())
                 .build();
 
@@ -62,7 +68,13 @@ public class UserService {
         return UserInfoResponse.fromEntity(user);
     }
 
+    // 정보 수정 시 캐시 삭제 (정합성 유지)
     @Transactional
+    @CacheEvict(value = {"user:info:username", "user:info:id"}, allEntries = true) 
+    // 주의: allEntries=true는 모든 유저 캐시를 날리므로 비효율적일 수 있음.
+    // 더 정교하게 하려면 username과 id를 각각 지정해서 지워야 함.
+    // 하지만 updateUserInfo에는 username 파라미터가 없어서 일단 전체 삭제로 처리하거나,
+    // User 객체를 조회한 뒤 그 username으로 개별 삭제해야 함.
     public void updateUserInfo(int userId, UserUpdateDto userUpdateDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -82,6 +94,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = {"user:info:username", "user:info:id"}, allEntries = true)
     public void changePassword(int userId, PasswordChangeDto passwordChangeDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -95,6 +108,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = {"user:info:username", "user:info:id"}, allEntries = true)
     public void withdrawUser(int userId, String checkPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
