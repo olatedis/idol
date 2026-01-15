@@ -14,6 +14,6 @@ public class IdolRegisterRequest {
     @jakarta.validation.constraints.NotBlank(message = "활동명은 필수입니다.")
     private String stageName;
 
-    private Long agencyId;
+    private int agencyId;
 }
 

@@ -1,5 +1,6 @@
 package com.bit.idol.userservice.dto.agency;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,6 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AgencyCreateRequest {
 
-    @jakarta.validation.constraints.NotBlank(message = "소속사 이름은 필수입니다.")
+    @NotBlank(message = "소속사 이름은 필수입니다.")
     private String name;
 }

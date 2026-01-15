@@ -13,11 +13,11 @@ import lombok.NoArgsConstructor;
 @Builder
 public class IdolDto {
 
-    private Long idolId;
+    private int idolId;
     private int userId;
     private String username;
     private String stageName;
-    private Long agencyId;
+    private int agencyId;
     private String agencyName;
     private IdolStatus status;
 

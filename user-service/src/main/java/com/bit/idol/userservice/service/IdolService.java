@@ -38,7 +38,7 @@ public class IdolService {
         }
 
         Agency agency = null;
-        if (request.getAgencyId() != null) {
+        if (request.getAgencyId() != 0) {
             agency = agencyRepository.findById(request.getAgencyId())
                     .orElseThrow(() -> new RuntimeException("Agency not found"));
         }
@@ -56,7 +56,7 @@ public class IdolService {
         return IdolDto.fromEntity(idol);
     }
 
-    public IdolDto getIdol(Long idolId) {
+    public IdolDto getIdol(int idolId) {
         Idol idol = idolRepository.findById(idolId)
                 .orElseThrow(() -> new RuntimeException("Idol not found"));
         return IdolDto.fromEntity(idol);
@@ -69,7 +69,7 @@ public class IdolService {
     }
 
     @Transactional
-    public void changeIdolStatus(Long idolId, IdolStatus status) {
+    public void changeIdolStatus(int idolId, IdolStatus status) {
         Idol idol = idolRepository.findById(idolId)
                 .orElseThrow(() -> new RuntimeException("Idol not found"));
         idol.setStatus(status);

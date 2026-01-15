@@ -36,7 +36,7 @@ public class AgencyController {
     }
 
     @GetMapping("/{agencyId}")
-    public ResponseEntity<AgencyDto> getAgency(@PathVariable Long agencyId) {
+    public ResponseEntity<AgencyDto> getAgency(@PathVariable int agencyId) {
         return ResponseEntity.ok(agencyService.getAgency(agencyId));
     }
 

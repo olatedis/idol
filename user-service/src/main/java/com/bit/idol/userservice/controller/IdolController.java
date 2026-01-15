@@ -37,7 +37,7 @@ public class IdolController {
     }
 
     @GetMapping("/{idolId}")
-    public ResponseEntity<IdolDto> getIdol(@PathVariable Long idolId) {
+    public ResponseEntity<IdolDto> getIdol(@PathVariable int idolId) {
         return ResponseEntity.ok(idolService.getIdol(idolId));
     }
 
@@ -48,7 +48,7 @@ public class IdolController {
 
     @PostMapping("/status/{idolId}")
     public ResponseEntity<Void> changeIdolStatus(
-            @PathVariable Long idolId,
+            @PathVariable int idolId,
             @RequestHeader("X-Role") String role,
             @RequestBody IdolStatusChangeRequest request
     ) {

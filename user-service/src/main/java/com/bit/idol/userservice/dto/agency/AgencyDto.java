@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class AgencyDto {
 
-    private Long agencyId;
+    private int agencyId;
 
     @jakarta.validation.constraints.NotBlank(message = "소속사 이름은 필수입니다.")
     private String name;
