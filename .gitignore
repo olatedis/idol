@@ -9,7 +9,10 @@ build/
 hs_err_pid*.log
 replay_pid*.log
 
-.idea/
+.idea/*
+
+compiler.xml
+
 
 ### STS ###
 .apt_generated
@@ -46,3 +49,4 @@ data/
 
 ### Environment Variables ###
 .env
+/.idea/
