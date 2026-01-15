@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -36,12 +35,10 @@ public class AuthController {
 
     @PostMapping("/reissue")
     public ResponseEntity<Map<String, String>> reissue(@RequestHeader("RefreshToken") String refreshToken) {
-        String newAccessToken = authService.reissue(refreshToken);
+        // RTR 적용: Access Token과 Refresh Token을 모두 새로 받음
+        Map<String, String> newTokens = authService.reissue(refreshToken);
         
-        Map<String, String> response = new HashMap<>();
-        response.put("accessToken", newAccessToken);
-        log.info("토큰 재발급 성공");
-        
-        return ResponseEntity.ok(response);
+        log.info("토큰 재발급 성공 (RTR 적용)");
+        return ResponseEntity.ok(newTokens);
     }
 }
