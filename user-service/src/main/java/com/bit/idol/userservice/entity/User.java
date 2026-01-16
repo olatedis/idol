@@ -41,7 +41,17 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
-    // --- 소셜 로그인 필드 추가 ---
+    // --- 소셜 로그인 필드 ---
     private String provider;   // KAKAO, GOOGLE, NAVER
     private String providerId; // 소셜 서비스의 고유 ID
+
+    // --- 신고 및 제재 필드 ---
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private UserStatus status = UserStatus.ACTIVE; // 기본값: 정상
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int reportCount = 0; // 누적 신고 횟수
 }

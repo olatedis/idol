@@ -21,4 +21,7 @@ public class UserDto {
     // 소셜 로그인 정보
     private String provider;
     private String providerId;
+
+    // 유저 상태 (ACTIVE, BANNED, SUSPENDED)
+    private String status;
 }
