@@ -32,6 +32,14 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body("회원가입 완료");
     }
 
+    // 소셜 로그인용 회원가입/조회 API (Auth Service에서 호출)
+    @PostMapping("/social")
+    public ResponseEntity<UserDto> registerSocialUser(@RequestBody UserDto userDto) {
+        log.info("소셜 회원가입/조회 요청: provider={}, providerId={}", userDto.getProvider(), userDto.getProviderId());
+        UserDto result = userService.registerSocialUser(userDto);
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserInfoResponse> getUserInfo(@RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role) {

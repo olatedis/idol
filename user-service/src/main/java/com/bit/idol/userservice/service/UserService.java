@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +24,7 @@ import java.util.Objects;
 public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
-    private final CacheManager cacheManager; // 수동 캐시 삭제를 위해 주입
+    private final CacheManager cacheManager;
 
     // 캐싱 적용: username으로 조회 시 Redis 캐시 사용
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
@@ -45,7 +46,6 @@ public class UserService {
 
     @Transactional
     public void registerUser(UserDto userDto) {
-        // 중복 체크
         if (userRepository.findByUsername(userDto.getUsername()).isPresent()) {
             throw new RuntimeException("Username already exists");
         }
@@ -65,13 +65,43 @@ public class UserService {
         log.info("회원가입 완료: username={}, userId={}", user.getUsername(), user.getId());
     }
 
+    // 소셜 로그인용 회원가입/조회
+    @Transactional
+    public UserDto registerSocialUser(UserDto userDto) {
+        // 1. 이미 가입된 소셜 유저인지 확인
+        return userRepository.findByProviderAndProviderId(userDto.getProvider(), userDto.getProviderId())
+                .map(UserDto::fromEntity) // 있으면 DTO 변환 후 리턴
+                .orElseGet(() -> {
+                    // 2. 없으면 자동 회원가입 진행
+                    // 소셜 유저는 비밀번호가 없으므로 랜덤값 생성
+                    String randomPassword = UUID.randomUUID().toString();
+                    
+                    // username 중복 방지를 위해 provider_providerId 조합 사용
+                    String socialUsername = userDto.getProvider() + "_" + userDto.getProviderId();
+
+                    User newUser = User.builder()
+                            .username(socialUsername)
+                            .password(passwordEncoder.encode(randomPassword))
+                            .nickname(userDto.getNickname())
+                            .email(userDto.getEmail())
+                            .role(Role.USER)
+                            .provider(userDto.getProvider())
+                            .providerId(userDto.getProviderId())
+                            .imgUrl(userDto.getImgUrl())
+                            .build();
+
+                    User savedUser = userRepository.save(newUser);
+                    log.info("소셜 회원가입 완료: provider={}, userId={}", userDto.getProvider(), savedUser.getId());
+                    return UserDto.fromEntity(savedUser);
+                });
+    }
+
     public UserInfoResponse getUserInfo(int userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return UserInfoResponse.fromEntity(user);
     }
 
-    // 정보 수정 시 해당 유저의 캐시만 삭제 (정교한 Evict)
     @Transactional
     public void updateUserInfo(int userId, UserUpdateDto userUpdateDto) {
         User user = userRepository.findById(userId)
@@ -88,9 +118,7 @@ public class UserService {
         if (userUpdateDto.getImgUrl() != null)
             user.setImgUrl(userUpdateDto.getImgUrl());
 
-        // 캐시 수동 삭제
         evictUserCache(user);
-        
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
     }
 
@@ -104,10 +132,7 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(passwordChangeDto.getNewPassword()));
-        
-        // 캐시 수동 삭제
         evictUserCache(user);
-        
         log.info("비밀번호 변경 완료: userId={}", userId);
     }
 
@@ -121,14 +146,10 @@ public class UserService {
         }
 
         userRepository.delete(user);
-        
-        // 캐시 수동 삭제
         evictUserCache(user);
-        
         log.info("회원 탈퇴 처리 완료: userId={}", userId);
     }
 
-    // 캐시 삭제 헬퍼 메서드
     private void evictUserCache(User user) {
         try {
             Objects.requireNonNull(cacheManager.getCache("user:info:id")).evict(user.getId());
