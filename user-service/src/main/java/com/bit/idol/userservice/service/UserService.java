@@ -8,11 +8,13 @@ import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
 import com.bit.idol.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final CacheManager cacheManager; // 수동 캐시 삭제를 위해 주입
 
     // 캐싱 적용: username으로 조회 시 Redis 캐시 사용
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
@@ -68,13 +71,8 @@ public class UserService {
         return UserInfoResponse.fromEntity(user);
     }
 
-    // 정보 수정 시 캐시 삭제 (정합성 유지)
+    // 정보 수정 시 해당 유저의 캐시만 삭제 (정교한 Evict)
     @Transactional
-    @CacheEvict(value = {"user:info:username", "user:info:id"}, allEntries = true) 
-    // 주의: allEntries=true는 모든 유저 캐시를 날리므로 비효율적일 수 있음.
-    // 더 정교하게 하려면 username과 id를 각각 지정해서 지워야 함.
-    // 하지만 updateUserInfo에는 username 파라미터가 없어서 일단 전체 삭제로 처리하거나,
-    // User 객체를 조회한 뒤 그 username으로 개별 삭제해야 함.
     public void updateUserInfo(int userId, UserUpdateDto userUpdateDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -90,11 +88,13 @@ public class UserService {
         if (userUpdateDto.getImgUrl() != null)
             user.setImgUrl(userUpdateDto.getImgUrl());
 
+        // 캐시 수동 삭제
+        evictUserCache(user);
+        
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
     }
 
     @Transactional
-    @CacheEvict(value = {"user:info:username", "user:info:id"}, allEntries = true)
     public void changePassword(int userId, PasswordChangeDto passwordChangeDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -104,11 +104,14 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(passwordChangeDto.getNewPassword()));
+        
+        // 캐시 수동 삭제
+        evictUserCache(user);
+        
         log.info("비밀번호 변경 완료: userId={}", userId);
     }
 
     @Transactional
-    @CacheEvict(value = {"user:info:username", "user:info:id"}, allEntries = true)
     public void withdrawUser(int userId, String checkPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -118,6 +121,21 @@ public class UserService {
         }
 
         userRepository.delete(user);
+        
+        // 캐시 수동 삭제
+        evictUserCache(user);
+        
         log.info("회원 탈퇴 처리 완료: userId={}", userId);
+    }
+
+    // 캐시 삭제 헬퍼 메서드
+    private void evictUserCache(User user) {
+        try {
+            Objects.requireNonNull(cacheManager.getCache("user:info:id")).evict(user.getId());
+            Objects.requireNonNull(cacheManager.getCache("user:info:username")).evict(user.getUsername());
+            log.info("캐시 삭제 완료: userId={}, username={}", user.getId(), user.getUsername());
+        } catch (Exception e) {
+            log.warn("캐시 삭제 중 오류 발생 (무시하고 진행): {}", e.getMessage());
+        }
     }
 }
