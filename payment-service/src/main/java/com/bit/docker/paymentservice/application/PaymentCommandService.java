@@ -1,6 +1,7 @@
 package com.bit.docker.paymentservice.application;
 
 import com.bit.docker.paymentservice.domain.entity.Payment;
+import com.bit.docker.paymentservice.domain.enumtype.PaymentDomain;
 import com.bit.docker.paymentservice.domain.policy.PaymentPolicy;
 import com.bit.docker.paymentservice.infra.kafka.PaymentEventProducer;
 import com.bit.docker.paymentservice.infra.persistence.PaymentRepository;
@@ -30,7 +31,7 @@ public class PaymentCommandService {
                 });
 
         // 실제로는 reservation 정보 조회 or 금액 계산 필요
-        Payment payment = Payment.create(reservationId, 1L, 10000);
+        Payment payment = Payment.create(reservationId, 1L, 10000, PaymentDomain.CONCERT);
         paymentRepository.save(payment);
 
         processPayment(payment);
@@ -42,10 +43,10 @@ public class PaymentCommandService {
 
         if (success) {
             payment.complete();
-            eventProducer.publishPaymentCompleted(payment.getReservationId());
+            eventProducer.publishPaymentCompleted(payment.getTargetId());
         } else {
             payment.fail();
-            eventProducer.publishPaymentFailed(payment.getReservationId());
+            eventProducer.publishPaymentFailed(payment.getTargetId());
         }
     }
 }

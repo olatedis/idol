@@ -1,5 +1,6 @@
 package com.bit.docker.paymentservice.domain.entity;
 
+import com.bit.docker.paymentservice.domain.enumtype.PaymentDomain;
 import com.bit.docker.paymentservice.domain.enumtype.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
 @Table(
         name = "payment",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = "reservationId")
+                @UniqueConstraint(columnNames = "targetId")
         }
 )
 public class Payment {
@@ -20,11 +21,18 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long reservationId;
+    @Enumerated(EnumType.STRING)
+    private PaymentDomain domain;
+
+    private Long targetId;
 
     private Long userId;
 
     private int amount;
+
+    private String pgProvider;     // 카카오페이, 토스 등
+    private String pgPaymentKey;   // PG가 내려준 결제 키
+    private String orderId;        // 우리 시스템 주문 번호
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
@@ -34,16 +42,17 @@ public class Payment {
     protected Payment() {
     }
 
-    private Payment(Long reservationId, Long userId, int amount) {
-        this.reservationId = reservationId;
+    private Payment(Long targetId, Long userId, int amount, PaymentDomain domain) {
+        this.targetId = targetId;
         this.userId = userId;
         this.amount = amount;
-        this.status = PaymentStatus.REQUESTED;
+        this.domain = domain;
+        this.status = PaymentStatus.READY;
         this.createdAt = LocalDateTime.now();
     }
 
-    public static Payment create(Long reservationId, Long userId, int amount) {
-        return new Payment(reservationId, userId, amount);
+    public static Payment create(Long reservationId, Long userId, int amount,  PaymentDomain domain) {
+        return new Payment(reservationId, userId, amount , domain);
     }
 
     public void complete() {
