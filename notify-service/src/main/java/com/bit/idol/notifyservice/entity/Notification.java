@@ -64,6 +64,7 @@ public class Notification {
     @Column(name = "deeplink", nullable = false, length = 255)
     private String deeplink;
 
+    /*
     @Enumerated(EnumType.STRING)
     @Column(
             name = "ref_type",
@@ -74,6 +75,7 @@ public class Notification {
 
     @Column(name = "ref_id", nullable = false)
     private int refId;
+    */
 
     @Column(name = "attributes_json", columnDefinition = "JSON")
     private String attributesJson;

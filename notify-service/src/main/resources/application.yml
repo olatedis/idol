@@ -1,0 +1,37 @@
+server:
+  port: 8096
+
+spring:
+  application:
+    name: notify-service
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notify-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+notify:
+  topics:
+    fanout: notify-fanout-topic
+    user: user.events
+  consumer:
+    group-id: notify-fanout-group
+    user-group-id: notify-user-group
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
