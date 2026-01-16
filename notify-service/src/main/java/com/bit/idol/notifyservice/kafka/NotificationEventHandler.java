@@ -1,6 +1,7 @@
 package com.bit.idol.notifyservice.kafka;
 
-import com.bit.idol.notifyservice.entity.*;
+import com.bit.idol.notifyservice.entity.Notification;
+import com.bit.idol.notifyservice.entity.NotificationType;
 import com.bit.idol.notifyservice.repository.NotificationPreferenceRepository;
 import com.bit.idol.notifyservice.repository.NotificationRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,8 +35,6 @@ public class NotificationEventHandler {
     @Transactional
     public void handleNotification(String rawJson) {
         try {
-            // json 문자열을 파싱해서 트리구조(부모->자식 관계로 계층이 나뉘어 있는 구조로 변환
-            // 왜 트리구조?->(data안에 receiverId, attribute 등 있고 또 attribute안에 voteCount등 있으니까)
             JsonNode root = om.readTree(rawJson);
 
             String eventId = text(root, "eventId");
@@ -46,20 +45,22 @@ public class NotificationEventHandler {
             // 필수필드 없으면 이벤트 처리안하고 종료
             if (blank(eventId) || blank(eventType) || data.isMissingNode()) return;
 
-            // 수신자 정보 파싱
+            // 수신자 정보 파싱 (fanout 이후에는 항상 단일 유저)
             int receiverId = data.path("receiverId").asInt(-1);
             if (receiverId <= 0) return;
 
-            // 알림 분류 정보 파싱
-            NotificationType category = NotificationType.valueOf(text(data, "category"));
-            NotificationRefType refType = NotificationRefType.valueOf(text(data, "refType"));
-            int refId = data.path("refId").asInt(-1);
-            if (refId <= 0) return;
+            // 알림 분류(category)는 필수로 유지
+            NotificationType category;
+            try {
+                category = NotificationType.valueOf(text(data, "category"));
+            } catch (Exception e) {
+                return; // category 없거나 값이 이상하면 저장하지 않음
+            }
 
+            // 유저 알림설정에 따라 차단되는지
             if (!isAllowed(receiverId, category)) return;
 
             Notification n = Notification.create();
-
             n.setReceiverId(receiverId);
             n.setCategory(category);
             n.setEventId(eventId);
@@ -69,10 +70,9 @@ public class NotificationEventHandler {
             n.setBody(text(data, "body"));
             n.setDeeplink(text(data, "deeplink"));
 
-            n.setRefType(refType);
-            n.setRefId(refId);
+            // ✅ refType/refId 완전 제거 (파싱/검증/저장 안함)
 
-            // attribute 처리 - 서비스마다 다르므로 json그대로 문자열로 저장
+            // attributes 처리 - 서비스마다 다르므로 json그대로 문자열로 저장
             JsonNode attrs = data.get("attributes");
             if (attrs != null && !attrs.isNull()) {
                 n.setAttributesJson(attrs.toString());
