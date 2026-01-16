@@ -31,17 +31,22 @@ public class AuthService {
             throw new RuntimeException("User not found");
         }
 
-        // 2. 비밀번호 검증
+        // 2. 차단 여부 확인 (BANNED 상태면 로그인 불가)
+        if ("BANNED".equals(user.getStatus())) {
+            throw new RuntimeException("Your account has been banned.");
+        }
+
+        // 3. 비밀번호 검증
         if (!bCryptPasswordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Invalid password");
         }
 
-        // 3. 토큰 생성
+        // 4. 토큰 생성
         String userId = String.valueOf(user.getUserId());
         String accessToken = jwtTokenProvider.createAccessToken(userId, user.getUsername(), user.getNickname(), user.getRole());
         String refreshToken = jwtTokenProvider.createRefreshToken(userId);
 
-        // 4. Refresh Token Redis 저장
+        // 5. Refresh Token Redis 저장
         redisTemplate.opsForValue().set(
                 "RT:" + userId,
                 refreshToken,
@@ -102,7 +107,14 @@ public class AuthService {
             throw new RuntimeException("User not found");
         }
 
-        // 5. 새로운 토큰 쌍 발급 (Access + Refresh)
+        // 5. 차단 여부 확인 (재발급 시에도 체크)
+        if ("BANNED".equals(user.getStatus())) {
+            // 차단된 유저라면 Refresh Token 삭제 후 예외 발생
+            redisTemplate.delete("RT:" + userId);
+            throw new RuntimeException("Your account has been banned.");
+        }
+
+        // 6. 새로운 토큰 쌍 발급 (Access + Refresh)
         String newAccessToken = jwtTokenProvider.createAccessToken(
                 String.valueOf(user.getUserId()),
                 user.getUsername(),
@@ -111,7 +123,7 @@ public class AuthService {
         );
         String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
 
-        // 6. Redis 업데이트 (RTR)
+        // 7. Redis 업데이트 (RTR)
         redisTemplate.opsForValue().set(
                 "RT:" + userId,
                 newRefreshToken,

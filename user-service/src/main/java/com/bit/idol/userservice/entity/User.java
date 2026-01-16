@@ -20,10 +20,10 @@ public class User {
     private int id;
 
     @Column(nullable = false, unique = true)
-    private String username; // 로그인 ID
+    private String username; // 로그인 ID (소셜은 provider_providerId 조합 사용)
 
     @Column(nullable = false)
-    private String password;
+    private String password; // 소셜 로그인은 임의의 값 저장
 
     @Column(nullable = false)
     private String nickname;
@@ -40,4 +40,18 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    // --- 소셜 로그인 필드 ---
+    private String provider;   // KAKAO, GOOGLE, NAVER
+    private String providerId; // 소셜 서비스의 고유 ID
+
+    // --- 신고 및 제재 필드 ---
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private UserStatus status = UserStatus.ACTIVE; // 기본값: 정상
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int reportCount = 0; // 누적 신고 횟수
 }
