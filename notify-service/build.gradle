@@ -21,6 +21,13 @@ dependencies {
     // REST API
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // JWT 검증용 (H256/RS256 모두 가능)
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.security:spring-security-messaging'
+
+
     // JPA + MySQL
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'com.mysql:mysql-connector-j'

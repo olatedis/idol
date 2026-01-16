@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/internal/users")
 @RequiredArgsConstructor
@@ -23,5 +25,11 @@ public class InternalUserController {
     @GetMapping("/info/{userId}")
     public ResponseEntity<UserDto> getUserInfoById(@PathVariable("userId") int userId) {
         return ResponseEntity.ok(userService.getUserById(userId));
+    }
+
+    // 추가: fanout-service가 전체 유저 목록 가져가는 내부용 API
+    @GetMapping("/info/all")
+    public ResponseEntity<List<UserDto>> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 }

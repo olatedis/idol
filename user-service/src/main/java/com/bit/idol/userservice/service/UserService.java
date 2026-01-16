@@ -13,6 +13,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -42,6 +44,13 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
         return UserDto.fromEntity(user);
+    }
+
+    public List<UserDto> getAllUsers() {
+        log.info("전체 사용자 조회 요청");
+        return userRepository.findAll().stream()
+                .map(UserDto::fromEntity)
+                .collect(Collectors.toList());
     }
 
     @Transactional

@@ -1,5 +1,6 @@
 package com.bit.idol.notifyservice.kafka;
 
+import com.bit.idol.notifyservice.entity.TargetType;
 import com.bit.idol.notifyservice.repository.NotificationPreferenceRepository;
 import com.bit.idol.notifyservice.repository.NotificationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,20 +26,15 @@ public class TopicConsumers {
         this.prefRepo = prefRepo;
     }
 
-    @KafkaListener(topics = "chat.events", groupId = "notify-chat-group")
-    public void onChatEvent(String rawJson) { handler.handleNotification(rawJson); }
-
-    @KafkaListener(topics = "vote.events", groupId = "notify-vote-group")
-    public void onVoteEvent(String rawJson) { handler.handleNotification(rawJson); }
-
-    @KafkaListener(topics = "ticket.events", groupId = "notify-ticket-group")
-    public void onTicketEvent(String rawJson) { handler.handleNotification(rawJson); }
-
-    @KafkaListener(topics = "notice.events", groupId = "notify-notice-group")
-    public void onNoticeEvent(String rawJson) { handler.handleNotification(rawJson); }
+    // fanout 결과(유저 단위)만 수신해서 저장
+    @KafkaListener(topics = "${notify.topics.fanout}", groupId = "${notify.consumer.group-id:notify-fanout-group}")
+    public void onFanoutEvent(String rawJson) {
+        handler.handleNotification(rawJson);
+    }
 
     // USER_DELETED 수신 시 Notify 데이터 정리
-    @KafkaListener(topics = "user.events", groupId = "notify-user-group")
+    // 새 모델에서는 receiverId가 없으므로 targetType=USER, targetId=userId 로 삭제
+    @KafkaListener(topics = "${notify.topics.user:user.events}", groupId = "${notify.consumer.user-group-id:notify-user-group}")
     @Transactional
     public void onUserEvent(String rawJson) {
         try {
@@ -49,7 +45,7 @@ public class TopicConsumers {
             int userId = root.path("data").path("userId").asInt(-1);
             if (userId <= 0) return;
 
-            notificationRepo.deleteAllByReceiverId(userId);
+            notificationRepo.deleteAllByTarget(TargetType.USER, String.valueOf(userId));
             prefRepo.deleteByUserId(userId);
 
         } catch (Exception ignore) {
