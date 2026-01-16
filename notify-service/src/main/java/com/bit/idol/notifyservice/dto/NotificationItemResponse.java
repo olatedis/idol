@@ -11,9 +11,6 @@ public class NotificationItemResponse {
     public String body;
     public String deeplink;
 
-    public String refType;
-    public int refId;
-
     public Map<String, Object> attributes;
 
     public String createdAt;
