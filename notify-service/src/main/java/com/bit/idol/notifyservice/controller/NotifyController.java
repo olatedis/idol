@@ -1,8 +1,8 @@
 package com.bit.idol.notifyservice.controller;
 
-import com.bit.idol.notifyservice.dto.*;
+import com.bit.idol.notifyservice.dto.NotificationItemResponse;
+import com.bit.idol.notifyservice.dto.NotificationListResponse;
 import com.bit.idol.notifyservice.service.NotificationService;
-import com.bit.idol.notifyservice.service.PreferenceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,58 +10,27 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/notify")
 public class NotifyController {
 
-    private final PreferenceService preferenceService;
     private final NotificationService notificationService;
 
-    public NotifyController(PreferenceService preferenceService, NotificationService notificationService) {
-        this.preferenceService = preferenceService;
+    public NotifyController(NotificationService notificationService) {
         this.notificationService = notificationService;
     }
 
-    // 유저 설정 조회 (알림 on/off 설정)
-    @GetMapping("/preferences")
-    public ResponseEntity<PreferenceResponse> getPreferences(@RequestHeader("X-User-Id") int userId) {
-        return ResponseEntity.ok(preferenceService.getOrCreate(userId));
-    }
-
-    @PutMapping("/preferences")
-    public ResponseEntity<PreferenceResponse> updatePreferences(
-            @RequestHeader("X-User-Id") int userId,
-            @RequestBody UpdatePreferenceRequest req
-    ) {
-        return ResponseEntity.ok(preferenceService.update(userId, req));
-    }
-
-    // 알림 목록 조회
+    // 알림 목록 조회 (내 알림 = targetType=USER, targetId=userId 로 fanout이 풀어서 저장했다는 전제)
     @GetMapping("/notifications")
     public ResponseEntity<NotificationListResponse> listNotifications(
             @RequestHeader("X-User-Id") int userId,
             @RequestParam(value = "cursor", required = false) String cursor,
-            @RequestParam(value = "size", required = false) Integer size,
-            @RequestParam(value = "type", required = false) String type,
-            @RequestParam(value = "unreadOnly", required = false) Boolean unreadOnly
+            @RequestParam(value = "size", required = false) Integer size
     ) {
-        return ResponseEntity.ok(notificationService.list(userId, cursor, size, type, unreadOnly));
+        return ResponseEntity.ok(notificationService.list(userId, cursor, size));
     }
 
-    // 읽지않은 알림개수 조회
-    @GetMapping("/notifications/unread-count")
-    public ResponseEntity<UnreadCountResponse> unreadCount(@RequestHeader("X-User-Id") int userId) {
-        return ResponseEntity.ok(notificationService.unreadCount(userId));
-    }
-
-    // 특정알림 읽음처리
-    @PatchMapping("/notifications/{id}/read")
-    public ResponseEntity<MarkReadResponse> markRead(
-            @RequestHeader("X-User-Id") int userId,
+    // 알림 단건 조회
+    @GetMapping("/notifications/{id}")
+    public ResponseEntity<NotificationItemResponse> getOne(
             @PathVariable("id") int notificationId
     ) {
-        return ResponseEntity.ok(notificationService.markRead(userId, notificationId));
-    }
-
-    // 전체읽음처리
-    @PatchMapping("/notifications/read-all")
-    public ResponseEntity<MarkAllReadResponse> markAllRead(@RequestHeader("X-User-Id") int userId) {
-        return ResponseEntity.ok(notificationService.markAllRead(userId));
+        return ResponseEntity.ok(notificationService.getOne(notificationId));
     }
 }

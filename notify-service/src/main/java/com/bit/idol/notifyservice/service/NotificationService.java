@@ -1,8 +1,9 @@
 package com.bit.idol.notifyservice.service;
 
-import com.bit.idol.notifyservice.dto.*;
+import com.bit.idol.notifyservice.dto.NotificationListResponse;
+import com.bit.idol.notifyservice.dto.NotificationItemResponse;
 import com.bit.idol.notifyservice.entity.Notification;
-import com.bit.idol.notifyservice.entity.NotificationType;
+import com.bit.idol.notifyservice.entity.TargetType;
 import com.bit.idol.notifyservice.repository.NotificationRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class NotificationService {
@@ -30,88 +33,57 @@ public class NotificationService {
         this.om = om;
     }
 
+    // 내 알림 조회: fanout이 USER 단위로 풀어서 targetType=USER, targetId=userId 로 저장된다는 전제
     @Transactional(readOnly = true)
-    public NotificationListResponse list(int userId, String cursorIso, Integer size, String type, Boolean unreadOnly) {
+    public NotificationListResponse list(int userId, String cursorIso, Integer size) {
         int s = (size == null) ? DEFAULT_SIZE : Math.min(size, MAX_SIZE);
-        boolean unread = (unreadOnly != null) && unreadOnly;
-
-        NotificationType category = null;
-        if (type != null && !type.isBlank()) category = NotificationType.valueOf(type);
 
         LocalDateTime cursor = null;
-        if (cursorIso != null && !cursorIso.isBlank()) cursor = LocalDateTime.parse(cursorIso, ISO);
+        if (cursorIso != null && !cursorIso.isBlank()) {
+            cursor = LocalDateTime.parse(cursorIso, ISO);
+        }
 
         var pageable = PageRequest.of(0, s);
-        List<Notification> list = repo.findListByCursor(userId, category, unread, cursor, pageable);
+        List<Notification> list = repo.findListByCursor(TargetType.USER, String.valueOf(userId), cursor, pageable);
 
         NotificationListResponse res = new NotificationListResponse();
         res.items = new ArrayList<>();
-        for (Notification n : list) res.items.add(toResponse(n));
+        for (Notification n : list) {
+            res.items.add(toResponse(n));
+        }
 
-        res.nextCursor = list.isEmpty() ? null : list.get(list.size() - 1).getCreatedAt().format(ISO);
+        res.nextCursor = list.isEmpty() ? null : list.get(list.size() - 1).getOccurredAt().format(ISO);
         res.hasNext = list.size() == s;
         return res;
     }
 
-    // 읽지않은 알림개수 조회
+    // 특정 알림 단건 조회(필요하면)
     @Transactional(readOnly = true)
-    public UnreadCountResponse unreadCount(int userId) {
-        return new UnreadCountResponse(repo.countByReceiverIdAndReadAtIsNull(userId));
-    }
-
-    // 특정알림 읽음처리
-    @Transactional
-    public MarkReadResponse markRead(int userId, int notificationId) {
+    public NotificationItemResponse getOne(int notificationId) {
         Notification n = repo.findById(notificationId).orElseThrow(EntityNotFoundException::new);
-        if (n.getReceiverId() != userId) throw new SecurityException("FORBIDDEN");
-
-        if (n.getReadAt() == null) {
-            n.setReadAt(LocalDateTime.now());
-            repo.save(n);
-        }
-
-        MarkReadResponse res = new MarkReadResponse();
-        res.notificationId = n.getNotificationId();
-        res.readAt = (n.getReadAt() == null) ? null : n.getReadAt().format(ISO);
-        return res;
-    }
-
-    // 전체읽음처리
-    @Transactional
-    public MarkAllReadResponse markAllRead(int userId) {
-        LocalDateTime now = LocalDateTime.now();
-        int updated = repo.markAllRead(userId, now);
-
-        MarkAllReadResponse res = new MarkAllReadResponse();
-        res.updatedCount = updated;
-        res.readAt = now.format(ISO);
-        return res;
+        return toResponse(n);
     }
 
     private NotificationItemResponse toResponse(Notification n) {
         NotificationItemResponse dto = new NotificationItemResponse();
         dto.notificationId = n.getNotificationId();
-        dto.category = n.getCategory().name();
-        dto.eventType = n.getEventType();
+        dto.eventId = n.getEventId();
+        dto.type = n.getType();
 
-        dto.title = n.getTitle();
-        dto.body = n.getBody();
-        dto.deeplink = n.getDeeplink();
+        dto.targetType = n.getTargetType().name();
+        dto.targetId = n.getTargetId();
 
-        dto.refType = n.getRefType().name();
-        dto.refId = n.getRefId();
+        dto.redirectUrl = n.getRedirectUrl();
+        dto.occurredAt = n.getOccurredAt().format(ISO);
 
-        dto.attributes = parseAttributes(n.getAttributesJson());
-
-        dto.createdAt = n.getCreatedAt().format(ISO);
-        dto.readAt = (n.getReadAt() == null) ? null : n.getReadAt().format(ISO);
+        dto.args = parseArgs(n.getArgsJson());
         return dto;
     }
 
-    private Map<String, Object> parseAttributes(String json) {
+    private Map<String, String> parseArgs(String json) {
         if (json == null || json.isBlank()) return null;
         try {
-            return om.readValue(json, new TypeReference<Map<String, Object>>() {});
+            return om.readValue(json, new TypeReference<Map<String, String>>() {});
         } catch (Exception e) {
             return null;
         }

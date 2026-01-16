@@ -6,7 +6,7 @@ spring:
     name: notify-service
 
   datasource:
-    url: jdbc:mysql://localhost:3306/???DB??
+    url: jdbc:mysql://localhost:3306/idoldbname
     username: root
     password: ${DB_PASSWORD:1234}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -31,9 +31,7 @@ notify:
   topics:
     fanout: notify-fanout-topic
     user: user.events
-  consumer:
-    group-id: notify-fanout-group
-    user-group-id: notify-user-group
+
 
 eureka:
   client:
