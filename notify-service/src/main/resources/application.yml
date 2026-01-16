@@ -5,6 +5,20 @@ spring:
   application:
     name: notify-service
 
+  datasource:
+    url: jdbc:mysql://localhost:3306/???DB??
+    username: root
+    password: ${DB_PASSWORD:1234}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
