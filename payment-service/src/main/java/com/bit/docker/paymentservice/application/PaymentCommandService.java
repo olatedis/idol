@@ -1,7 +1,10 @@
 package com.bit.docker.paymentservice.application;
 
+import com.bit.docker.paymentservice.domain.dto.TossConfirmRequest;
+import com.bit.docker.paymentservice.domain.dto.TossConfirmResponse;
 import com.bit.docker.paymentservice.domain.entity.Payment;
 import com.bit.docker.paymentservice.domain.enumtype.PaymentDomain;
+import com.bit.docker.paymentservice.domain.enumtype.PaymentStatus;
 import com.bit.docker.paymentservice.domain.policy.PaymentPolicy;
 import com.bit.docker.paymentservice.infra.kafka.PaymentEventProducer;
 import com.bit.docker.paymentservice.infra.persistence.PaymentRepository;
@@ -49,4 +52,31 @@ public class PaymentCommandService {
             eventProducer.publishPaymentFailed(payment.getTargetId());
         }
     }
+
+    @Transactional
+    public void confirmPayment(
+            String paymentKey,
+            String orderId,
+            Long amount
+    ) {
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new RuntimeException("결제 없음"));
+
+        TossConfirmResponse response = tossPgClient.confirm(
+                new TossConfirmRequest(paymentKey, orderId, amount)
+        );
+
+        if (!"DONE".equals(response.getStatus())) {
+            payment.setStatus(PaymentStatus.FAILED);
+            return;
+        }
+
+        payment.setPaymentKey(paymentKey);
+        payment.setAmount(response.getTotalAmount());
+        payment.setStatus(PaymentStatus.COMPLETED);
+
+        // 결제 완료 이벤트 발행
+        paymentEventProducer.publishCompleted(payment);
+    }
+
 }

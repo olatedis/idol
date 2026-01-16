@@ -24,14 +24,13 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     private PaymentDomain domain;
 
-    private Long targetId;
+    private Long targetId;      // 결제 대상 ID(콘서트, 구독)
 
     private Long userId;
 
-    private int amount;
+    private int amount;     // 최종 결제 금액
 
-    private String pgProvider;     // 카카오페이, 토스 등
-    private String pgPaymentKey;   // PG가 내려준 결제 키
+    private String paymentKey;   // PG가 내려준 결제 키
     private String orderId;        // 우리 시스템 주문 번호
 
     @Enumerated(EnumType.STRING)
