@@ -7,7 +7,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
+/**
+ * 새 Notification 모델(요청형):
+ * - 기존 receiverId/title/body/deeplink/refType/refId/readAt 등은 폐기
+ * - eventId(UUID), type(템플릿 키), targetType/targetId, args, redirectUrl, occurredAt 저장
+ */
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -15,85 +22,58 @@ import java.time.LocalDateTime;
 @Table(
         name = "notification",
         uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_notification_receiver_event",
-                        columnNames = {"receiver_id", "event_id"}
-                )
+                // 같은 eventId는 중복 저장되면 안 되므로 유니크 권장
+                @UniqueConstraint(name = "uk_notification_event_id", columnNames = {"event_id"})
         },
         indexes = {
-                @Index(
-                        name = "idx_notification_receiver_created",
-                        columnList = "receiver_id, created_at"
-                ),
-                @Index(
-                        name = "idx_notification_receiver_unread",
-                        columnList = "receiver_id, read_at, created_at"
-                )
+                // target 기반 조회를 많이 할 가능성이 큼
+                @Index(name = "idx_notification_target", columnList = "target_type, target_id"),
+                @Index(name = "idx_notification_occurred_at", columnList = "occurred_at")
         }
 )
 public class Notification {
 
+
+    // DB 내부 식별자
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "notification_id", nullable = false)
     private int notificationId;
 
-    @Column(name = "receiver_id", nullable = false)
-    private int receiverId;
+    // 예: "VOTE_COMPLETED", "RANKING_UP", "GENERAL_NOTICE"
+    @Column(name = "type", nullable = false, length = 80)
+    private String type;
 
+    // 예: USER(특정인), IDOL_SUB(아이돌구독자), GROUP_SUB(그룹구독자), ALL(전체)
     @Enumerated(EnumType.STRING)
-    @Column(
-            name = "category",
-            nullable = false,
-            columnDefinition = "ENUM('CHAT','VOTE','TICKET','NOTICE','SYSTEM')"
-    )
-    private NotificationType category;
+    @Column(name = "target_type", nullable = false, length = 30)
+    private TargetType targetType;
 
+    // 예: "100"(유저ID), "50"(아이돌ID), "10"(그룹ID), null(전체)
+    @Column(name = "target_id", length = 80)
+    private String targetId;
+
+    // 예: { "idolName": "아이유", "voteCount": "1", "foodName": "치킨" }
+    @Column(name = "args_json", columnDefinition = "JSON")
+    private String argsJson;
+
+    // 예: "/votes/123", "/artist/50"
+    @Column(name = "redirect_url", nullable = false, length = 255)
+    private String redirectUrl;
+
+    @Column(name = "occurred_at", nullable = false)
+    private LocalDateTime occurredAt;
+
+    // 이벤트 고유 ID(UUID 문자열)
     @Column(name = "event_id", nullable = false, length = 64)
     private String eventId;
-
-    @Column(name = "event_type", nullable = false, length = 80)
-    private String eventType;
-
-    @Column(name = "title", nullable = false, length = 120)
-    private String title;
-
-    @Column(name = "body", nullable = false, length = 500)
-    private String body;
-
-    @Column(name = "deeplink", nullable = false, length = 255)
-    private String deeplink;
-
-    /*
-    @Enumerated(EnumType.STRING)
-    @Column(
-            name = "ref_type",
-            nullable = false,
-            columnDefinition = "ENUM('CHAT_ROOM','VOTE','TICKET','NOTICE')"
-    )
-    private NotificationRefType refType;
-
-    @Column(name = "ref_id", nullable = false)
-    private int refId;
-    */
-
-    @Column(name = "attributes_json", columnDefinition = "JSON")
-    private String attributesJson;
-
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "read_at")
-    private LocalDateTime readAt;
 
     public static Notification create() {
         return new Notification();
     }
 
-    @PrePersist
-    protected void onCreate() {
-        if (this.createdAt == null) {
-            this.createdAt = LocalDateTime.now();
-        }
+
+    public void setArgsFromMap(Map<String, String> args, String jsonString) {
+        this.argsJson = jsonString;
     }
 }

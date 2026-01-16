@@ -5,14 +5,14 @@ import java.util.Map;
 public class NotificationItemResponse {
     public int notificationId;
 
-    public String category;
-    public String eventType;
-    public String title;
-    public String body;
-    public String deeplink;
+    public String eventId;
+    public String type;
 
-    public Map<String, Object> attributes;
+    public String targetType;
+    public String targetId;
 
-    public String createdAt;
-    public String readAt;
+    public Map<String, String> args;
+
+    public String redirectUrl;
+    public String occurredAt;
 }
