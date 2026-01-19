@@ -36,8 +36,8 @@ spring:
       s3:
         bucket: idol--bucket-2026-service
       credentials:
-        access-key: ${AWS_ACCESS_KEY:YOUR_ACCESS_KEY}
-        secret-key: ${AWS_SECRET_KEY:YOUR_SECRET_KEY}
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
       region:
         static: ap-northeast-2
       stack:
