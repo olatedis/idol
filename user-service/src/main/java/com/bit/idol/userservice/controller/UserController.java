@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/users")
@@ -63,6 +65,21 @@ public class UserController {
         userService.updateUserInfo(userId, userUpdateDto);
         log.info("회원정보 수정 완료: userId={}", userId);
         return ResponseEntity.ok("회원정보 수정 완료");
+    }
+
+    // 프로필 이미지 업로드 API 추가
+    @PostMapping("/me/image")
+    public ResponseEntity<String> updateProfileImage(@RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Role") String role,
+            @RequestParam("file") MultipartFile file) {
+        if (!"USER".equals(role)) {
+            log.warn("권한 없는 사용자 접근 시도 (이미지 업로드): userId={}, role={}", userId, role);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("접근 권한이 없습니다.");
+        }
+        log.info("프로필 이미지 변경 요청: userId={}", userId);
+        String fileUrl = userService.updateProfileImage(userId, file);
+        log.info("프로필 이미지 변경 완료: userId={}, url={}", userId, fileUrl);
+        return ResponseEntity.ok(fileUrl);
     }
 
     @PostMapping("/password/change")
