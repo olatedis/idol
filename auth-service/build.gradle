@@ -31,6 +31,9 @@ dependencies {
     // Email
     implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+    // Rate Limiting (Bucket4j)
+    implementation 'com.github.vladimir-bukhtoyarov:bucket4j-core:7.6.0'
+
     // Zipkin & Micrometer Tracing
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
