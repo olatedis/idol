@@ -13,6 +13,11 @@ import java.time.LocalDateTime;
         name = "subscriptions",
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = {"user_id", "idol_id"})
+        },
+        indexes = {
+                @Index(name = "idx_user_id", columnList = "user_id"),
+                @Index(name = "idx_idol_id", columnList = "idol_id"),
+                @Index(name = "idx_status", columnList = "status")
         }
 )
 @Getter

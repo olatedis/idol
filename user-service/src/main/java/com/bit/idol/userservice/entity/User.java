@@ -8,7 +8,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+    @Index(name = "idx_email", columnList = "email"),
+    @Index(name = "idx_nickname", columnList = "nickname"),
+    @Index(name = "idx_provider", columnList = "provider, providerId") // 소셜 로그인 조회용 복합 인덱스
+})
 @Getter
 @Setter
 @NoArgsConstructor
