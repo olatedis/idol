@@ -8,6 +8,23 @@ spring:
     redis:
       host: localhost
       port: 6379
+  
+  # 이메일 설정 (Gmail SMTP)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:your-email@gmail.com} # 본인 구글 이메일
+    password: ${MAIL_PASSWORD:your-app-password}     # 앱 비밀번호
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 eureka:
   client:
@@ -17,7 +34,6 @@ eureka:
     prefer-ip-address: true
 
 jwt:
-  # 기본값 설정 (주의: 실제 운영 시에는 반드시 환경 변수로 덮어씌워야 함)
   secret: ${JWT_SECRET:your-very-long-and-secure-random-string-idol-link-project}
   access-expiration: 3600000
   refresh-expiration: 1209600000

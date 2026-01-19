@@ -36,8 +36,10 @@ public class UserDto {
     private String provider;
     private String providerId;
 
-    // 상태 필드 추가
     private UserStatus status;
+
+    // 이메일 인증 토큰 (회원가입 시 필수)
+    private String verificationToken;
 
     public static UserDto fromEntity(User user) {
         return UserDto.builder()
@@ -52,7 +54,7 @@ public class UserDto {
                 .imgUrl(user.getImgUrl())
                 .provider(user.getProvider())
                 .providerId(user.getProviderId())
-                .status(user.getStatus()) // 상태값 매핑
+                .status(user.getStatus())
                 .build();
     }
 }

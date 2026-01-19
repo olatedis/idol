@@ -10,6 +10,7 @@ import com.bit.idol.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final CacheManager cacheManager;
-    private final S3Service s3Service; // S3Service 주입
+    private final S3Service s3Service;
+    private final StringRedisTemplate redisTemplate; // Redis 주입
 
     // 캐싱 적용: username으로 조회 시 Redis 캐시 사용
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
@@ -57,6 +59,26 @@ public class UserService {
 
     @Transactional
     public void registerUser(UserDto userDto) {
+        // 1. 이메일 인증 토큰 검증 (소셜 로그인은 제외)
+        if (userDto.getProvider() == null) {
+            if (userDto.getVerificationToken() == null) {
+                throw new RuntimeException("이메일 인증이 필요합니다.");
+            }
+
+            String verifiedEmail = redisTemplate.opsForValue().get("verify:token:" + userDto.getVerificationToken());
+            if (verifiedEmail == null) {
+                throw new RuntimeException("유효하지 않거나 만료된 인증 토큰입니다.");
+            }
+
+            if (!verifiedEmail.equals(userDto.getEmail())) {
+                throw new RuntimeException("인증된 이메일과 입력한 이메일이 일치하지 않습니다.");
+            }
+            
+            // 인증 토큰 사용 완료 처리 (재사용 방지)
+            redisTemplate.delete("verify:token:" + userDto.getVerificationToken());
+        }
+
+        // 2. 중복 체크
         if (userRepository.findByUsername(userDto.getUsername()).isPresent()) {
             throw new RuntimeException("Username already exists");
         }

@@ -2,6 +2,7 @@ package com.bit.idol.authservice.controller;
 
 import com.bit.idol.authservice.model.LoginRequestDto;
 import com.bit.idol.authservice.service.AuthService;
+import com.bit.idol.authservice.service.email.VerificationService;
 import com.bit.idol.authservice.service.social.SocialAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import java.util.Map;
 public class AuthController {
     private final AuthService authService;
     private final SocialAuthService socialAuthService;
+    private final VerificationService verificationService;
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequestDto request) {
@@ -25,7 +27,6 @@ public class AuthController {
         return ResponseEntity.ok(tokens);
     }
 
-    // 카카오 로그인 API 추가
     @PostMapping("/login/kakao")
     public ResponseEntity<Map<String, String>> loginKakao(@RequestBody Map<String, String> request) {
         String kakaoAccessToken = request.get("token");
@@ -49,5 +50,22 @@ public class AuthController {
         Map<String, String> newTokens = authService.reissue(refreshToken);
         log.info("토큰 재발급 성공 (RTR 적용)");
         return ResponseEntity.ok(newTokens);
+    }
+
+    // --- 이메일 인증 API ---
+
+    @PostMapping("/email/send")
+    public ResponseEntity<String> sendEmail(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        verificationService.sendCode(email);
+        return ResponseEntity.ok("인증번호가 발송되었습니다.");
+    }
+
+    @PostMapping("/email/verify")
+    public ResponseEntity<String> verifyEmail(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String code = request.get("code");
+        String token = verificationService.verifyCode(email, code);
+        return ResponseEntity.ok(token); // 인증 성공 시 토큰 반환
     }
 }
