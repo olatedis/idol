@@ -4,6 +4,22 @@ server:
 spring:
   application:
     name: user-service
+  
+  # Spring Cloud 버전 호환성 체크 비활성화 (Boot 3.4.x 사용 시 필요)
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    aws:
+      s3:
+        bucket: idol--bucket-2026-service
+      credentials:
+        access-key: ${AWS_ACCESS_KEY:YOUR_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY:YOUR_SECRET_KEY}
+      region:
+        static: ap-northeast-2
+      stack:
+        auto: false
+
   datasource:
     url: jdbc:mysql://localhost:3307/idol_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
     username: root
@@ -29,19 +45,6 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
-
-  # AWS S3 설정
-  cloud:
-    aws:
-      s3:
-        bucket: idol--bucket-2026-service
-      credentials:
-        access-key: ${AWS_ACCESS_KEY}
-        secret-key: ${AWS_SECRET_KEY}
-      region:
-        static: ap-northeast-2
-      stack:
-        auto: false
 
 eureka:
   client:
