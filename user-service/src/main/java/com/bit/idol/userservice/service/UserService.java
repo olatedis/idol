@@ -188,6 +188,17 @@ public class UserService {
         log.info("비밀번호 변경 완료: userId={}", userId);
     }
 
+    // 비밀번호 재설정 (이메일 인증 후)
+    @Transactional
+    public void resetPassword(String email, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        evictUserCache(user);
+        log.info("비밀번호 재설정 완료: email={}", email);
+    }
+
     @Transactional
     public void withdrawUser(int userId, String checkPassword) {
         User user = userRepository.findById(userId)
