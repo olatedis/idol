@@ -12,12 +12,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class PaymentCommandService {
+public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final PaymentEventProducer eventProducer;
 
-    public PaymentCommandService(
+    public PaymentService(
             PaymentRepository paymentRepository,
             PaymentEventProducer eventProducer
     ) {
@@ -78,5 +78,6 @@ public class PaymentCommandService {
         // 결제 완료 이벤트 발행
         paymentEventProducer.publishCompleted(payment);
     }
+
 
 }
