@@ -13,9 +13,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 import java.util.stream.Collectors;
-
 import java.util.Objects;
 import java.util.UUID;
 
@@ -27,6 +28,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final CacheManager cacheManager;
+    private final S3Service s3Service; // S3Service 주입
 
     // 캐싱 적용: username으로 조회 시 Redis 캐시 사용
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
@@ -77,15 +79,10 @@ public class UserService {
     // 소셜 로그인용 회원가입/조회
     @Transactional
     public UserDto registerSocialUser(UserDto userDto) {
-        // 1. 이미 가입된 소셜 유저인지 확인
         return userRepository.findByProviderAndProviderId(userDto.getProvider(), userDto.getProviderId())
-                .map(UserDto::fromEntity) // 있으면 DTO 변환 후 리턴
+                .map(UserDto::fromEntity)
                 .orElseGet(() -> {
-                    // 2. 없으면 자동 회원가입 진행
-                    // 소셜 유저는 비밀번호가 없으므로 랜덤값 생성
                     String randomPassword = UUID.randomUUID().toString();
-                    
-                    // username 중복 방지를 위해 provider_providerId 조합 사용
                     String socialUsername = userDto.getProvider() + "_" + userDto.getProviderId();
 
                     User newUser = User.builder()
@@ -129,6 +126,30 @@ public class UserService {
 
         evictUserCache(user);
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
+    }
+
+    // 프로필 이미지 업로드 및 변경
+    @Transactional
+    public String updateProfileImage(int userId, MultipartFile file) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 1. 기존 이미지가 있다면 S3에서 삭제 (선택 사항)
+        if (user.getImgUrl() != null && !user.getImgUrl().isEmpty()) {
+            s3Service.deleteFile(user.getImgUrl());
+        }
+
+        // 2. 새 이미지 업로드
+        String fileUrl = s3Service.uploadFile(file);
+
+        // 3. DB 업데이트
+        user.setImgUrl(fileUrl);
+        
+        // 4. 캐시 삭제
+        evictUserCache(user);
+
+        log.info("프로필 이미지 변경 완료: userId={}, url={}", userId, fileUrl);
+        return fileUrl;
     }
 
     @Transactional
