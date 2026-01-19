@@ -3,6 +3,8 @@ package com.bit.idol.userservice.dto.user;
 import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
 import com.bit.idol.userservice.entity.UserStatus;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,16 +17,16 @@ import lombok.NoArgsConstructor;
 public class UserDto {
     private int userId;
 
-    @jakarta.validation.constraints.NotBlank(message = "사용자 이름은 필수입니다.")
+    @NotBlank(message = "사용자 이름은 필수입니다.")
     private String username;
 
     private String password;
 
-    @jakarta.validation.constraints.NotBlank(message = "닉네임은 필수입니다.")
+    @NotBlank(message = "닉네임은 필수입니다.")
     private String nickname;
 
-    @jakarta.validation.constraints.NotBlank(message = "이메일은 필수입니다.")
-    @jakarta.validation.constraints.Email(message = "유효하지 않은 이메일 형식입니다.")
+    @NotBlank(message = "이메일은 필수입니다.")
+    @Email(message = "유효하지 않은 이메일 형식입니다.")
     private String email;
 
     private String phone;
