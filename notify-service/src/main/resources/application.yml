@@ -27,11 +27,16 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
+  security:
+    oauth2:
+      resource server:
+        jwt:
+          secret-key: ${JWT_SECRET:your-very-long-and-secure-random-string-idol-link-project}
+
 notify:
   topics:
     fanout: notify-fanout-topic
     user: user.events
-
 
 eureka:
   client:

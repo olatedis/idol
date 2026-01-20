@@ -3,6 +3,7 @@ package com.bit.idol.notifyservice.kafka;
 import com.bit.idol.notifyservice.entity.Notification;
 import com.bit.idol.notifyservice.entity.TargetType;
 import com.bit.idol.notifyservice.repository.NotificationRepository;
+import com.bit.idol.notifyservice.sse.NotificationSsePublisher;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -17,10 +18,14 @@ public class NotificationEventHandler {
 
     private final ObjectMapper om;
     private final NotificationRepository notificationRepo;
+    private final NotificationSsePublisher ssePublisher;
 
-    public NotificationEventHandler(ObjectMapper om, NotificationRepository notificationRepo) {
+    public NotificationEventHandler(ObjectMapper om,
+                                    NotificationRepository notificationRepo,
+                                    NotificationSsePublisher ssePublisher) {
         this.om = om;
         this.notificationRepo = notificationRepo;
+        this.ssePublisher = ssePublisher;
     }
 
     @Transactional
@@ -81,7 +86,13 @@ public class NotificationEventHandler {
             n.setArgsJson(argsJson);
 
             try {
-                notificationRepo.save(n);
+                Notification saved = notificationRepo.save(n);
+
+                if (saved.getTargetType() == TargetType.USER && !blank(saved.getTargetId())) {
+                    int userId = Integer.parseInt(saved.getTargetId());
+                    ssePublisher.pushToUser(userId, saved);
+                }
+
             } catch (DataIntegrityViolationException dup) {
             }
 
