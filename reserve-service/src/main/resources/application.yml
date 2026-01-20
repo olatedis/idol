@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: ranking-service
+    name: reserve-service
 
   data:
     redis:
