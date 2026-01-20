@@ -3,12 +3,12 @@ package com.bit.docker.paymentservice.domain.entity;
 import com.bit.docker.paymentservice.domain.enumtype.PaymentDomain;
 import com.bit.docker.paymentservice.domain.enumtype.PaymentStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Getter
+@Data
 @Table(
         name = "payment",
         uniqueConstraints = {
@@ -19,19 +19,19 @@ public class Payment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
     @Enumerated(EnumType.STRING)
     private PaymentDomain domain;
 
-    private Long targetId;      // 결제 대상 ID(콘서트, 구독)
+    private int targetId;      // 결제 대상 ID(콘서트, 구독)
 
-    private Long userId;
+    private int userId;
 
     private int amount;     // 최종 결제 금액
 
     private String paymentKey;   // PG가 내려준 결제 키
-    private String orderId;        // 우리 시스템 주문 번호
+    private String orderId;        // 시스템 주문 번호
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
@@ -41,7 +41,8 @@ public class Payment {
     protected Payment() {
     }
 
-    private Payment(Long targetId, Long userId, int amount, PaymentDomain domain) {
+    private Payment(String orderId, int targetId, int userId, int amount, PaymentDomain domain) {
+        this.orderId = orderId;
         this.targetId = targetId;
         this.userId = userId;
         this.amount = amount;
@@ -50,11 +51,13 @@ public class Payment {
         this.createdAt = LocalDateTime.now();
     }
 
-    public static Payment create(Long reservationId, Long userId, int amount,  PaymentDomain domain) {
-        return new Payment(reservationId, userId, amount , domain);
+    public static Payment create(String orderId, int targetId, int userId, int amount,  PaymentDomain domain) {
+        return new Payment(orderId, targetId, userId, amount , domain);
     }
 
-    public void complete() {
+    public void complete(String paymentKey, int amount) {
+        this.paymentKey = paymentKey;
+        this.amount = amount;
         this.status = PaymentStatus.COMPLETED;
     }
 

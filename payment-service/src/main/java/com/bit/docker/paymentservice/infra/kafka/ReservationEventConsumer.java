@@ -14,7 +14,7 @@ public class ReservationEventConsumer {
     }
 
     @KafkaListener(topics = "reservation-created")
-    public void consume(Long reservationId) {
-        paymentService.createPayment(reservationId);
+    public void consume(String orderId, Long userId) {
+        paymentService.createPayment(orderId, userId);
     }
 }

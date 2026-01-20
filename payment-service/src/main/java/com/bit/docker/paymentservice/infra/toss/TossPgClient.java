@@ -5,20 +5,18 @@ import com.bit.docker.paymentservice.domain.dto.TossConfirmResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 @Component
 @RequiredArgsConstructor
 public class TossPgClient {
 
-    private final WebClient webClient;
+    private final WebClient tossWebClient;
 
     @Value("${toss.secret-key}")
     private String secretKey;
 
     public TossConfirmResponse confirm(TossConfirmRequest request) {
-
-        return webClient.post()
+        return tossWebClient.post()
                 .uri("/v1/payments/confirm")
                 .headers(headers -> {
                     headers.setBasicAuth(secretKey, "");
@@ -29,4 +27,5 @@ public class TossPgClient {
                 .block();
     }
 }
+
 

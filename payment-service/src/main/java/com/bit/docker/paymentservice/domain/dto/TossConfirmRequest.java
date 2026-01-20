@@ -8,6 +8,6 @@ import lombok.Getter;
 public class TossConfirmRequest {
     private String paymentKey;
     private String orderId;
-    private Long amount;
+    private int amount;
 }
 

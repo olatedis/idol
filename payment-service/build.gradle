@@ -31,6 +31,7 @@ ext {
 dependencies {
     // Web
     implementation 'org.springframework.boot:spring-boot-starter-web' // webmvc -> web 변경
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
     // Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -42,7 +43,9 @@ dependencies {
 
     // Actuator & Monitoring
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    
+
+    implementation 'org.springframework.kafka:spring-kafka:3.2.0'
+
     // Zipkin & Tracing (Spring Boot 3.x 스타일)
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'

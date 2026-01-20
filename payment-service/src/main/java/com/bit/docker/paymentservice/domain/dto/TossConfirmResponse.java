@@ -8,7 +8,7 @@ public class TossConfirmResponse {
     private String paymentKey;
     private String orderId;
     private String status;
-    private Long totalAmount;
+    private int totalAmount;
 }
 
 
