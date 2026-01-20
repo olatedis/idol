@@ -63,6 +63,15 @@ services:
       - ./data/mysql/data:/var/lib/mysql
       - ./data/mysql/init:/docker-entrypoint-initdb.d
 
+  # MongoDB 추가
+  mongo:
+    image: mongo:latest
+    container_name: idol-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongo/data:/data/db
+
   zipkin:
     image: openzipkin/zipkin
     container_name: idol-zipkin
