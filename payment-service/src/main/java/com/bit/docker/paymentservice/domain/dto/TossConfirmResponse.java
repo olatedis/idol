@@ -1,7 +1,6 @@
 package com.bit.docker.paymentservice.domain.dto;
 
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
 public class TossConfirmResponse {
