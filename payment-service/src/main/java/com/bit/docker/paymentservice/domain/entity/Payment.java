@@ -51,9 +51,24 @@ public class Payment {
         this.createdAt = LocalDateTime.now();
     }
 
-    public static Payment create(String orderId, int targetId, int userId, int amount,  PaymentDomain domain) {
-        return new Payment(orderId, targetId, userId, amount , domain);
+    public static Payment ready(
+            String orderId,
+            int amount,
+            PaymentDomain domain,
+            int targetId,
+            int userId
+    ) {
+        Payment payment = new Payment();
+        payment.orderId = orderId;
+        payment.amount = amount;
+        payment.domain = domain;
+        payment.targetId = targetId;
+        payment.status = PaymentStatus.READY;
+        payment.userId = userId;
+        payment.createdAt = LocalDateTime.now();
+        return payment;
     }
+
 
     public void complete(String paymentKey, int amount) {
         this.paymentKey = paymentKey;

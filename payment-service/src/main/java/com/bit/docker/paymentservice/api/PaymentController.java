@@ -2,7 +2,7 @@ package com.bit.docker.paymentservice.api;
 
 
 import com.bit.docker.paymentservice.application.PaymentService;
-import com.bit.docker.paymentservice.domain.dto.TossConfirmRequest;
+import com.bit.docker.paymentservice.domain.dto.*;
 import com.bit.docker.paymentservice.domain.entity.Payment;
 import com.bit.docker.paymentservice.infra.persistence.PaymentRepository;
 import lombok.AllArgsConstructor;
@@ -19,15 +19,22 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping("/confirm")
-    public ResponseEntity<Void> confirm(@RequestBody TossConfirmRequest dto) {
-        paymentService.confirmPayment(
-                dto.getPaymentKey(),
-                dto.getOrderId(),
-                dto.getAmount()
-        );
+    public ResponseEntity<Void> confirm(
+            @RequestBody PaymentConfirmDto dto
+    ) {
+        paymentService.confirm(dto);
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/ready")
+    public ResponseEntity<PaymentCreateResponse> createPayment(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestBody PaymentCreateRequest request
+    ) {
+        PaymentCreateResponse response =
+                paymentService.createPayment(request, userId);
+        return ResponseEntity.ok(response);
+    }
     @GetMapping("/{orderId}")
     public Payment getPayment(@PathVariable String orderId) {
         return paymentRepository.findByOrderId(orderId)
