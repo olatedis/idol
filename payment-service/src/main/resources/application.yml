@@ -5,6 +5,21 @@ spring:
   application:
     name: payment-service
 
+  datasource:
+    url: jdbc:mysql://localhost:3306/idol_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    username: root
+    password: ${DB_PASSWORD:1234}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+
   data:
     redis:
       host: localhost
@@ -13,10 +28,17 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
-      group-id: ranking-group
+      group-id: payment-group
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+#      테스트용 키. 토스는 테스트 키로 요청해도 정상적으로 응답해줌.
+#      (결제x 응답만0)
+toss:
+  secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R
+  client-key: test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq
+  base-url: https://api.tosspayments.com
 
 eureka:
   client:

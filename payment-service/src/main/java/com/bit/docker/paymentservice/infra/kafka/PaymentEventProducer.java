@@ -1,5 +1,6 @@
 package com.bit.docker.paymentservice.infra.kafka;
 
+import com.bit.docker.paymentservice.domain.entity.Payment;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -12,11 +13,11 @@ public class PaymentEventProducer {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void publishPaymentCompleted(Long reservationId) {
-        kafkaTemplate.send("payment-completed", reservationId);
+    public void publishPaymentCompleted(Payment payment) {
+        kafkaTemplate.send("payment-completed", payment.getTargetId());
     }
 
-    public void publishPaymentFailed(Long reservationId) {
-        kafkaTemplate.send("payment-failed", reservationId);
+    public void publishPaymentFailed(int targetId) {
+        kafkaTemplate.send("payment-failed", targetId);
     }
 }
