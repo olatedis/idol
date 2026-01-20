@@ -1,5 +1,5 @@
 server:
-  port: 8095  # TODO: 팀 포트 규칙
+  port: 8095
 
 spring:
   application:
