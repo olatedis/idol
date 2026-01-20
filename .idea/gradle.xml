@@ -22,6 +22,15 @@
         </option>
       </GradleProjectSettings>
       <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/chat-service" />
+        <option name="gradleJvm" value="25" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/chat-service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/concert-service" />
         <option name="gradleJvm" value="25" />
         <option name="modules">
