@@ -40,7 +40,7 @@ public class PasswordResetService {
 
         // 3. 이메일 발송
         String resetLink = "http://localhost:3000/reset-password?token=" + token; // 프론트엔드 주소
-        String subject = "[Idol Vote] 비밀번호 재설정 안내";
+        String subject = "[Idol] 비밀번호 재설정 안내";
         String content = String.format("""
                 <div style="font-family: 'Apple SD Gothic Neo', 'sans-serif' !important; width: 540px; height: 600px; border-top: 4px solid #555; margin: 100px auto; padding: 30px 0; box-sizing: border-box;">
                     <h1 style="margin: 0; padding: 0 5px; font-size: 28px; font-weight: 400;">
