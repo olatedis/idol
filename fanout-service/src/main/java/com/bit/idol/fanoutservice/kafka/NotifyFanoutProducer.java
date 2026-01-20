@@ -1,22 +1,24 @@
 package com.bit.idol.fanoutservice.kafka;
 
-import com.bit.idol.fanoutservice.dto.NotifyEvent;
+import com.bit.idol.fanoutservice.dto.NotifyFanoutEvent;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+// notify-fanout-topic으로 유저 단위 이벤트 발행
 @Component
 @RequiredArgsConstructor
 public class NotifyFanoutProducer {
 
-    private final KafkaTemplate<String, NotifyEvent> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper om;
 
-    @Value("${fanout.topics.fanout}")
-    private String fanoutTopic;
-
-    public void send(NotifyEvent event) {
-        // key는 eventId를 쓰면 파티셔닝/순서에 도움이 됨
-        kafkaTemplate.send(fanoutTopic, event.getEventId(), event);
+    public void send(String topic, NotifyFanoutEvent event) {
+        try {
+            String json = om.writeValueAsString(event);
+            kafkaTemplate.send(topic, event.getEventId(), json);
+        } catch (Exception ignore) {
+        }
     }
 }
