@@ -1,20 +1,19 @@
 package com.bit.docker.subscriptionservice.service;
 
-import com.bit.docker.subscriptionservice.dto.SubscriptionCancelRequest;
-import com.bit.docker.subscriptionservice.dto.SubscriptionCreateRequest;
-import com.bit.docker.subscriptionservice.dto.SubscriptionDto;
-import com.bit.docker.subscriptionservice.dto.SubscriptionEvent;
+import com.bit.docker.subscriptionservice.dto.*;
+import com.bit.docker.subscriptionservice.entity.GroupSubscription;
 import com.bit.docker.subscriptionservice.entity.Subscription;
 import com.bit.docker.subscriptionservice.entity.SubscriptionStatus;
+import com.bit.docker.subscriptionservice.repository.GroupSubscriptionRepository;
 import com.bit.docker.subscriptionservice.repository.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RequiredArgsConstructor
 @Service
@@ -23,26 +22,24 @@ import java.time.LocalDateTime;
 public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
+    private final GroupSubscriptionRepository groupSubscriptionRepository;
     private final StringRedisTemplate redisTemplate;
     private final SubscriptionEventProducer eventProducer;
 
-    private static final String KEY_PREFIX = "sub:";
+    private static final String KEY_PREFIX_IDOL = "sub:";
+    private static final String KEY_PREFIX_GROUP = "gsub:";
 
-    /* =========================
-       구독 생성
-     ========================= */
+    // 개인(아이돌) 구독 생성
     @Transactional
     public SubscriptionDto subscribe(int userId, SubscriptionCreateRequest request) {
 
-        String redisKey = buildKey(userId, request.getIdolId());
+        String redisKey = buildIdolKey(userId, request.getIdolId());
 
-        // 1. Redis 먼저 확인
         String cachedStatus = redisTemplate.opsForValue().get(redisKey);
         if (SubscriptionStatus.ACTIVE.name().equals(cachedStatus)) {
             throw new RuntimeException("이미 구독 중인 아이돌입니다.");
         }
 
-        // 2. DB 확인
         subscriptionRepository.findByUserIdAndIdolId(userId, request.getIdolId())
                 .ifPresent(sub -> {
                     if (sub.getStatus() == SubscriptionStatus.ACTIVE) {
@@ -62,28 +59,26 @@ public class SubscriptionService {
 
         subscriptionRepository.save(subscription);
 
-        // 3. Redis 캐시 저장
         redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
 
-        // kafka 이벤트 생성
+        // 개인 구독 이벤트
         eventProducer.publish(
                 "subscription.created",
                 SubscriptionEvent.builder()
                         .eventType("CREATED")
+                        .targetType(SubscriptionEvent.TargetType.IDOL)
                         .userId(userId)
                         .idolId(request.getIdolId())
+                        .groupId(null)
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
 
-        log.info("구독 생성 완료: userId={}, idolId={}", userId, request.getIdolId());
-
+        log.info("개인(아이돌) 구독 생성 완료: userId={}, idolId={}", userId, request.getIdolId());
         return SubscriptionDto.fromEntity(subscription);
     }
 
-    /* =========================
-       구독 해지
-     ========================= */
+    // 개인(아이돌) 구독 해지
     @Transactional
     public void cancel(int userId, SubscriptionCancelRequest request) {
 
@@ -97,26 +92,25 @@ public class SubscriptionService {
 
         subscription.cancel();
 
-        // Redis 제거
-        redisTemplate.delete(buildKey(userId, request.getIdolId()));
+        redisTemplate.delete(buildIdolKey(userId, request.getIdolId()));
 
-        // kafka 이벤트 생성
+        // 개인 구독 해지 이벤트
         eventProducer.publish(
                 "subscription.canceled",
                 SubscriptionEvent.builder()
                         .eventType("CANCELED")
+                        .targetType(SubscriptionEvent.TargetType.IDOL)
                         .userId(userId)
                         .idolId(request.getIdolId())
+                        .groupId(null)
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
 
-        log.info("구독 해지 완료: userId={}, idolId={}", userId, request.getIdolId());
+        log.info("개인(아이돌) 구독 해지 완료: userId={}, idolId={}", userId, request.getIdolId());
     }
 
-    /* =========================
-       내 구독 목록 조회
-     ========================= */
+    // 내 개인(아이돌) 구독 목록 조회
     public List<SubscriptionDto> getMySubscriptions(int userId) {
         return subscriptionRepository
                 .findAllByUserIdAndStatus(userId, SubscriptionStatus.ACTIVE)
@@ -125,20 +119,16 @@ public class SubscriptionService {
                 .toList();
     }
 
-    /* =========================
-       구독 여부 체크 (채팅 서비스용)
-     ========================= */
+    // 개인(아이돌) 구독 여부 체크(채팅 서비스용)
     public boolean isSubscribed(int userId, Long idolId) {
 
-        String redisKey = buildKey(userId, idolId);
+        String redisKey = buildIdolKey(userId, idolId);
 
-        // Redis 우선
         String cachedStatus = redisTemplate.opsForValue().get(redisKey);
         if (cachedStatus != null) {
             return SubscriptionStatus.ACTIVE.name().equals(cachedStatus);
         }
 
-        // DB fallback
         boolean active = subscriptionRepository.existsByUserIdAndIdolIdAndStatus(
                 userId,
                 idolId,
@@ -152,8 +142,134 @@ public class SubscriptionService {
         return active;
     }
 
-    private String buildKey(int userId, Long idolId) {
-        return KEY_PREFIX + userId + ":" + idolId;
+    // 그룹 구독 생성
+    @Transactional
+    public GroupSubscriptionDto subscribeGroup(int userId, GroupSubscriptionCreateRequest request) {
+
+        String redisKey = buildGroupKey(userId, request.getGroupId());
+
+        String cachedStatus = redisTemplate.opsForValue().get(redisKey);
+        if (SubscriptionStatus.ACTIVE.name().equals(cachedStatus)) {
+            throw new RuntimeException("이미 구독 중인 그룹입니다.");
+        }
+
+        groupSubscriptionRepository.findByUserIdAndGroupId(userId, request.getGroupId())
+                .ifPresent(gs -> {
+                    if (gs.getStatus() == SubscriptionStatus.ACTIVE) {
+                        throw new RuntimeException("이미 구독 중인 그룹입니다.");
+                    }
+                });
+
+        LocalDateTime now = LocalDateTime.now();
+
+        GroupSubscription gs = GroupSubscription.builder()
+                .userId(userId)
+                .groupId(request.getGroupId())
+                .status(SubscriptionStatus.ACTIVE)
+                .startedAt(now)
+                .autoRenew(request.isAutoRenew())
+                .build();
+
+        groupSubscriptionRepository.save(gs);
+
+        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
+
+        // 그룹 구독 이벤트
+        eventProducer.publish(
+                "group-subscription.created",
+                SubscriptionEvent.builder()
+                        .eventType("CREATED")
+                        .targetType(SubscriptionEvent.TargetType.GROUP)
+                        .userId(userId)
+                        .idolId(null)
+                        .groupId(request.getGroupId())
+                        .occurredAt(LocalDateTime.now())
+                        .build()
+        );
+
+        log.info("그룹 구독 생성 완료: userId={}, groupId={}", userId, request.getGroupId());
+        return GroupSubscriptionDto.fromEntity(gs);
+    }
+
+    // 그룹 구독 해지
+    @Transactional
+    public void cancelGroup(int userId, GroupSubscriptionCancelRequest request) {
+
+        GroupSubscription gs = groupSubscriptionRepository
+                .findByUserIdAndGroupId(userId, request.getGroupId())
+                .orElseThrow(() -> new RuntimeException("구독 정보가 없습니다."));
+
+        if (gs.getStatus() != SubscriptionStatus.ACTIVE) {
+            throw new RuntimeException("활성 구독 상태가 아닙니다.");
+        }
+
+        gs.cancel();
+
+        redisTemplate.delete(buildGroupKey(userId, request.getGroupId()));
+
+        // 그룹 구독 해지 이벤트
+        eventProducer.publish(
+                "group-subscription.canceled",
+                SubscriptionEvent.builder()
+                        .eventType("CANCELED")
+                        .targetType(SubscriptionEvent.TargetType.GROUP)
+                        .userId(userId)
+                        .idolId(null)
+                        .groupId(request.getGroupId())
+                        .occurredAt(LocalDateTime.now())
+                        .build()
+        );
+
+        log.info("그룹 구독 해지 완료: userId={}, groupId={}", userId, request.getGroupId());
+    }
+
+    // 내 그룹 구독 목록 조회
+    public List<GroupSubscriptionDto> getMyGroupSubscriptions(int userId) {
+        return groupSubscriptionRepository
+                .findAllByUserIdAndStatus(userId, SubscriptionStatus.ACTIVE)
+                .stream()
+                .map(GroupSubscriptionDto::fromEntity)
+                .toList();
+    }
+
+    // 그룹 구독 여부 체크(필요하면 사용)
+    public boolean isGroupSubscribed(int userId, Long groupId) {
+
+        String redisKey = buildGroupKey(userId, groupId);
+
+        String cachedStatus = redisTemplate.opsForValue().get(redisKey);
+        if (cachedStatus != null) {
+            return SubscriptionStatus.ACTIVE.name().equals(cachedStatus);
+        }
+
+        boolean active = groupSubscriptionRepository.existsByUserIdAndGroupIdAndStatus(
+                userId,
+                groupId,
+                SubscriptionStatus.ACTIVE
+        );
+
+        if (active) {
+            redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
+        }
+
+        return active;
+    }
+
+    // fanout용: idolId(개인 아이돌) ACTIVE 구독자 userId 리스트
+    public List<Integer> getActiveSubscriberUserIdsByIdolId(Long idolId) {
+        return subscriptionRepository.selectUserIdsByIdolIdAndStatus(idolId, SubscriptionStatus.ACTIVE);
+    }
+
+    // fanout용: groupId(그룹) ACTIVE 구독자 userId 리스트
+    public List<Integer> getActiveSubscriberUserIdsByGroupId(Long groupId) {
+        return groupSubscriptionRepository.selectUserIdsByGroupIdAndStatus(groupId, SubscriptionStatus.ACTIVE);
+    }
+
+    private String buildIdolKey(int userId, Long idolId) {
+        return KEY_PREFIX_IDOL + userId + ":" + idolId;
+    }
+
+    private String buildGroupKey(int userId, Long groupId) {
+        return KEY_PREFIX_GROUP + userId + ":" + groupId;
     }
 }
-

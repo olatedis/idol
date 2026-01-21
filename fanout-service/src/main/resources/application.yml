@@ -26,6 +26,9 @@ fanout:
 clients:
   user-service:
     url: http://localhost:8082
+  subscription-service:
+    url: http://localhost:8088
+
 
 eureka:
   client:

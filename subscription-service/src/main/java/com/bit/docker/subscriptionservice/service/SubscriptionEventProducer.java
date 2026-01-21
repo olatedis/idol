@@ -15,8 +15,14 @@ public class SubscriptionEventProducer {
 
     public void publish(String topic, SubscriptionEvent event) {
         kafkaTemplate.send(topic, event);
-        log.info("Kafka 이벤트 발행: topic={}, userId={}, idolId={}",
-                topic, event.getUserId(), event.getIdolId());
+        log.info("Kafka 이벤트 발행: topic={}, eventType={}, targetType={}, userId={}, idolId={}, groupId={}",
+                topic,
+                event.getEventType(),
+                event.getTargetType(),
+                event.getUserId(),
+                event.getIdolId(),
+                event.getGroupId()
+        );
     }
 }
 
