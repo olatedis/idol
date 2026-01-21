@@ -8,9 +8,12 @@ import com.bit.idol.chatservice.producer.ChatProducer;
 import com.bit.idol.chatservice.repository.ChatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -19,9 +22,27 @@ public class ChatService {
 
     private final ChatRepository chatRepository;
     private final ChatFilter chatFilter;
-    private final ChatProducer chatProducer; // Kafka Producer
+    private final ChatProducer chatProducer;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    // 도배 방지 설정 (3초에 1회)
+    private static final long RATE_LIMIT_SECONDS = 3;
 
     public void processMessage(ChatMessageDto messageDto) {
+        // 0. 도배 방지 (USER인 경우만)
+        if ("USER".equals(messageDto.getSenderRole())) {
+            String limitKey = "chat:limit:" + messageDto.getSenderId();
+            
+            // 키가 존재하면 도배로 간주
+            if (redisTemplate.hasKey(limitKey)) {
+                log.warn("도배 방지 걸림: userId={}", messageDto.getSenderId());
+                throw new RuntimeException("메시지를 너무 빠르게 보낼 수 없습니다. 잠시 후 다시 시도해주세요.");
+            }
+            
+            // 키 생성 (3초 후 만료)
+            redisTemplate.opsForValue().set(limitKey, "1", Duration.ofSeconds(RATE_LIMIT_SECONDS));
+        }
+
         try {
             // 1. 메시지 검열
             String filteredContent = chatFilter.filter(messageDto.getContent());
@@ -51,7 +72,6 @@ public class ChatService {
         chatRepository.save(chatMessage);
 
         // 3. Kafka로 전송 (Redis로 직접 쏘지 않음!)
-        // Kafka -> ChatConsumer -> Redis Pub/Sub -> WebSocket 흐름으로 이어짐
         chatProducer.sendChatMessage(messageDto);
         
         log.info("메시지 처리 완료 (DB저장 -> Kafka전송): room={}, sender={}", messageDto.getIdolId(), messageDto.getSenderNickname());
