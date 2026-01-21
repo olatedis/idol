@@ -68,14 +68,13 @@ public class ChatService {
         
         ChatMessage savedMessage = chatRepository.save(chatMessage);
         
-        // DTO에 저장된 ID(MongoDB ID) 세팅 (클라이언트가 정렬할 때 필요)
+        // DTO에 저장된 ID(MongoDB ID) 세팅
         messageDto.setId(savedMessage.getId());
 
         // 3. Redis 캐싱 (최신 메시지 저장)
-        // Key: chat:room:{idolId}
         String cacheKey = "chat:room:" + messageDto.getIdolId();
         redisTemplate.opsForList().leftPush(cacheKey, messageDto);
-        redisTemplate.opsForList().trim(cacheKey, 0, CACHE_SIZE - 1); // 50개만 유지
+        redisTemplate.opsForList().trim(cacheKey, 0, CACHE_SIZE - 1);
 
         // 4. Kafka로 전송
         chatProducer.sendChatMessage(messageDto);
@@ -83,22 +82,79 @@ public class ChatService {
         log.info("메시지 처리 완료: room={}, id={}", messageDto.getIdolId(), savedMessage.getId());
     }
 
+    // 메시지 회수 (Soft Delete)
+    public void deleteMessage(String messageId, Long idolId, int userId) {
+        // 1. DB에서 메시지 조회
+        ChatMessage message = chatRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("메시지를 찾을 수 없습니다."));
+
+        // 2. 권한 확인 (본인 메시지인지, 아이돌인지)
+        if (message.getSenderId() != userId) {
+            throw new RuntimeException("본인의 메시지만 삭제할 수 있습니다.");
+        }
+
+        // 3. Soft Delete 처리 (내용 변경 및 타입 변경)
+        // 실제로는 update를 해야 하므로 save를 다시 호출
+        ChatMessage deletedMessage = ChatMessage.builder()
+                .id(message.getId())
+                .idolId(message.getIdolId())
+                .senderId(message.getSenderId())
+                .senderNickname(message.getSenderNickname())
+                .senderRole(message.getSenderRole())
+                .content("삭제된 메시지입니다.")
+                .type("DELETED") // 타입 변경
+                .createdAt(message.getCreatedAt())
+                .build();
+        
+        chatRepository.save(deletedMessage);
+
+        // 4. Redis 캐시에서도 삭제 (또는 업데이트)
+        // 리스트에서 특정 요소를 찾아 지우는 건 복잡하므로, 
+        // 간단하게 캐시 전체를 날려버리거나(다음 조회 시 DB에서 긁어옴), 
+        // 삭제 이벤트를 전송해서 클라이언트가 처리하게 함.
+        // 여기서는 "삭제 이벤트 전송"에 집중.
+
+        // 5. 삭제 이벤트 브로드캐스팅 (Kafka -> Redis -> WebSocket)
+        ChatMessageDto deleteEvent = ChatMessageDto.builder()
+                .id(messageId)
+                .idolId(idolId)
+                .type("DELETE") // 클라이언트에게 "이거 지워!"라고 알림
+                .build();
+        
+        chatProducer.sendChatMessage(deleteEvent);
+        
+        log.info("메시지 삭제 처리 완료: id={}", messageId);
+    }
+
+    // 아이돌 접속 상태 조회
+    public boolean isIdolOnline(Long idolId) {
+        String onlineKey = "idol:online:" + idolId;
+        return redisTemplate.hasKey(onlineKey);
+    }
+
+    // 아이돌 접속 상태 변경 (StompHandler에서 호출)
+    public void setIdolOnline(Long idolId, boolean isOnline) {
+        String onlineKey = "idol:online:" + idolId;
+        if (isOnline) {
+            redisTemplate.opsForValue().set(onlineKey, "ON");
+        } else {
+            redisTemplate.delete(onlineKey);
+        }
+    }
+
     // 채팅 내역 조회 (페이징 + 캐싱)
     public List<ChatMessageDto> getChatHistory(Long idolId, String lastId, int size) {
-        // 1. 첫 페이지 요청(lastId == null)이면 Redis 캐시 확인
         if (lastId == null) {
             String cacheKey = "chat:room:" + idolId;
             List<Object> cachedMessages = redisTemplate.opsForList().range(cacheKey, 0, size - 1);
             
             if (cachedMessages != null && !cachedMessages.isEmpty()) {
-                log.info("채팅 내역 Redis 캐시 조회: room={}, size={}", idolId, cachedMessages.size());
                 return cachedMessages.stream()
                         .map(obj -> (ChatMessageDto) obj)
                         .collect(Collectors.toList());
             }
         }
 
-        // 2. 캐시 없거나 더 과거 데이터 요청이면 MongoDB 조회
         Pageable pageable = PageRequest.of(0, size);
         List<ChatMessage> messages;
 
@@ -107,8 +163,6 @@ public class ChatService {
         } else {
             messages = chatRepository.findByIdolIdAndIdLessThanOrderByIdDesc(idolId, lastId, pageable);
         }
-
-        log.info("채팅 내역 DB 조회: room={}, lastId={}, size={}", idolId, lastId, messages.size());
         
         return messages.stream()
                 .map(this::convertToDto)
@@ -117,7 +171,7 @@ public class ChatService {
 
     private ChatMessageDto convertToDto(ChatMessage entity) {
         return ChatMessageDto.builder()
-                .id(entity.getId()) // MongoDB ID
+                .id(entity.getId())
                 .idolId(entity.getIdolId())
                 .senderId(entity.getSenderId())
                 .senderNickname(entity.getSenderNickname())

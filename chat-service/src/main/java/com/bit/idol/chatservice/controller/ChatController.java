@@ -29,6 +29,7 @@ public class ChatController {
     // 클라이언트가 /pub/chat/send 로 메시지를 보내면 여기서 처리
     @MessageMapping("/chat/send")
     public void sendMessage(ChatMessageDto messageDto, SimpMessageHeaderAccessor accessor) {
+        // 세션에서 인증된 유저 정보 가져오기 (위변조 방지)
         Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
         String role = (String) accessor.getSessionAttributes().get("role");
         String nickname = (String) accessor.getSessionAttributes().get("nickname");
@@ -38,12 +39,14 @@ public class ChatController {
             return;
         }
 
+        // DTO에 세션 정보 덮어쓰기
         messageDto.setSenderId(userId);
         messageDto.setSenderRole(role);
         messageDto.setSenderNickname(nickname);
 
         log.info("메시지 수신: room={}, sender={}", messageDto.getIdolId(), nickname);
         
+        // 서비스 로직 실행 (검열 -> 저장 -> Kafka 발행)
         chatService.processMessage(messageDto);
     }
 
@@ -97,5 +100,32 @@ public class ChatController {
         response.put("type", type);
         
         return ResponseEntity.ok(response);
+    }
+
+    // 메시지 삭제 API (HTTP POST)
+    // 본인이 보낸 메시지만 삭제 가능 (Soft Delete)
+    @PostMapping("/chat/message/delete")
+    @ResponseBody
+    public ResponseEntity<Void> deleteMessage(
+            @RequestHeader("X-User-Id") int userId, // Gateway에서 넘어온 유저 ID
+            @RequestBody Map<String, Object> request
+    ) {
+        String messageId = (String) request.get("messageId");
+        // idolId는 Long 타입으로 안전하게 변환
+        Long idolId = Long.valueOf(request.get("idolId").toString());
+
+        log.info("메시지 삭제 요청: msgId={}, userId={}", messageId, userId);
+        chatService.deleteMessage(messageId, idolId, userId);
+        
+        return ResponseEntity.ok().build();
+    }
+
+    // 아이돌 접속 상태 확인 API (HTTP GET)
+    // 채팅방 목록에서 초록불(🟢) 띄울 때 사용
+    @GetMapping("/chat/status/{idolId}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Boolean>> getIdolStatus(@PathVariable("idolId") Long idolId) {
+        boolean isOnline = chatService.isIdolOnline(idolId);
+        return ResponseEntity.ok(Map.of("online", isOnline));
     }
 }
