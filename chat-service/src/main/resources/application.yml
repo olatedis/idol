@@ -9,6 +9,16 @@ spring:
   cloud:
     compatibility-verifier:
       enabled: false
+    aws:
+      s3:
+        bucket: idol--bucket-2026-service
+      credentials:
+        access-key: ${AWS_ACCESS_KEY:YOUR_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY:YOUR_SECRET_KEY}
+      region:
+        static: ap-northeast-2
+      stack:
+        auto: false
 
   # MongoDB 설정 (채팅 내역 저장)
   data:
@@ -37,6 +47,12 @@ spring:
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+  # 파일 업로드 크기 제한 (20MB - 동영상 고려)
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
 
 eureka:
   client:
