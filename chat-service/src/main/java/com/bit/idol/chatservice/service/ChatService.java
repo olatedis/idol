@@ -1,5 +1,6 @@
 package com.bit.idol.chatservice.service;
 
+import com.bit.idol.chatservice.client.UserFeignClient;
 import com.bit.idol.chatservice.dto.ChatMessageDto;
 import com.bit.idol.chatservice.entity.ChatMessage;
 import com.bit.idol.chatservice.filter.ChatFilter;
@@ -19,11 +20,27 @@ public class ChatService {
     private final ChatRepository chatRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final ChatFilter chatFilter;
+    private final UserFeignClient userFeignClient;
 
     public void processMessage(ChatMessageDto messageDto) {
-        // 1. 메시지 검열
-        String filteredContent = chatFilter.filter(messageDto.getContent());
-        messageDto.setContent(filteredContent);
+        try {
+            // 1. 메시지 검열
+            String filteredContent = chatFilter.filter(messageDto.getContent());
+            messageDto.setContent(filteredContent);
+        } catch (RuntimeException e) {
+            // 욕설 감지 시 예외 발생
+            log.warn("욕설 감지됨. 유저 신고 처리: userId={}, msg={}", messageDto.getSenderId(), e.getMessage());
+            
+            // 유저 신고 (비동기로 처리하면 더 좋음)
+            try {
+                userFeignClient.reportUser(messageDto.getSenderId());
+            } catch (Exception feignError) {
+                log.error("유저 신고 실패: {}", feignError.getMessage());
+            }
+            
+            // 클라이언트에게 에러 전파 (메시지 전송 중단)
+            throw e;
+        }
 
         // 2. MongoDB 저장
         ChatMessage chatMessage = ChatMessage.builder()
@@ -45,8 +62,6 @@ public class ChatService {
             
         } else {
             // 팬이 보냄 -> 아이돌에게만 전송 (/queue/idol/{id})
-            // 주의: 실제로는 아이돌이 접속 중인 서버로만 보내야 효율적이지만,
-            // 간단하게 구현하기 위해 아이돌 전용 토픽으로 발행함.
             redisTemplate.convertAndSend("/queue/idol/" + messageDto.getIdolId(), messageDto);
         }
         

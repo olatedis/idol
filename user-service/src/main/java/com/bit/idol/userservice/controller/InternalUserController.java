@@ -45,4 +45,12 @@ public class InternalUserController {
         
         return ResponseEntity.ok().build();
     }
+
+    // 신고 횟수 증가 (Chat Service 등에서 호출)
+    @PostMapping("/{userId}/report")
+    public ResponseEntity<Void> increaseReportCount(@PathVariable("userId") int userId) {
+        log.info("유저 신고 요청 (Internal): userId={}", userId);
+        userService.increaseReportCount(userId);
+        return ResponseEntity.ok().build();
+    }
 }
