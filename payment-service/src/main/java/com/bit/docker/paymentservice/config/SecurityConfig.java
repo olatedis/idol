@@ -24,7 +24,8 @@ public class SecurityConfig {
                     config.addExposedHeader("*");
                     return config;
                 }))
-                .csrf(AbstractHttpConfigurer::disable)
+//                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
