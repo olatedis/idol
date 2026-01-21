@@ -9,6 +9,16 @@ spring:
   cloud:
     compatibility-verifier:
       enabled: false
+    aws:
+      s3:
+        bucket: idol--bucket-2026-service
+      credentials:
+        access-key: ${AWS_ACCESS_KEY:YOUR_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY:YOUR_SECRET_KEY}
+      region:
+        static: ap-northeast-2
+      stack:
+        auto: false
 
   # MongoDB 설정 (채팅 내역 저장)
   data:
@@ -25,6 +35,24 @@ spring:
     redis:
       host: localhost
       port: 6379
+
+  # Kafka 설정 (Producer & Consumer)
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: chat-service-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+  # 파일 업로드 크기 제한 (20MB - 동영상 고려)
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
 
 eureka:
   client:

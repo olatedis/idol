@@ -6,6 +6,7 @@ import com.bit.idol.userservice.dto.user.UserInfoResponse;
 import com.bit.idol.userservice.dto.user.UserUpdateDto;
 import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
+import com.bit.idol.userservice.entity.UserStatus;
 import com.bit.idol.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
@@ -211,6 +212,24 @@ public class UserService {
         userRepository.delete(user);
         evictUserCache(user);
         log.info("회원 탈퇴 처리 완료: userId={}", userId);
+    }
+
+    // 신고 횟수 증가 (욕설 감지 등)
+    @Transactional
+    public void increaseReportCount(int userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setReportCount(user.getReportCount() + 1);
+        
+        // 신고 누적 10회 이상이면 계정 일시 정지
+        if (user.getReportCount() >= 10) {
+            user.setStatus(UserStatus.SUSPENDED);
+            log.warn("유저 일시 정지 처리됨 (신고 누적): userId={}", userId);
+        }
+
+        evictUserCache(user);
+        log.info("신고 횟수 증가: userId={}, count={}", userId, user.getReportCount());
     }
 
     private void evictUserCache(User user) {

@@ -8,6 +8,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Document(collection = "chat_messages")
 @Getter
@@ -24,7 +26,15 @@ public class ChatMessage {
     private String senderRole; // USER or IDOL
     
     private String content; // 메시지 내용
-    private String type; // TALK, IMAGE, SYSTEM 등
+    private String type; // TALK, IMAGE, SYSTEM, DELETED 등
+
+    // 답장 기능 (원본 메시지 ID)
+    private String parentId;
+
+    // 반응 기능 (이모지별 카운트)
+    // 예: { "HEART": 10, "LIKE": 5 }
+    @Builder.Default
+    private Map<String, Integer> reactions = new HashMap<>();
 
     private LocalDateTime createdAt;
 }

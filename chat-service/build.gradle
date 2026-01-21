@@ -19,6 +19,7 @@ repositories {
 
 ext {
     set('springCloudVersion', "2024.0.0")
+    set('springCloudAwsVersion', "3.1.0") // AWS 버전 변수 추가
 }
 
 dependencies {
@@ -30,6 +31,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+    // Kafka (비동기 메시지 처리)
+    implementation 'org.springframework.kafka:spring-kafka'
+
+    // AWS S3 (파일 업로드)
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
+
     // MSA (Eureka & Feign)
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
@@ -40,6 +47,9 @@ dependencies {
     // Zipkin & Micrometer Tracing
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+
+    // Aho-Corasick (욕설 필터링 성능 최적화)
+    implementation 'com.hankcs:aho-corasick-double-array-trie:1.2.3'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -53,6 +63,7 @@ dependencies {
 dependencyManagement {
     imports {
         mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+        mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudAwsVersion}" // AWS BOM 추가
     }
 }
 
