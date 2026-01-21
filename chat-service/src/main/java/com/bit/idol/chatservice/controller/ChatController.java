@@ -5,6 +5,7 @@ import com.bit.idol.chatservice.service.ChatService;
 import com.bit.idol.chatservice.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
@@ -23,6 +24,7 @@ public class ChatController {
 
     private final ChatService chatService;
     private final S3Service s3Service;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     // 클라이언트가 /pub/chat/send 로 메시지를 보내면 여기서 처리
     @MessageMapping("/chat/send")
@@ -52,11 +54,13 @@ public class ChatController {
         String role = (String) accessor.getSessionAttributes().get("role");
         if (!"IDOL".equals(role)) return;
 
-        // Kafka나 Redis를 거치지 않고 바로 WebSocket 브로커로 쏘는 게 효율적이지만,
-        // 서버가 여러 대일 수 있으므로 Redis Pub/Sub을 타야 함.
-        // 여기서는 간단히 ChatService에 위임하지 않고 바로 RedisTemplate을 써도 되지만,
-        // 구조 통일을 위해 ChatService에 typing 메서드를 만드는 게 좋음.
-        // (일단은 생략하고 클라이언트가 알아서 처리하도록 두거나, 추후 구현)
+        // Redis Pub/Sub으로 바로 발행 (DB 저장 X, Kafka X)
+        // 팬들은 /sub/idol/{id}를 구독 중이므로 거기로 쏘면 됨
+        // 타입만 TYPING으로 변경
+        messageDto.setType("TYPING");
+        redisTemplate.convertAndSend("/sub/idol/" + messageDto.getIdolId(), messageDto);
+        
+        log.debug("작성 중 신호 전송: room={}", messageDto.getIdolId());
     }
 
     // 채팅 내역 조회 API (HTTP)
