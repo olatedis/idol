@@ -41,6 +41,9 @@ dependencies {
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
+    // Aho-Corasick (욕설 필터링 성능 최적화)
+    implementation 'com.hankcs:aho-corasick-double-array-trie:1.2.3'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
