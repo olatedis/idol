@@ -22,6 +22,7 @@ public class PaymentController {
     public ResponseEntity<Void> confirm(
             @RequestBody PaymentConfirmDto dto
     ) {
+        System.out.println("PaymentController.confirm"+dto);
         paymentService.confirm(dto);
         return ResponseEntity.ok().build();
     }

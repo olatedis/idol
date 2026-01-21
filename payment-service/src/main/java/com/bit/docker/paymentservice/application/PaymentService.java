@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Service
 @AllArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
@@ -92,6 +92,11 @@ public class PaymentService {
         // 토스 측 상태가 DONE 이면 승인 성공
         if ("DONE".equals(response.getStatus())) {
             payment.complete(response.getPaymentKey(), payment.getAmount());
+
+
+            paymentRepository.save(payment);
+            paymentRepository.flush();
+            System.out.println("payment: "+payment);
 
             // 승인 성공 Kafka 이벤트 발행
             paymentEventProducerService.publish(

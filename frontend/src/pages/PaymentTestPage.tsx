@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 
 // ⚠️ 테스트 전제
-// 1. 토스페이먼츠 테스트 클라이언트 키 사용
-// 2. payment-service가 로컬 8083에서 동작 중
-// 3. 주문 생성 → 결제창 → 결제 승인(confirm) 흐름 테스트용
+// 토스페이먼츠 테스트 클라이언트 키 사용
+// 주문 생성 → 결제창 → 결제 승인(confirm) 흐름 테스트용
 
 const CLIENT_KEY = "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq"; // 토스 테스트 클라이언트 키
 const API_BASE = "http://localhost:8087";
