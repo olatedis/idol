@@ -27,6 +27,9 @@
       <module name="auth-service" options="-parameters" />
       <module name="auth-service.main" options="-parameters" />
       <module name="auth-service.test" options="-parameters" />
+      <module name="chat-service" options="-parameters" />
+      <module name="chat-service.main" options="-parameters" />
+      <module name="chat-service.test" options="-parameters" />
       <module name="com.bit.idol.auth-service.main" options="-parameters" />
       <module name="com.bit.idol.auth-service.test" options="-parameters" />
       <module name="com.bit.idol.vote-service" options="-parameters" />
