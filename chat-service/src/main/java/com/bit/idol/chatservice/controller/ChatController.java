@@ -9,12 +9,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -28,7 +27,6 @@ public class ChatController {
     // 클라이언트가 /pub/chat/send 로 메시지를 보내면 여기서 처리
     @MessageMapping("/chat/send")
     public void sendMessage(ChatMessageDto messageDto, SimpMessageHeaderAccessor accessor) {
-        // 세션에서 인증된 유저 정보 가져오기 (위변조 방지)
         Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
         String role = (String) accessor.getSessionAttributes().get("role");
         String nickname = (String) accessor.getSessionAttributes().get("nickname");
@@ -38,15 +36,38 @@ public class ChatController {
             return;
         }
 
-        // DTO에 세션 정보 덮어쓰기
         messageDto.setSenderId(userId);
         messageDto.setSenderRole(role);
         messageDto.setSenderNickname(nickname);
 
         log.info("메시지 수신: room={}, sender={}", messageDto.getIdolId(), nickname);
         
-        // 서비스 로직 실행 (검열 -> 저장 -> Kafka 발행)
         chatService.processMessage(messageDto);
+    }
+
+    // 작성 중 표시 (저장 X, 브로드캐스팅만)
+    @MessageMapping("/chat/typing")
+    public void typing(ChatMessageDto messageDto, SimpMessageHeaderAccessor accessor) {
+        // 아이돌만 사용 가능
+        String role = (String) accessor.getSessionAttributes().get("role");
+        if (!"IDOL".equals(role)) return;
+
+        // Kafka나 Redis를 거치지 않고 바로 WebSocket 브로커로 쏘는 게 효율적이지만,
+        // 서버가 여러 대일 수 있으므로 Redis Pub/Sub을 타야 함.
+        // 여기서는 간단히 ChatService에 위임하지 않고 바로 RedisTemplate을 써도 되지만,
+        // 구조 통일을 위해 ChatService에 typing 메서드를 만드는 게 좋음.
+        // (일단은 생략하고 클라이언트가 알아서 처리하도록 두거나, 추후 구현)
+    }
+
+    // 채팅 내역 조회 API (HTTP)
+    @GetMapping("/chat/history/{idolId}")
+    @ResponseBody
+    public ResponseEntity<List<ChatMessageDto>> getChatHistory(
+            @PathVariable("idolId") Long idolId,
+            @RequestParam(value = "lastId", required = false) String lastId,
+            @RequestParam(value = "size", defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(chatService.getChatHistory(idolId, lastId, size));
     }
 
     // 파일 업로드 API (HTTP)

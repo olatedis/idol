@@ -12,10 +12,11 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class ChatMessageDto {
+    private String id; // MongoDB ID (페이징 커서용)
     private Long idolId; // 방 번호
     private int senderId;
     private String senderNickname;
     private String senderRole; // USER or IDOL
     private String content;
-    private String type; // TALK
+    private String type; // TALK, IMAGE, VIDEO, VOICE
 }
