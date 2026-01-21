@@ -32,6 +32,9 @@ dependencies {
     // Redis (캐싱 및 세션 관리용)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+    // Kafka (비동기 메시지 처리)
+    implementation 'org.springframework.kafka:spring-kafka'
+
     // AWS S3 (파일 업로드용)
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
 
