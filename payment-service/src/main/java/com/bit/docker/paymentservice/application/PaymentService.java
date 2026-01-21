@@ -94,21 +94,24 @@ public class PaymentService {
             payment.complete(response.getPaymentKey(), payment.getAmount());
 
 
-            paymentRepository.save(payment);
-            paymentRepository.flush();
             System.out.println("payment: "+payment);
 
-            // 승인 성공 Kafka 이벤트 발행
-            paymentEventProducerService.publish(
-                    "payment.completed",
-                    new PaymentEvent(
-                            payment.getUserId(),
-                            payment.getOrderId(),
-                            payment.getDomain(),
-                            payment.getTargetId(),
-                            payment.getAmount()
-                    )
-            );
+//            try{
+//                // 승인 성공 Kafka 이벤트 발행
+//                paymentEventProducerService.publish(
+//                        "payment.completed",
+//                        new PaymentEvent(
+//                                payment.getUserId(),
+//                                payment.getOrderId(),
+//                                payment.getDomain(),
+//                                payment.getTargetId(),
+//                                payment.getAmount()
+//                        )
+//                );
+//
+//            }catch (Exception e){
+//                System.out.println("카프카 이벤트 발행 실패"+ e);
+//            }
         } else {
             payment.fail();
         }
