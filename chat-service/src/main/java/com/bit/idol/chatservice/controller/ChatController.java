@@ -111,7 +111,6 @@ public class ChatController {
             @RequestBody Map<String, Object> request
     ) {
         String messageId = (String) request.get("messageId");
-        // idolId는 Long 타입으로 안전하게 변환
         Long idolId = Long.valueOf(request.get("idolId").toString());
 
         log.info("메시지 삭제 요청: msgId={}, userId={}", messageId, userId);
@@ -127,5 +126,20 @@ public class ChatController {
     public ResponseEntity<Map<String, Boolean>> getIdolStatus(@PathVariable("idolId") Long idolId) {
         boolean isOnline = chatService.isIdolOnline(idolId);
         return ResponseEntity.ok(Map.of("online", isOnline));
+    }
+
+    // 메시지 반응 추가 API (HTTP POST)
+    // 좋아요, 하트 등 이모지 반응
+    @PostMapping("/chat/reaction")
+    @ResponseBody
+    public ResponseEntity<Void> addReaction(@RequestBody Map<String, Object> request) {
+        String messageId = (String) request.get("messageId");
+        String reactionType = (String) request.get("reactionType");
+        Long idolId = Long.valueOf(request.get("idolId").toString());
+
+        log.info("반응 추가 요청: msgId={}, type={}", messageId, reactionType);
+        chatService.addReaction(messageId, reactionType, idolId);
+        
+        return ResponseEntity.ok().build();
     }
 }
