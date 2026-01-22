@@ -26,6 +26,12 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
+# Swagger 설정 (Gateway 주소 명시 - 수정됨)
+springdoc:
+  servers:
+    - url: http://localhost:8000
+      description: Gateway Server
+
 eureka:
   client:
     service-url:

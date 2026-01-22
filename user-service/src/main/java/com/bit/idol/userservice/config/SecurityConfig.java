@@ -21,6 +21,8 @@ public class SecurityConfig {
                 .requestMatchers("/users/**").permitAll() // 회원가입 등 사용자 관련 API 허용
                 .requestMatchers("/internal/**").permitAll() // 내부 통신용 API 허용
                 .requestMatchers("/actuator/**").permitAll() // 상태 확인용
+                // Swagger 관련 경로 허용
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated() // 그 외 요청은 인증 필요
             );
         

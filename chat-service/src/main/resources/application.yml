@@ -54,6 +54,12 @@ spring:
       max-file-size: 20MB
       max-request-size: 20MB
 
+# Swagger 설정 (Gateway 주소 명시)
+springdoc:
+  servers:
+    - url: http://localhost:8000
+      description: Gateway Server
+
 eureka:
   client:
     service-url:
