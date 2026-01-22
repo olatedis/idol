@@ -63,7 +63,7 @@ services:
       - ./data/mysql/data:/var/lib/mysql
       - ./data/mysql/init:/docker-entrypoint-initdb.d
 
-  # MongoDB 추가
+  # MongoDB
   mongo:
     image: mongo:latest
     container_name: idol-mongo
@@ -77,3 +77,26 @@ services:
     container_name: idol-zipkin
     ports:
       - "9411:9411"
+
+  # Elasticsearch (검색 엔진)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    container_name: idol-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # 메모리 제한
+    ports:
+      - "9200:9200"
+    volumes:
+      - ./data/elasticsearch/data:/usr/share/elasticsearch/data
+
+  # Kibana (데이터 시각화)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.10
+    container_name: idol-kibana
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
