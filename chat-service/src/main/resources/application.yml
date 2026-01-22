@@ -54,6 +54,12 @@ spring:
       max-file-size: 20MB
       max-request-size: 20MB
 
+# Swagger 설정 (Gateway 주소 명시)
+springdoc:
+  servers:
+    - url: http://localhost:8000
+      description: Gateway Server
+
 eureka:
   client:
     service-url:
@@ -68,3 +74,24 @@ management:
   zipkin:
     tracing:
       endpoint: http://localhost:9411/api/v2/spans
+
+# Resilience4j 설정 (추가됨)
+resilience4j:
+  circuitbreaker:
+    instances:
+      user-check: # 유저 정보 확인용
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+      subscription-check: # 구독 확인용
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50

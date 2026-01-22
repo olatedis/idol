@@ -3,6 +3,7 @@ package com.bit.idol.chatservice.controller;
 import com.bit.idol.chatservice.dto.ChatMessageDto;
 import com.bit.idol.chatservice.service.ChatService;
 import com.bit.idol.chatservice.service.S3Service;
+import com.bit.idol.chatservice.service.TranslationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -24,12 +25,12 @@ public class ChatController {
 
     private final ChatService chatService;
     private final S3Service s3Service;
+    private final TranslationService translationService; // 번역 서비스 추가
     private final RedisTemplate<String, Object> redisTemplate;
 
     // 클라이언트가 /pub/chat/send 로 메시지를 보내면 여기서 처리
     @MessageMapping("/chat/send")
     public void sendMessage(ChatMessageDto messageDto, SimpMessageHeaderAccessor accessor) {
-        // 세션에서 인증된 유저 정보 가져오기 (위변조 방지)
         Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
         String role = (String) accessor.getSessionAttributes().get("role");
         String nickname = (String) accessor.getSessionAttributes().get("nickname");
@@ -39,27 +40,21 @@ public class ChatController {
             return;
         }
 
-        // DTO에 세션 정보 덮어쓰기
         messageDto.setSenderId(userId);
         messageDto.setSenderRole(role);
         messageDto.setSenderNickname(nickname);
 
         log.info("메시지 수신: room={}, sender={}", messageDto.getIdolId(), nickname);
         
-        // 서비스 로직 실행 (검열 -> 저장 -> Kafka 발행)
         chatService.processMessage(messageDto);
     }
 
     // 작성 중 표시 (저장 X, 브로드캐스팅만)
     @MessageMapping("/chat/typing")
     public void typing(ChatMessageDto messageDto, SimpMessageHeaderAccessor accessor) {
-        // 아이돌만 사용 가능
         String role = (String) accessor.getSessionAttributes().get("role");
         if (!"IDOL".equals(role)) return;
 
-        // Redis Pub/Sub으로 바로 발행 (DB 저장 X, Kafka X)
-        // 팬들은 /sub/idol/{id}를 구독 중이므로 거기로 쏘면 됨
-        // 타입만 TYPING으로 변경
         messageDto.setType("TYPING");
         redisTemplate.convertAndSend("/sub/idol/" + messageDto.getIdolId(), messageDto);
         
@@ -103,11 +98,10 @@ public class ChatController {
     }
 
     // 메시지 삭제 API (HTTP POST)
-    // 본인이 보낸 메시지만 삭제 가능 (Soft Delete)
     @PostMapping("/chat/message/delete")
     @ResponseBody
     public ResponseEntity<Void> deleteMessage(
-            @RequestHeader("X-User-Id") int userId, // Gateway에서 넘어온 유저 ID
+            @RequestHeader("X-User-Id") int userId,
             @RequestBody Map<String, Object> request
     ) {
         String messageId = (String) request.get("messageId");
@@ -120,7 +114,6 @@ public class ChatController {
     }
 
     // 아이돌 접속 상태 확인 API (HTTP GET)
-    // 채팅방 목록에서 초록불(🟢) 띄울 때 사용
     @GetMapping("/chat/status/{idolId}")
     @ResponseBody
     public ResponseEntity<Map<String, Boolean>> getIdolStatus(@PathVariable("idolId") Long idolId) {
@@ -129,7 +122,6 @@ public class ChatController {
     }
 
     // 메시지 반응 추가 API (HTTP POST)
-    // 좋아요, 하트 등 이모지 반응
     @PostMapping("/chat/reaction")
     @ResponseBody
     public ResponseEntity<Void> addReaction(@RequestBody Map<String, Object> request) {
@@ -141,5 +133,17 @@ public class ChatController {
         chatService.addReaction(messageId, reactionType, idolId);
         
         return ResponseEntity.ok().build();
+    }
+
+    // 메시지 번역 API (HTTP GET)
+    // 예: /chat/translate/msg123?lang=EN
+    @GetMapping("/chat/translate/{messageId}")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> translateMessage(
+            @PathVariable("messageId") String messageId,
+            @RequestParam(value = "lang", defaultValue = "EN") String lang
+    ) {
+        String translatedText = translationService.translateMessage(messageId, lang);
+        return ResponseEntity.ok(Map.of("text", translatedText, "lang", lang));
     }
 }

@@ -36,5 +36,10 @@ public class ChatMessage {
     @Builder.Default
     private Map<String, Integer> reactions = new HashMap<>();
 
+    // 번역 기능 (언어별 번역본 캐싱)
+    // 예: { "EN": "Hello", "JA": "こんにちは" }
+    @Builder.Default
+    private Map<String, String> translations = new HashMap<>();
+
     private LocalDateTime createdAt;
 }

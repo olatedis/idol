@@ -13,6 +13,7 @@
     <file type="web" url="file://$PROJECT_DIR$/payment-service" />
     <file type="web" url="file://$PROJECT_DIR$/ranking-service" />
     <file type="web" url="file://$PROJECT_DIR$/reserve-service" />
+    <file type="web" url="file://$PROJECT_DIR$/search-service" />
     <file type="web" url="file://$PROJECT_DIR$/subscription-service" />
     <file type="web" url="file://$PROJECT_DIR$/user-service" />
     <file type="web" url="file://$PROJECT_DIR$/vote-service" />

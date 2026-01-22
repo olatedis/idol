@@ -7,6 +7,19 @@ spring:
 
   cloud:
     gateway:
+      # CORS 설정 (전역) - 프론트엔드(5173) 전용
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: 
+              - "http://localhost:5173" # 프론트엔드 주소
+              - "http://localhost:8000" # Swagger UI (Gateway 자신)
+            allowedMethods:
+              - GET
+              - POST
+            allowedHeaders: "*"
+            allowCredentials: true # 특정 Origin을 명시했으므로 true 가능 (쿠키/인증헤더 허용)
+
       routes:
         - id: auth-service
           uri: lb://AUTH-SERVICE
@@ -16,7 +29,7 @@ spring:
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
-            - Path=/users/**
+            - Path=/users/**, /reports/**, /internal/**
 
         - id: voting-service
           uri: lb://VOTING-SERVICE
@@ -26,12 +39,60 @@ spring:
         - id: ranking-service
           uri: lb://RANKING-SERVICE
           predicates:
-            - Path=/ws-ranking/**, /api/rankings/** # HTTP API 경로 추가
+            - Path=/ws-ranking/**, /api/rankings/**
+
+        - id: chat-service
+          uri: lb://CHAT-SERVICE
+          predicates:
+            - Path=/chat/**, /ws-chat/**
+
+        # Swagger API Docs 라우팅
+        - id: openapi-auth
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/v3/api-docs/auth-service
+          filters:
+            - RewritePath=/v3/api-docs/auth-service, /v3/api-docs
+
+        - id: openapi-user
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/v3/api-docs/user-service
+          filters:
+            - RewritePath=/v3/api-docs/user-service, /v3/api-docs
+
+        - id: openapi-vote
+          uri: lb://VOTING-SERVICE
+          predicates:
+            - Path=/v3/api-docs/vote-service
+          filters:
+            - RewritePath=/v3/api-docs/vote-service, /v3/api-docs
+
+        - id: openapi-chat
+          uri: lb://CHAT-SERVICE
+          predicates:
+            - Path=/v3/api-docs/chat-service
+          filters:
+            - RewritePath=/v3/api-docs/chat-service, /v3/api-docs
 
       discovery:
         locator:
           enabled: true
           lower-case-service-id: true
+
+# Swagger UI 설정
+springdoc:
+  swagger-ui:
+    urls:
+      - name: Auth Service
+        url: /v3/api-docs/auth-service
+      - name: User Service
+        url: /v3/api-docs/user-service
+      - name: Vote Service
+        url: /v3/api-docs/vote-service
+      - name: Chat Service
+        url: /v3/api-docs/chat-service
+    path: /swagger-ui.html
 
 eureka:
   client:
@@ -43,10 +104,8 @@ eureka:
     prefer-ip-address: true
 
 jwt:
-  # 기본값 설정
   secret: ${JWT_SECRET:your-very-long-and-secure-random-string-idol-link-project}
-  # 랭킹 조회 API도 인증 없이 접근 가능하도록 화이트리스트 추가
-  white-list-path: /auth/login, /auth/reissue, /users/register, /ws-ranking/**, /api/rankings/**
+  white-list-path: /auth/login, /auth/reissue, /users/register, /ws-ranking/**, /api/rankings/**, /v3/api-docs/**, /swagger-ui/**, /swagger-ui.html, /webjars/**
 
 logging:
   level:
