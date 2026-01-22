@@ -7,16 +7,18 @@ spring:
 
   cloud:
     gateway:
-      # CORS 설정 (전역)
+      # CORS 설정 (전역) - 프론트엔드(5173) 전용
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins: "*" # 모든 도메인 허용 (개발용)
+            allowedOrigins: 
+              - "http://localhost:5173" # 프론트엔드 주소
+              - "http://localhost:8000" # Swagger UI (Gateway 자신)
             allowedMethods:
               - GET
               - POST
-            allowedHeaders: "*" # 모든 헤더 허용
-            allowCredentials: false # allowedOrigins가 *일 때는 false여야 함
+            allowedHeaders: "*"
+            allowCredentials: true # 특정 Origin을 명시했으므로 true 가능 (쿠키/인증헤더 허용)
 
       routes:
         - id: auth-service
@@ -27,7 +29,7 @@ spring:
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
-            - Path=/users/**, /reports/**, /internal/** # reports 경로 추가
+            - Path=/users/**, /reports/**, /internal/**
 
         - id: voting-service
           uri: lb://VOTING-SERVICE
