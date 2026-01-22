@@ -44,7 +44,7 @@ dependencies {
     // Actuator & Monitoring
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-    implementation 'org.springframework.kafka:spring-kafka:3.2.0'
+    implementation 'org.springframework.kafka:spring-kafka'
 
     // Zipkin & Tracing (Spring Boot 3.x 스타일)
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
