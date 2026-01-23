@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Idol Chat Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .input-group { margin-bottom: 10px; }
+        label { display: inline-block; width: 100px; font-weight: bold; }
+        input { width: 300px; padding: 5px; }
+        button { padding: 5px 10px; cursor: pointer; }
+        #chat-box { width: 100%; height: 400px; border: 1px solid #ccc; overflow-y: scroll; margin-bottom: 10px; padding: 10px; background: #f9f9f9; }
+        .message { margin-bottom: 5px; }
+        .my-msg { color: blue; text-align: right; }
+        .other-msg { color: green; }
+        .system-msg { color: gray; font-style: italic; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>🎤 Idol Chat Test</h2>
+
+    <div class="input-group">
+        <label>Token:</label>
+        <input type="text" id="token" placeholder="Bearer eyJhbGci...">
+    </div>
+    <div class="input-group">
+        <label>Idol ID:</label>
+        <input type="number" id="idolId" value="2">
+    </div>
+    <div class="input-group">
+        <button onclick="connect()">🔴 연결 (Connect)</button>
+        <button onclick="disconnect()">⚪ 연결 끊기</button>
+    </div>
+
+    <hr>
+
+    <div id="chat-box"></div>
+
+    <div class="input-group">
+        <input type="text" id="message" placeholder="메시지를 입력하세요" onkeypress="if(event.keyCode==13) sendMessage()">
+        <button onclick="sendMessage()">전송 (Send)</button>
+    </div>
+</div>
+
+<script>
+    let stompClient = null;
+    let roomId = "2"; // 아이돌 ID와 동일하게 설정 (테스트용)
+
+    function connect() {
+        const token = document.getElementById('token').value;
+        const idolId = document.getElementById('idolId').value;
+        roomId = idolId;
+
+        if (!token) {
+            alert("토큰을 입력해주세요!");
+            return;
+        }
+
+        // SockJS 없이 일반 WebSocket 사용 (WebSocketConfig 설정에 맞춤)
+        const socket = new WebSocket('ws://localhost:8089/ws-chat');
+        stompClient = Stomp.over(socket);
+
+        const headers = {
+            'Authorization': token,
+            'idolId': idolId
+        };
+
+        stompClient.connect(headers, function (frame) {
+            console.log('Connected: ' + frame);
+            appendMessage("✅ 시스템: 채팅방에 연결되었습니다.", "system-msg");
+
+            // 구독 (Subscribe)
+            stompClient.subscribe('/sub/chat/room/' + roomId, function (message) {
+                const body = JSON.parse(message.body);
+                showMessage(body);
+            });
+
+        }, function (error) {
+            console.error('Error:', error);
+            appendMessage("❌ 시스템: 연결 실패! (" + error + ")", "system-msg");
+        });
+    }
+
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect();
+        }
+        console.log("Disconnected");
+        appendMessage("⚪ 시스템: 연결이 종료되었습니다.", "system-msg");
+    }
+
+    function sendMessage() {
+        const messageInput = document.getElementById('message');
+        const content = messageInput.value;
+
+        if (!stompClient || !content) return;
+
+        const chatMessage = {
+            roomId: roomId,
+            content: content,
+            type: 'TALK'
+        };
+
+        stompClient.send("/pub/chat/message", {}, JSON.stringify(chatMessage));
+        messageInput.value = '';
+    }
+
+    function showMessage(message) {
+        // 내가 보낸 메시지인지 확인 (간단하게 닉네임 등으로 구분 가능하지만 여기선 생략)
+        appendMessage(message.senderName + ": " + message.content, "other-msg");
+    }
+
+    function appendMessage(text, className) {
+        const chatBox = document.getElementById('chat-box');
+        const div = document.createElement('div');
+        div.className = 'message ' + className;
+        div.innerText = text;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight; // 스크롤 자동 내림
+    }
+</script>
+</body>
+</html>

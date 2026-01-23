@@ -39,6 +39,7 @@ public class UserDto {
     private String providerId;
 
     private UserStatus status;
+    private int reportCount; // 추가됨
 
     // 이메일 인증 토큰 (회원가입 시 필수)
     private String verificationToken;
@@ -57,6 +58,7 @@ public class UserDto {
                 .provider(user.getProvider())
                 .providerId(user.getProviderId())
                 .status(user.getStatus())
+                .reportCount(user.getReportCount()) // 추가됨
                 .build();
     }
 }

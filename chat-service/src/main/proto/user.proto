@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.bit.idol.grpc";
+option java_outer_classname = "UserProto";
+
+service UserGrpcService {
+  // 유저 정보 조회 (ID로 조회)
+  rpc GetUserById (UserIdRequest) returns (UserResponse);
+
+  // 유저 정보 조회 (토큰으로 조회)
+  rpc GetUserByToken (UserTokenRequest) returns (UserResponse);
+}
+
+message UserIdRequest {
+  int32 user_id = 1;
+}
+
+message UserTokenRequest {
+  string token = 1;
+}
+
+message UserResponse {
+  int32 user_id = 1;
+  string username = 2;
+  string nickname = 3;
+  string email = 4;
+  string role = 5;
+  string status = 6;
+}

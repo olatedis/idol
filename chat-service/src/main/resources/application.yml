@@ -26,10 +26,6 @@ spring:
       host: localhost
       port: 27017
       database: idol_chat
-      # 계정 설정이 필요하다면 아래 주석을 해제하고 입력하세요
-      # authentication-database: admin 
-      # username: root
-      # password: password
 
     # Redis 설정 (Pub/Sub 및 채팅방 관리)
     redis:
@@ -48,13 +44,20 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
-  # 파일 업로드 크기 제한 (20MB - 동영상 고려)
+  # 파일 업로드 크기 제한 (20MB)
   servlet:
     multipart:
       max-file-size: 20MB
       max-request-size: 20MB
 
-# Swagger 설정 (Gateway 주소 명시)
+# gRPC Client 설정 (수정됨)
+grpc:
+  client:
+    auth-service: # 이름 변경
+      address: static://localhost:9091 # 포트 변경
+      negotiation-type: plaintext
+
+# Swagger 설정
 springdoc:
   servers:
     - url: http://localhost:8000
@@ -75,11 +78,11 @@ management:
     tracing:
       endpoint: http://localhost:9411/api/v2/spans
 
-# Resilience4j 설정 (추가됨)
+# Resilience4j 설정
 resilience4j:
   circuitbreaker:
     instances:
-      user-check: # 유저 정보 확인용
+      user-check:
         registerHealthIndicator: true
         slidingWindowSize: 10
         minimumNumberOfCalls: 5
@@ -87,7 +90,7 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         waitDurationInOpenState: 10s
         failureRateThreshold: 50
-      subscription-check: # 구독 확인용
+      subscription-check:
         registerHealthIndicator: true
         slidingWindowSize: 10
         minimumNumberOfCalls: 5
