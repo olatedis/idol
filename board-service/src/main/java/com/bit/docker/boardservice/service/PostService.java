@@ -1,8 +1,7 @@
 package com.bit.docker.boardservice.service;
 
-import com.bit.docker.boardservice.client.AgencyInternalClient;
-import com.bit.docker.boardservice.client.GroupInternalClient;
-import com.bit.docker.boardservice.client.IdolInternalClient;
+import com.bit.docker.boardservice.client.*;
+import com.bit.docker.boardservice.dto.PostListResponse;
 import com.bit.docker.boardservice.dto.PostResponse;
 import com.bit.docker.boardservice.dto.PostUpdateRequest;
 import com.bit.docker.boardservice.dto.PostWriteRequest;
@@ -32,14 +31,15 @@ public class PostService {
 
     private final PostRepository postRepository;
 
-    private final IdolInternalClient idolInternalClient;
+    /*private final IdolInternalClient idolInternalClient;
     private final GroupInternalClient groupInternalClient;
-    private final AgencyInternalClient agencyInternalClient;
+    private final AgencyInternalClient agencyInternalClient;*/
+
+    private final UserInternalClient userInternalClient;
+    private final SubscriptionInternalClient subscriptionInternalClient;
+
 
     private final NotifyProducer notifyProducer;
-
-    @Value("${internal.key}")
-    private String internalKey;
 
     @Transactional
     public PostResponse insert(PostWriteRequest req, Integer userId, Role role) {
@@ -62,15 +62,22 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostResponse selectOne(Long postId) {
+    public PostResponse selectOne(Long postId, Integer userId, Role role) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ApiException(404, "post not found"));
+
+        // A안: IDOL 게시판은 "상세(content)"는 구독자만 (USER만 제한)
+        if (post.getBoardType() == BoardType.IDOL && role == Role.USER) {
+            boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId);
+            if (!ok) throw new ApiException(403, "subscription required");
+        }
+
         return toResponse(post);
     }
 
+
     @Transactional(readOnly = true)
-    public Page<PostResponse> selectAll(BoardType boardType, Long idolId, Long groupId, Pageable pageable) {
-        // TODO: 추후 게시판 유료/무료에 대한 제한구분되면 다시 와서 수정하기
+    public Page<PostListResponse> selectAll(BoardType boardType, Long idolId, Long groupId, Pageable pageable) {
         validateBoardScope(boardType, idolId, groupId);
 
         Page<Post> page;
@@ -81,8 +88,9 @@ public class PostService {
         } else {
             page = postRepository.findByBoardTypeOrderByCreatedAtDesc(boardType, pageable);
         }
-        return page.map(this::toResponse);
+        return page.map(this::toListResponse);
     }
+
 
     @Transactional
     public PostResponse update(Long postId, PostUpdateRequest req, Integer userId, Role role) {
@@ -127,26 +135,14 @@ public class PostService {
     }
 
     private void requireCreatePermission(BoardType boardType, Long idolId, Long groupId, Integer userId, Role role) {
-        if (role == null) throw new ApiException(401, "role is required");
-
-        // ADMIN은 모든 것 가능
-        if (role == Role.ADMIN) return;
-
-        if (boardType == BoardType.FAN) {
-            // FAN 게시판: USER는 작성 가능, IDOL/AGENCY는 보통 작성 막음
-            if (role == Role.USER) return;
-            throw new ApiException(403, "forbidden");
-        }
-
         if (boardType == BoardType.IDOL) {
-            // IDOL/AGENCY만 작성 가능
             if (role == Role.IDOL) {
-                boolean ok = idolInternalClient.isOwner(idolId, userId, internalKey);
+                boolean ok = userInternalClient.isIdolOwner(idolId, userId);
                 if (!ok) throw new ApiException(403, "forbidden");
                 return;
             }
             if (role == Role.AGENCY) {
-                boolean ok = agencyInternalClient.canManageIdol(userId, idolId, internalKey);
+                boolean ok = userInternalClient.canAgencyManageIdol(userId, idolId);
                 if (!ok) throw new ApiException(403, "forbidden");
                 return;
             }
@@ -154,42 +150,30 @@ public class PostService {
         }
 
         if (boardType == BoardType.GROUP) {
-            // 그룹 게시판: 그룹 멤버 IDOL 또는 AGENCY 가능
             if (role == Role.IDOL) {
-                boolean ok = groupInternalClient.isMember(groupId, userId, internalKey);
+                boolean ok = userInternalClient.isGroupMember(groupId, userId);
                 if (!ok) throw new ApiException(403, "forbidden");
                 return;
             }
             if (role == Role.AGENCY) {
-                boolean ok = agencyInternalClient.canManageGroup(userId, groupId, internalKey);
+                boolean ok = userInternalClient.canAgencyManageGroup(userId, groupId);
                 if (!ok) throw new ApiException(403, "forbidden");
                 return;
             }
             throw new ApiException(403, "forbidden");
         }
 
-        throw new ApiException(403, "forbidden");
     }
 
     private void requireUpdatePermission(Post post, Integer userId, Role role) {
-        if (role == null) throw new ApiException(401, "role is required");
-        if (role == Role.ADMIN) return;
-
-        // FAN 게시판: USER는 본인 글만 수정 가능
-        if (post.getBoardType() == BoardType.FAN) {
-            if (role == Role.USER && post.getAuthorId().equals(userId)) return;
-            throw new ApiException(403, "forbidden");
-        }
-
-        // IDOL/GROUP 게시판 수정: IDOL/AGENCY만, 범위 검증 포함
         if (post.getBoardType() == BoardType.IDOL) {
             if (role == Role.IDOL) {
-                boolean ok = idolInternalClient.isOwner(post.getIdolId(), userId, internalKey);
+                boolean ok = userInternalClient.isIdolOwner(post.getIdolId(), userId);
                 if (!ok) throw new ApiException(403, "forbidden");
                 return;
             }
             if (role == Role.AGENCY) {
-                boolean ok = agencyInternalClient.canManageIdol(userId, post.getIdolId(), internalKey);
+                boolean ok = userInternalClient.canAgencyManageIdol(userId, post.getIdolId());
                 if (!ok) throw new ApiException(403, "forbidden");
                 return;
             }
@@ -198,19 +182,18 @@ public class PostService {
 
         if (post.getBoardType() == BoardType.GROUP) {
             if (role == Role.IDOL) {
-                boolean ok = groupInternalClient.isMember(post.getGroupId(), userId, internalKey);
+                boolean ok = userInternalClient.isGroupMember(post.getGroupId(), userId);
                 if (!ok) throw new ApiException(403, "forbidden");
                 return;
             }
             if (role == Role.AGENCY) {
-                boolean ok = agencyInternalClient.canManageGroup(userId, post.getGroupId(), internalKey);
+                boolean ok = userInternalClient.canAgencyManageGroup(userId, post.getGroupId());
                 if (!ok) throw new ApiException(403, "forbidden");
                 return;
             }
             throw new ApiException(403, "forbidden");
         }
 
-        throw new ApiException(403, "forbidden");
     }
 
     private void requireDeletePermission(Post post, Integer userId, Role role) {
@@ -273,5 +256,10 @@ public class PostService {
         return t;
     }
 
+    private PostListResponse toListResponse(Post post) {
+        PostListResponse res = new PostListResponse();
+        BeanUtils.copyProperties(post, res);
+        return res;
+    }
 
 }

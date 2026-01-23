@@ -1,5 +1,6 @@
 package com.bit.docker.boardservice.controller;
 
+import com.bit.docker.boardservice.dto.PostListResponse;
 import com.bit.docker.boardservice.dto.PostResponse;
 import com.bit.docker.boardservice.dto.PostUpdateRequest;
 import com.bit.docker.boardservice.dto.PostWriteRequest;
@@ -28,15 +29,20 @@ public class PostController {
             @RequestParam(value = "groupId", required = false) Long groupId,
             Pageable pageable
     ) {
-        Page<PostResponse> page = postService.selectAll(boardType, idolId, groupId, pageable);
+        Page<PostListResponse> page = postService.selectAll(boardType, idolId, groupId, pageable);
         return ResponseEntity.ok(page);
     }
 
-    // 단건 조회
     @GetMapping("/{postId}")
-    public ResponseEntity<?> showOne(@PathVariable("postId") Long postId) {
-        return ResponseEntity.ok(postService.selectOne(postId));
+    public ResponseEntity<?> showOne(
+            @RequestHeader("X-User-Id") Integer userId,
+            @RequestHeader("X-User-Role") String roleRaw,
+            @PathVariable("postId") Long postId
+    ) {
+        Role role = parseRole(roleRaw);
+        return ResponseEntity.ok(postService.selectOne(postId, userId, role));
     }
+
 
     // 작성
     @PostMapping
