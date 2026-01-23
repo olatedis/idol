@@ -57,7 +57,7 @@ public class SubscriptionExpireScheduler {
                             .targetType(SubscriptionEvent.TargetType.IDOL)
                             .userId(sub.getUserId())
                             .idolId(sub.getIdolId())
-                            .groupId(null)
+                            .groupId(0)
                             .occurredAt(LocalDateTime.now())
                             .build()
             );
@@ -83,7 +83,7 @@ public class SubscriptionExpireScheduler {
                             .eventType("EXPIRED")
                             .targetType(SubscriptionEvent.TargetType.GROUP)
                             .userId(gs.getUserId())
-                            .idolId(null)
+                            .idolId(0)
                             .groupId(gs.getGroupId())
                             .occurredAt(LocalDateTime.now())
                             .build()

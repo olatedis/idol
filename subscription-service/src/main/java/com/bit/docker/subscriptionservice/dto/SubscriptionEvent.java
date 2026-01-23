@@ -15,11 +15,11 @@ public class SubscriptionEvent {
 
     private String eventType; // CREATED, CANCELED, EXPIRED
     private int userId;
-    private Long idolId; // targetType=IDOL일때
+    private int idolId; // targetType=IDOL일때
     private LocalDateTime occurredAt;
 
     // 0121 그룹id관련 수정(추가)
-    private Long groupId;
+    private int groupId;
     private TargetType targetType; // targetType=GROUP일때
     public enum TargetType {
         IDOL, GROUP

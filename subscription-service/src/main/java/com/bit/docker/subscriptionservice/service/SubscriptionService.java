@@ -52,14 +52,13 @@ public class SubscriptionService {
         Subscription subscription = Subscription.builder()
                 .userId(userId)
                 .idolId(request.getIdolId())
-                .status(SubscriptionStatus.ACTIVE)
-                .startedAt(now)
+                .status(SubscriptionStatus.PENDING)
                 .autoRenew(request.isAutoRenew())
                 .build();
 
         subscriptionRepository.save(subscription);
 
-        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
+//        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
 
         // 개인 구독 이벤트
         eventProducer.publish(
@@ -69,7 +68,7 @@ public class SubscriptionService {
                         .targetType(SubscriptionEvent.TargetType.IDOL)
                         .userId(userId)
                         .idolId(request.getIdolId())
-                        .groupId(null)
+                        .groupId(0)
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
@@ -102,7 +101,7 @@ public class SubscriptionService {
                         .targetType(SubscriptionEvent.TargetType.IDOL)
                         .userId(userId)
                         .idolId(request.getIdolId())
-                        .groupId(null)
+                        .groupId(0)
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
@@ -120,7 +119,7 @@ public class SubscriptionService {
     }
 
     // 개인(아이돌) 구독 여부 체크(채팅 서비스용)
-    public boolean isSubscribed(int userId, Long idolId) {
+    public boolean isSubscribed(int userId, int idolId) {
 
         String redisKey = buildIdolKey(userId, idolId);
 
@@ -181,7 +180,7 @@ public class SubscriptionService {
                         .eventType("CREATED")
                         .targetType(SubscriptionEvent.TargetType.GROUP)
                         .userId(userId)
-                        .idolId(null)
+                        .idolId(0)
                         .groupId(request.getGroupId())
                         .occurredAt(LocalDateTime.now())
                         .build()
@@ -214,7 +213,7 @@ public class SubscriptionService {
                         .eventType("CANCELED")
                         .targetType(SubscriptionEvent.TargetType.GROUP)
                         .userId(userId)
-                        .idolId(null)
+                        .idolId(0)
                         .groupId(request.getGroupId())
                         .occurredAt(LocalDateTime.now())
                         .build()
@@ -233,7 +232,7 @@ public class SubscriptionService {
     }
 
     // 그룹 구독 여부 체크(필요하면 사용)
-    public boolean isGroupSubscribed(int userId, Long groupId) {
+    public boolean isGroupSubscribed(int userId, int groupId) {
 
         String redisKey = buildGroupKey(userId, groupId);
 
@@ -256,20 +255,20 @@ public class SubscriptionService {
     }
 
     // fanout용: idolId(개인 아이돌) ACTIVE 구독자 userId 리스트
-    public List<Integer> getActiveSubscriberUserIdsByIdolId(Long idolId) {
+    public List<Integer> getActiveSubscriberUserIdsByIdolId(int idolId) {
         return subscriptionRepository.selectUserIdsByIdolIdAndStatus(idolId, SubscriptionStatus.ACTIVE);
     }
 
     // fanout용: groupId(그룹) ACTIVE 구독자 userId 리스트
-    public List<Integer> getActiveSubscriberUserIdsByGroupId(Long groupId) {
+    public List<Integer> getActiveSubscriberUserIdsByGroupId(int groupId) {
         return groupSubscriptionRepository.selectUserIdsByGroupIdAndStatus(groupId, SubscriptionStatus.ACTIVE);
     }
 
-    private String buildIdolKey(int userId, Long idolId) {
+    private String buildIdolKey(int userId, int idolId) {
         return KEY_PREFIX_IDOL + userId + ":" + idolId;
     }
 
-    private String buildGroupKey(int userId, Long groupId) {
+    private String buildGroupKey(int userId, int groupId) {
         return KEY_PREFIX_GROUP + userId + ":" + groupId;
     }
 

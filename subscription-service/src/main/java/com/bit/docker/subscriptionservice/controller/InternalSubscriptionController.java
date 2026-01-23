@@ -16,13 +16,13 @@ public class InternalSubscriptionController {
 
     // fanout용: 개인(아이돌) 구독자 userId 리스트
     @GetMapping("/idols/{idolId}/user-ids")
-    public ResponseEntity<List<Integer>> getIdolSubscriberUserIds(@PathVariable("idolId") Long idolId) {
+    public ResponseEntity<List<Integer>> getIdolSubscriberUserIds(@PathVariable("idolId") int idolId) {
         return ResponseEntity.ok(subscriptionService.getActiveSubscriberUserIdsByIdolId(idolId));
     }
 
     // fanout용: 그룹 구독자 userId 리스트
     @GetMapping("/groups/{groupId}/user-ids")
-    public ResponseEntity<List<Integer>> getGroupSubscriberUserIds(@PathVariable("groupId") Long groupId) {
+    public ResponseEntity<List<Integer>> getGroupSubscriberUserIds(@PathVariable("groupId") int groupId) {
         return ResponseEntity.ok(subscriptionService.getActiveSubscriberUserIdsByGroupId(groupId));
     }
 
