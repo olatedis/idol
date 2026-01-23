@@ -13,8 +13,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME:your-email@gmail.com} # 본인 구글 이메일
-    password: ${MAIL_PASSWORD:your-app-password}     # 앱 비밀번호
+    username: ${MAIL_USERNAME:your-email@gmail.com}
+    password: ${MAIL_PASSWORD:your-app-password}
     properties:
       mail:
         smtp:
@@ -26,7 +26,12 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-# Swagger 설정 (Gateway 주소 명시 - 수정됨)
+# gRPC Server 설정 (추가됨)
+grpc:
+  server:
+    port: 9091
+
+# Swagger 설정
 springdoc:
   servers:
     - url: http://localhost:8000
