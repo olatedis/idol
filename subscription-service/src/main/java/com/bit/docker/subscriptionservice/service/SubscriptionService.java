@@ -47,7 +47,6 @@ public class SubscriptionService {
                     }
                 });
 
-        LocalDateTime now = LocalDateTime.now();
 
         Subscription subscription = Subscription.builder()
                 .userId(userId)
@@ -58,22 +57,23 @@ public class SubscriptionService {
 
         subscriptionRepository.save(subscription);
 
-//        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
+        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.PENDING.name());
 
-        // 개인 구독 이벤트
-        eventProducer.publish(
-                "subscription.created",
-                SubscriptionEvent.builder()
-                        .eventType("CREATED")
-                        .targetType(SubscriptionEvent.TargetType.IDOL)
-                        .userId(userId)
-                        .idolId(request.getIdolId())
-                        .groupId(0)
-                        .occurredAt(LocalDateTime.now())
-                        .build()
-        );
-
-        log.info("개인(아이돌) 구독 생성 완료: userId={}, idolId={}", userId, request.getIdolId());
+//         결제 완료 이후에 해야함.
+//        // 개인 구독 이벤트
+//        eventProducer.publish(
+//                "subscription.created",
+//                SubscriptionEvent.builder()
+//                        .eventType("CREATED")
+//                        .targetType(SubscriptionEvent.TargetType.IDOL)
+//                        .userId(userId)
+//                        .idolId(request.getIdolId())
+//                        .groupId(0)
+//                        .occurredAt(LocalDateTime.now())
+//                        .build()
+//        );
+//
+        log.info("개인(아이돌) 구독 준비 완료: userId={}, idolId={}", userId, request.getIdolId());
         return SubscriptionDto.fromEntity(subscription);
     }
 
