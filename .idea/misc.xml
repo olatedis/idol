@@ -4,6 +4,7 @@
   <component name="FrameworkDetectionExcludesConfiguration">
     <file type="web" url="file://$PROJECT_DIR$/api-gateway" />
     <file type="web" url="file://$PROJECT_DIR$/auth-service" />
+    <file type="web" url="file://$PROJECT_DIR$/board-service" />
     <file type="web" url="file://$PROJECT_DIR$/chat-service" />
     <file type="web" url="file://$PROJECT_DIR$/concert-service" />
     <file type="web" url="file://$PROJECT_DIR$/eureka-server" />
