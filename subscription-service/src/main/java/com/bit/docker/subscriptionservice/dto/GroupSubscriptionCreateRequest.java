@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 public class GroupSubscriptionCreateRequest {
 
     @NotNull
-    private Long groupId;
+    private int groupId;
 
     private boolean autoRenew;
 }

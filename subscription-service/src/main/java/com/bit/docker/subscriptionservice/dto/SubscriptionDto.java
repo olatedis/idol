@@ -15,9 +15,9 @@ import java.time.LocalDateTime;
 @Builder
 public class SubscriptionDto {
 
-    private Long subscriptionId;
+    private int subscriptionId;
     private int userId;
-    private Long idolId;
+    private int idolId;
     private SubscriptionStatus status;
     private LocalDateTime startedAt;
     private LocalDateTime expiredAt;

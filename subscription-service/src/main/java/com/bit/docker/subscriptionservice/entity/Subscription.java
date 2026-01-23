@@ -28,13 +28,13 @@ public class Subscription {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
     @Column(name = "user_id", nullable = false)
     private int userId;
 
     @Column(name = "idol_id", nullable = false)
-    private Long idolId;
+    private int idolId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -47,6 +47,14 @@ public class Subscription {
 
     @Column(nullable = false)
     private boolean autoRenew;
+
+    public void activate() {
+        if (this.status != SubscriptionStatus.PENDING) {
+            throw new IllegalStateException("활성화 불가 상태");
+        }
+        this.status = SubscriptionStatus.ACTIVE;
+        this.startedAt = LocalDateTime.now();
+    }
 
     public void cancel() {
         this.status = SubscriptionStatus.CANCELED;

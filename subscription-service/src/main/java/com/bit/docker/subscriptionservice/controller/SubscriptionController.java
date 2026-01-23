@@ -67,7 +67,7 @@ public class SubscriptionController {
     @GetMapping("/internal/check")
     public ResponseEntity<Boolean> checkSubscription(
             @RequestHeader("X-User-Id") int userId,
-            @RequestParam Long idolId
+            @RequestParam int idolId
     ) {
         return ResponseEntity.ok(subscriptionService.isSubscribed(userId, idolId));
     }

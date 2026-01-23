@@ -10,13 +10,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
+public interface SubscriptionRepository extends JpaRepository<Subscription, Integer> {
 
-    Optional<Subscription> findByUserIdAndIdolId(int userId, Long idolId);
+    Optional<Subscription> findByUserIdAndIdolId(int userId, int idolId);
     List<Subscription> findAllByUserIdAndStatus(int userId, SubscriptionStatus status);
     boolean existsByUserIdAndIdolIdAndStatus(
             int userId,
-            Long idolId,
+            int idolId,
             SubscriptionStatus status
     );
     List<Subscription> findAllByStatusAndExpiredAtBefore(
@@ -31,5 +31,5 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
         WHERE s.idolId = :idolId
           AND s.status = :status
     """)
-    List<Integer> selectUserIdsByIdolIdAndStatus(@Param("idolId") Long idolId, @Param("status") SubscriptionStatus status);
+    List<Integer> selectUserIdsByIdolIdAndStatus(@Param("idolId") int idolId, @Param("status") SubscriptionStatus status);
 }

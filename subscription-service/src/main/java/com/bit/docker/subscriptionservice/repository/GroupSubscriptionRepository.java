@@ -11,13 +11,13 @@ import java.util.List;
 import java.util.Optional;
 
 // 0121 그룹id관련 생성
-public interface GroupSubscriptionRepository extends JpaRepository<GroupSubscription, Long> {
+public interface GroupSubscriptionRepository extends JpaRepository<GroupSubscription, Integer> {
 
-    Optional<GroupSubscription> findByUserIdAndGroupId(int userId, Long groupId);
+    Optional<GroupSubscription> findByUserIdAndGroupId(int userId, int groupId);
 
     List<GroupSubscription> findAllByUserIdAndStatus(int userId, SubscriptionStatus status);
 
-    boolean existsByUserIdAndGroupIdAndStatus(int userId, Long groupId, SubscriptionStatus status);
+    boolean existsByUserIdAndGroupIdAndStatus(int userId, int groupId, SubscriptionStatus status);
 
     List<GroupSubscription> findAllByStatusAndExpiredAtBefore(SubscriptionStatus status, LocalDateTime now);
 
@@ -27,5 +27,5 @@ public interface GroupSubscriptionRepository extends JpaRepository<GroupSubscrip
         WHERE gs.groupId = :groupId
           AND gs.status = :status
     """)
-    List<Integer> selectUserIdsByGroupIdAndStatus(@Param("groupId") Long groupId, @Param("status") SubscriptionStatus status);
+    List<Integer> selectUserIdsByGroupIdAndStatus(@Param("groupId") int groupId, @Param("status") SubscriptionStatus status);
 }
