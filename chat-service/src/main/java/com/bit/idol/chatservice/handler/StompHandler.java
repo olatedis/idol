@@ -26,18 +26,23 @@ public class StompHandler implements ChannelInterceptor {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor != null && accessor.getCommand() != null) {
-            switch (accessor.getCommand()) {
-                case CONNECT:
-                    handleConnect(accessor);
-                    break;
-                case SEND:
-                    handleSend(accessor);
-                    break;
-                case DISCONNECT:
-                    handleDisconnect(accessor);
-                    break;
-                default:
-                    break;
+            try {
+                switch (accessor.getCommand()) {
+                    case CONNECT:
+                        handleConnect(accessor);
+                        break;
+                    case SEND:
+                        handleSend(accessor);
+                        break;
+                    case DISCONNECT:
+                        handleDisconnect(accessor);
+                        break;
+                    default:
+                        break;
+                }
+            } catch (Exception e) {
+                log.error("STOMP 처리 중 오류 발생: command={}, error={}", accessor.getCommand(), e.getMessage(), e);
+                throw e; // 예외를 다시 던져서 클라이언트에게 알림
             }
         }
 
@@ -45,17 +50,24 @@ public class StompHandler implements ChannelInterceptor {
     }
 
     private void handleConnect(StompHeaderAccessor accessor) {
-        // 1. 토큰 검증 (gRPC + 서킷 브레이커)
+        log.info("CONNECT 요청 수신: sessionId={}", accessor.getSessionId());
+
+        // 1. 토큰 검증
         String token = accessor.getFirstNativeHeader("Authorization");
+        log.debug("Authorization Header: {}", token);
+        
         if (token == null || !token.startsWith("Bearer ")) {
             throw new RuntimeException("인증 토큰이 없습니다.");
         }
 
         UserDto user = connectService.verifyUser(token);
+        log.info("유저 검증 성공: userId={}, role={}", user.getUserId(), user.getRole());
 
-        // 2. 구독 여부 확인 (USER인 경우만)
+        // 2. 구독 여부 확인
         if ("USER".equals(user.getRole())) {
             String idolIdStr = accessor.getFirstNativeHeader("idolId");
+            log.debug("idolId Header: {}", idolIdStr);
+            
             if (idolIdStr == null) {
                 throw new RuntimeException("idolId 헤더가 필요합니다.");
             }
@@ -66,48 +78,39 @@ public class StompHandler implements ChannelInterceptor {
             if (!isSubscribed) {
                 throw new RuntimeException("구독하지 않은 아이돌입니다.");
             }
+            log.info("구독 확인 성공: userId={}, idolId={}", user.getUserId(), idolId);
         }
-        // 3. 아이돌인 경우 접속 상태 ON
         else if ("IDOL".equals(user.getRole())) {
             chatService.setIdolOnline((long) user.getUserId(), true);
             log.info("아이돌 접속 ON: idolId={}", user.getUserId());
         }
 
-        // 4. Redis에 세션 정보 저장 (캐싱)
+        // 3. Redis 저장
         connectService.saveUserSession(accessor.getSessionId(), user);
         
-        // 5. 세션 속성에도 저장 (메모리 캐시 - 이중 안전장치)
+        // 4. 세션 속성 저장
         accessor.getSessionAttributes().put("userId", user.getUserId());
         accessor.getSessionAttributes().put("role", user.getRole());
         accessor.getSessionAttributes().put("nickname", user.getNickname());
         
-        log.info("웹소켓 연결 성공: userId={}, sessionId={}", user.getUserId(), accessor.getSessionId());
+        log.info("웹소켓 연결 최종 승인: sessionId={}", accessor.getSessionId());
     }
 
     private void handleSend(StompHeaderAccessor accessor) {
-        // Redis에서 세션 정보 확인 (외부 서버 호출 X)
         UserDto user = connectService.getUserSession(accessor.getSessionId());
         
         if (user == null) {
-            // Redis에 없으면 메모리(SessionAttributes) 확인 (Fallback)
             Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
             if (userId == null) {
-                throw new RuntimeException("세션이 만료되었습니다. 다시 로그인해주세요.");
+                throw new RuntimeException("세션이 만료되었습니다.");
             }
-            // 메모리엔 있는데 Redis엔 없으면 다시 저장 (복구)
-            // (여기서는 생략)
         }
-        
-        // 추가 검증 로직이 필요하다면 여기서 수행 (예: 도배 방지 등)
     }
 
     private void handleDisconnect(StompHeaderAccessor accessor) {
         String sessionId = accessor.getSessionId();
-        
-        // Redis 세션 삭제
         connectService.removeUserSession(sessionId);
 
-        // 아이돌 접속 종료 처리
         Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
         String role = (String) accessor.getSessionAttributes().get("role");
 
