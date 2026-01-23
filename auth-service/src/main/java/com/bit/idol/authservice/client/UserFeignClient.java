@@ -21,7 +21,7 @@ public interface UserFeignClient {
     @PostMapping("/users/social")
     UserDto registerSocialUser(@RequestBody UserDto userDto);
 
-    // 비밀번호 재설정 (내부 호출용)
+    // 비밀번호 재설정 (내부 호출용) - 반환값 int로 변경
     @PostMapping("/internal/users/password/reset")
-    void resetPassword(@RequestBody Map<String, String> request);
+    int resetPassword(@RequestBody Map<String, String> request);
 }
