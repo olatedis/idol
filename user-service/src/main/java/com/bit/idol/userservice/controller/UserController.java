@@ -1,28 +1,23 @@
 package com.bit.idol.userservice.controller;
 
-import com.bit.idol.userservice.dto.user.UserDto;
-import com.bit.idol.userservice.service.UserService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import com.bit.idol.userservice.dto.user.PasswordChangeDto;
+import com.bit.idol.userservice.dto.user.UserDto;
 import com.bit.idol.userservice.dto.user.UserInfoResponse;
 import com.bit.idol.userservice.dto.user.UserUpdateDto;
 import com.bit.idol.userservice.dto.user.UserWithdrawDto;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import com.bit.idol.userservice.service.UserService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
-@lombok.extern.slf4j.Slf4j
+@Slf4j
 public class UserController {
     private final UserService userService;
 
@@ -43,14 +38,15 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserInfoResponse> getUserInfo(@RequestHeader("X-User-Id") int userId,
+    public ResponseEntity<UserDto> getUserInfo(@RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role) {
         if (!"USER".equals(role)) {
             log.warn("권한 없는 사용자 접근 시도: userId={}, role={}", userId, role);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         log.info("내 정보 조회 요청: userId={}", userId);
-        return ResponseEntity.ok(userService.getUserInfo(userId));
+        // getUserInfo -> getUserById로 변경 (CQRS 적용)
+        return ResponseEntity.ok(userService.getUserById(userId));
     }
 
     @PostMapping("/me/update")
@@ -67,7 +63,7 @@ public class UserController {
         return ResponseEntity.ok("회원정보 수정 완료");
     }
 
-    // 프로필 이미지 업로드 API 추가
+    // 프로필 이미지 업로드 API
     @PostMapping("/me/image")
     public ResponseEntity<String> updateProfileImage(@RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.bit.idol.grpc";
+option java_outer_classname = "AuthProto";
+
+service AuthGrpcService {
+  // 토큰 검증 및 정보 조회
+  rpc VerifyToken (TokenRequest) returns (AuthResponse);
+}
+
+message TokenRequest {
+  string token = 1;
+}
+
+message AuthResponse {
+  string user_id = 1;
+  string nickname = 2;
+  string role = 3;
+  bool is_valid = 4; // 유효성 여부
+}
