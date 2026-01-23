@@ -272,4 +272,14 @@ public class SubscriptionService {
     private String buildGroupKey(int userId, Long groupId) {
         return KEY_PREFIX_GROUP + userId + ":" + groupId;
     }
+
+
+    public boolean isActiveIdolSubscriber(int userId, Long idolId) {
+        return subscriptionRepository.existsByUserIdAndIdolIdAndStatus(
+                userId,
+                idolId,
+                SubscriptionStatus.ACTIVE
+        );
+    }
+
 }

@@ -31,10 +31,6 @@ public class PostService {
 
     private final PostRepository postRepository;
 
-    /*private final IdolInternalClient idolInternalClient;
-    private final GroupInternalClient groupInternalClient;
-    private final AgencyInternalClient agencyInternalClient;*/
-
     private final UserInternalClient userInternalClient;
     private final SubscriptionInternalClient subscriptionInternalClient;
 

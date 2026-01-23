@@ -1,0 +1,24 @@
+package com.bit.idol.userservice.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Table(name = "groups")
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Group {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
+
+    @Column(nullable = false, unique = true)
+    private String name;
+
+    @ManyToOne
+    @JoinColumn(name = "agency_id", nullable = false)
+    private Agency agency;
+}
