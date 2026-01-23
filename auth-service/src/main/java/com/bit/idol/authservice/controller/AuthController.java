@@ -12,6 +12,7 @@ import io.github.bucket4j.ConsumptionProbe;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,7 @@ public class AuthController {
     private final PasswordResetService passwordResetService;
     private final UserFeignClient userFeignClient;
     private final RateLimiterService rateLimiterService;
+    private final StringRedisTemplate redisTemplate; // 토큰 삭제용 추가
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequestDto request) {
@@ -128,16 +130,21 @@ public class AuthController {
         // 토큰 검증
         String email = passwordResetService.verifyToken(token);
 
-        // User Service 호출하여 비밀번호 변경
+        // User Service 호출하여 비밀번호 변경 및 userId 획득
         Map<String, String> resetRequest = new HashMap<>();
         resetRequest.put("email", email);
         resetRequest.put("newPassword", newPassword);
-        userFeignClient.resetPassword(resetRequest);
+        
+        int userId = userFeignClient.resetPassword(resetRequest);
 
-        // 토큰 삭제 (재사용 방지)
+        // ★ 핵심: 해당 유저의 모든 Refresh Token 삭제 (강제 로그아웃)
+        redisTemplate.delete("RT:" + userId);
+        log.info("비밀번호 변경으로 인한 전체 로그아웃 처리: userId={}", userId);
+
+        // 이메일 인증 토큰 삭제 (재사용 방지)
         passwordResetService.deleteToken(token);
 
-        return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
+        return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다. 다시 로그인해주세요.");
     }
 
     // 클라이언트 IP 추출 유틸 메서드

@@ -31,9 +31,8 @@ public class UserService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final CacheManager cacheManager;
     private final S3Service s3Service;
-    private final StringRedisTemplate redisTemplate; // Redis 주입
+    private final StringRedisTemplate redisTemplate;
 
-    // 캐싱 적용: username으로 조회 시 Redis 캐시 사용
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
     public UserDto getUserByUsername(String username) {
         log.info("사용자 조회 (Username) - DB 접근: username={}", username);
@@ -42,7 +41,6 @@ public class UserService {
         return UserDto.fromEntity(user);
     }
 
-    // 캐싱 적용: userId로 조회 시 Redis 캐시 사용
     @Cacheable(value = "user:info:id", key = "#userId", unless = "#result == null")
     public UserDto getUserById(int userId) {
         log.info("사용자 조회 (ID) - DB 접근: userId={}", userId);
@@ -75,11 +73,9 @@ public class UserService {
                 throw new RuntimeException("인증된 이메일과 입력한 이메일이 일치하지 않습니다.");
             }
             
-            // 인증 토큰 사용 완료 처리 (재사용 방지)
             redisTemplate.delete("verify:token:" + userDto.getVerificationToken());
         }
 
-        // 2. 중복 체크
         if (userRepository.findByUsername(userDto.getUsername()).isPresent()) {
             throw new RuntimeException("Username already exists");
         }
@@ -99,7 +95,6 @@ public class UserService {
         log.info("회원가입 완료: username={}, userId={}", user.getUsername(), user.getId());
     }
 
-    // 소셜 로그인용 회원가입/조회
     @Transactional
     public UserDto registerSocialUser(UserDto userDto) {
         return userRepository.findByProviderAndProviderId(userDto.getProvider(), userDto.getProviderId())
@@ -151,24 +146,17 @@ public class UserService {
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
     }
 
-    // 프로필 이미지 업로드 및 변경
     @Transactional
     public String updateProfileImage(int userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 1. 기존 이미지가 있다면 S3에서 삭제 (선택 사항)
         if (user.getImgUrl() != null && !user.getImgUrl().isEmpty()) {
             s3Service.deleteFile(user.getImgUrl());
         }
 
-        // 2. 새 이미지 업로드
         String fileUrl = s3Service.uploadFile(file);
-
-        // 3. DB 업데이트
         user.setImgUrl(fileUrl);
-        
-        // 4. 캐시 삭제
         evictUserCache(user);
 
         log.info("프로필 이미지 변경 완료: userId={}, url={}", userId, fileUrl);
@@ -189,15 +177,17 @@ public class UserService {
         log.info("비밀번호 변경 완료: userId={}", userId);
     }
 
-    // 비밀번호 재설정 (이메일 인증 후)
+    // 비밀번호 재설정 (이메일 인증 후) - 반환값 int로 변경
     @Transactional
-    public void resetPassword(String email, String newPassword) {
+    public int resetPassword(String email, String newPassword) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
         user.setPassword(passwordEncoder.encode(newPassword));
         evictUserCache(user);
-        log.info("비밀번호 재설정 완료: email={}", email);
+        log.info("비밀번호 재설정 완료: email={}, userId={}", email, user.getId());
+        
+        return user.getId(); // userId 반환
     }
 
     @Transactional
@@ -214,7 +204,6 @@ public class UserService {
         log.info("회원 탈퇴 처리 완료: userId={}", userId);
     }
 
-    // 신고 횟수 증가 (욕설 감지 등)
     @Transactional
     public void increaseReportCount(int userId) {
         User user = userRepository.findById(userId)
@@ -222,7 +211,6 @@ public class UserService {
 
         user.setReportCount(user.getReportCount() + 1);
         
-        // 신고 누적 10회 이상이면 계정 일시 정지
         if (user.getReportCount() >= 10) {
             user.setStatus(UserStatus.SUSPENDED);
             log.warn("유저 일시 정지 처리됨 (신고 누적): userId={}", userId);
