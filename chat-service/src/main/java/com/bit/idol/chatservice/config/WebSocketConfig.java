@@ -19,20 +19,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // 클라이언트 연결 엔드포인트: ws://localhost:8089/ws-chat
+        // SockJS 제거 (Postman/Apic 테스트 용이성 및 성능 향상)
         registry.addEndpoint("/ws-chat")
-                .setAllowedOriginPatterns("*") // 모든 도메인 허용 (보안상 나중에 구체화 필요)
-                .withSockJS(); // SockJS 지원 (선택 사항, 웹소켓 미지원 브라우저 대비)
+                .setAllowedOriginPatterns("*");
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // 메시지 구독 요청 prefix (클라이언트가 메시지 받을 때)
-        // /sub/idol/{id} -> 아이돌 메시지 수신 (Broadcasting)
-        // /queue/idol/{id} -> 아이돌이 팬 메시지 수신 (Unicasting)
+        // 메시지 구독 요청 prefix
         registry.enableSimpleBroker("/sub", "/queue");
 
-        // 메시지 발행 요청 prefix (클라이언트가 메시지 보낼 때)
-        // /pub/chat/send
+        // 메시지 발행 요청 prefix
         registry.setApplicationDestinationPrefixes("/pub");
     }
 
