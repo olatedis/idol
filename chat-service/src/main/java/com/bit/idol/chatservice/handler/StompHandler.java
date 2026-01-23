@@ -18,18 +18,26 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class StompHandler implements ChannelInterceptor {
 
-    private final ConnectService connectService; // 서킷 브레이커 적용된 서비스
+    private final ConnectService connectService;
     private final ChatService chatService;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-        if (accessor != null) {
-            if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-                handleConnect(accessor);
-            } else if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
-                handleDisconnect(accessor);
+        if (accessor != null && accessor.getCommand() != null) {
+            switch (accessor.getCommand()) {
+                case CONNECT:
+                    handleConnect(accessor);
+                    break;
+                case SEND:
+                    handleSend(accessor);
+                    break;
+                case DISCONNECT:
+                    handleDisconnect(accessor);
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -37,7 +45,7 @@ public class StompHandler implements ChannelInterceptor {
     }
 
     private void handleConnect(StompHeaderAccessor accessor) {
-        // 1. 토큰 검증 (서킷 브레이커 적용)
+        // 1. 토큰 검증 (gRPC + 서킷 브레이커)
         String token = accessor.getFirstNativeHeader("Authorization");
         if (token == null || !token.startsWith("Bearer ")) {
             throw new RuntimeException("인증 토큰이 없습니다.");
@@ -45,7 +53,7 @@ public class StompHandler implements ChannelInterceptor {
 
         UserDto user = connectService.verifyUser(token);
 
-        // 2. 구독 여부 확인 (USER인 경우만, 서킷 브레이커 적용)
+        // 2. 구독 여부 확인 (USER인 경우만)
         if ("USER".equals(user.getRole())) {
             String idolIdStr = accessor.getFirstNativeHeader("idolId");
             if (idolIdStr == null) {
@@ -65,15 +73,41 @@ public class StompHandler implements ChannelInterceptor {
             log.info("아이돌 접속 ON: idolId={}", user.getUserId());
         }
 
-        // 4. 세션에 유저 정보 저장
+        // 4. Redis에 세션 정보 저장 (캐싱)
+        connectService.saveUserSession(accessor.getSessionId(), user);
+        
+        // 5. 세션 속성에도 저장 (메모리 캐시 - 이중 안전장치)
         accessor.getSessionAttributes().put("userId", user.getUserId());
         accessor.getSessionAttributes().put("role", user.getRole());
         accessor.getSessionAttributes().put("nickname", user.getNickname());
         
-        log.info("웹소켓 연결 성공: userId={}, role={}", user.getUserId(), user.getRole());
+        log.info("웹소켓 연결 성공: userId={}, sessionId={}", user.getUserId(), accessor.getSessionId());
+    }
+
+    private void handleSend(StompHeaderAccessor accessor) {
+        // Redis에서 세션 정보 확인 (외부 서버 호출 X)
+        UserDto user = connectService.getUserSession(accessor.getSessionId());
+        
+        if (user == null) {
+            // Redis에 없으면 메모리(SessionAttributes) 확인 (Fallback)
+            Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
+            if (userId == null) {
+                throw new RuntimeException("세션이 만료되었습니다. 다시 로그인해주세요.");
+            }
+            // 메모리엔 있는데 Redis엔 없으면 다시 저장 (복구)
+            // (여기서는 생략)
+        }
+        
+        // 추가 검증 로직이 필요하다면 여기서 수행 (예: 도배 방지 등)
     }
 
     private void handleDisconnect(StompHeaderAccessor accessor) {
+        String sessionId = accessor.getSessionId();
+        
+        // Redis 세션 삭제
+        connectService.removeUserSession(sessionId);
+
+        // 아이돌 접속 종료 처리
         Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
         String role = (String) accessor.getSessionAttributes().get("role");
 
@@ -81,5 +115,7 @@ public class StompHandler implements ChannelInterceptor {
             chatService.setIdolOnline((long) userId, false);
             log.info("아이돌 접속 OFF: idolId={}", userId);
         }
+        
+        log.info("웹소켓 연결 종료: sessionId={}", sessionId);
     }
 }
