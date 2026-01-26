@@ -1,14 +1,16 @@
 package com.bit.idol.userservice.service;
 
 import com.bit.idol.userservice.document.UserView;
+import com.bit.idol.userservice.dto.notification.NotificationEventDto;
+import com.bit.idol.userservice.dto.notification.TargetType;
 import com.bit.idol.userservice.dto.user.PasswordChangeDto;
 import com.bit.idol.userservice.dto.user.UserDto;
-import com.bit.idol.userservice.dto.user.UserInfoResponse;
 import com.bit.idol.userservice.dto.user.UserUpdateDto;
 import com.bit.idol.userservice.entity.BanHistory;
 import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
 import com.bit.idol.userservice.entity.UserStatus;
+import com.bit.idol.userservice.producer.NotificationProducer;
 import com.bit.idol.userservice.repository.BanHistoryRepository;
 import com.bit.idol.userservice.repository.UserRepository;
 import com.bit.idol.userservice.repository.UserViewRepository;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -33,13 +36,12 @@ import java.util.stream.Collectors;
 public class UserService {
     private final UserRepository userRepository;
     private final UserViewRepository userViewRepository;
-    private final BanHistoryRepository banHistoryRepository; // 추가됨
+    private final BanHistoryRepository banHistoryRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final CacheManager cacheManager;
     private final S3Service s3Service;
     private final StringRedisTemplate redisTemplate;
-
-    // ... (조회 메서드 생략 - 기존과 동일) ...
+    private final NotificationProducer notificationProducer; // 알림 프로듀서 추가
 
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
     public UserDto getUserByUsername(String username) {
@@ -71,11 +73,8 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    // ... (회원가입, 수정 메서드 생략 - 기존과 동일) ...
-
     @Transactional
     public void registerUser(UserDto userDto) {
-        // (기존 코드 유지)
         if (userDto.getProvider() == null) {
             if (userDto.getVerificationToken() == null) {
                 throw new RuntimeException("이메일 인증이 필요합니다.");
@@ -109,7 +108,6 @@ public class UserService {
 
     @Transactional
     public UserDto registerSocialUser(UserDto userDto) {
-        // (기존 코드 유지)
         return userRepository.findByProviderAndProviderId(userDto.getProvider(), userDto.getProviderId())
                 .map(user -> {
                     syncToMongo(user);
@@ -139,7 +137,6 @@ public class UserService {
 
     @Transactional
     public void updateUserInfo(int userId, UserUpdateDto userUpdateDto) {
-        // (기존 코드 유지)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -156,7 +153,6 @@ public class UserService {
 
     @Transactional
     public String updateProfileImage(int userId, MultipartFile file) {
-        // (기존 코드 유지)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -174,7 +170,6 @@ public class UserService {
 
     @Transactional
     public void changePassword(int userId, PasswordChangeDto passwordChangeDto) {
-        // (기존 코드 유지)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -184,22 +179,27 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(passwordChangeDto.getNewPassword()));
         evictUserCache(user);
+
+        // 알림 발송
+        sendPasswordChangedNotification(user);
     }
 
     @Transactional
     public int resetPassword(String email, String newPassword) {
-        // (기존 코드 유지)
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
         user.setPassword(passwordEncoder.encode(newPassword));
         evictUserCache(user);
+
+        // 알림 발송
+        sendPasswordChangedNotification(user);
+
         return user.getId();
     }
 
     @Transactional
     public void withdrawUser(int userId, String checkPassword) {
-        // (기존 코드 유지)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -212,8 +212,6 @@ public class UserService {
         evictUserCache(user);
     }
 
-    // --- 신고 및 제재 관련 (수정됨) ---
-
     @Transactional
     public void increaseReportCount(int userId) {
         User user = userRepository.findById(userId)
@@ -221,11 +219,9 @@ public class UserService {
 
         user.setReportCount(user.getReportCount() + 1);
         
-        // 10회 이상이고 정지 상태가 아니면 자동 정지
         if (user.getReportCount() >= 10 && user.getStatus() == UserStatus.ACTIVE) {
             user.setStatus(UserStatus.SUSPENDED);
             
-            // 제재 이력 저장
             BanHistory history = BanHistory.builder()
                     .userId(userId)
                     .status(UserStatus.SUSPENDED)
@@ -240,7 +236,6 @@ public class UserService {
         evictUserCache(user);
     }
 
-    // 관리자용 상태 변경 (추가됨)
     @Transactional
     public void updateUserStatus(int userId, UserStatus newStatus, String reason) {
         User user = userRepository.findById(userId)
@@ -250,12 +245,10 @@ public class UserService {
 
         user.setStatus(newStatus);
 
-        // 정지 해제 시 신고 횟수 초기화
         if (newStatus == UserStatus.ACTIVE) {
             user.setReportCount(0);
         }
 
-        // 제재 이력 저장
         BanHistory history = BanHistory.builder()
                 .userId(userId)
                 .status(newStatus)
@@ -268,8 +261,6 @@ public class UserService {
         
         log.info("유저 상태 변경 완료: userId={}, status={}", userId, newStatus);
     }
-
-    // --- Helper Methods ---
 
     private void syncToMongo(User user) {
         try {
@@ -318,5 +309,18 @@ public class UserService {
         } catch (Exception e) {
             log.warn("캐시 삭제 중 오류 발생: {}", e.getMessage());
         }
+    }
+
+    // 알림 발송 헬퍼 메서드
+    private void sendPasswordChangedNotification(User user) {
+        NotificationEventDto event = NotificationEventDto.builder()
+                .eventId(UUID.randomUUID().toString())
+                .type("PASSWORD_CHANGED")
+                .targetType(TargetType.USER)
+                .targetId(String.valueOf(user.getId()))
+                .occurredAt(LocalDateTime.now())
+                .build();
+        
+        notificationProducer.send(event);
     }
 }

@@ -11,6 +11,10 @@ import java.util.List;
 
 public interface VoteRepository extends JpaRepository<Vote, Integer> {
     List<Vote> findAllByEndDateBeforeAndStatus(LocalDateTime now, VoteStatus status);
+    
+    // 마감 임박 투표 조회 (추가됨)
+    List<Vote> findAllByEndDateBetweenAndStatus(LocalDateTime start, LocalDateTime end, VoteStatus status);
+
     Page<Vote> findByTitleContaining(String keyword, Pageable pageable);
     
     // 상태별 투표 목록 조회 (워밍업용)

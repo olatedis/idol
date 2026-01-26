@@ -25,10 +25,9 @@ public class ChatController {
 
     private final ChatService chatService;
     private final S3Service s3Service;
-    private final TranslationService translationService; // 번역 서비스 추가
+    private final TranslationService translationService;
     private final RedisTemplate<String, Object> redisTemplate;
 
-    // 클라이언트가 /pub/chat/send 로 메시지를 보내면 여기서 처리
     @MessageMapping("/chat/send")
     public void sendMessage(ChatMessageDto messageDto, SimpMessageHeaderAccessor accessor) {
         Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
@@ -46,10 +45,10 @@ public class ChatController {
 
         log.info("메시지 수신: room={}, sender={}", messageDto.getIdolId(), nickname);
         
+        // 알림 로직은 ChatService로 이동됨
         chatService.processMessage(messageDto);
     }
 
-    // 작성 중 표시 (저장 X, 브로드캐스팅만)
     @MessageMapping("/chat/typing")
     public void typing(ChatMessageDto messageDto, SimpMessageHeaderAccessor accessor) {
         String role = (String) accessor.getSessionAttributes().get("role");
@@ -61,7 +60,6 @@ public class ChatController {
         log.debug("작성 중 신호 전송: room={}", messageDto.getIdolId());
     }
 
-    // 채팅 내역 조회 API (HTTP)
     @GetMapping("/chat/history/{idolId}")
     @ResponseBody
     public ResponseEntity<List<ChatMessageDto>> getChatHistory(
@@ -72,7 +70,6 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getChatHistory(idolId, lastId, size));
     }
 
-    // 파일 업로드 API (HTTP)
     @PostMapping("/chat/upload")
     @ResponseBody
     public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
@@ -97,7 +94,6 @@ public class ChatController {
         return ResponseEntity.ok(response);
     }
 
-    // 메시지 삭제 API (HTTP POST)
     @PostMapping("/chat/message/delete")
     @ResponseBody
     public ResponseEntity<Void> deleteMessage(
@@ -113,7 +109,6 @@ public class ChatController {
         return ResponseEntity.ok().build();
     }
 
-    // 아이돌 접속 상태 확인 API (HTTP GET)
     @GetMapping("/chat/status/{idolId}")
     @ResponseBody
     public ResponseEntity<Map<String, Boolean>> getIdolStatus(@PathVariable("idolId") Long idolId) {
@@ -121,7 +116,6 @@ public class ChatController {
         return ResponseEntity.ok(Map.of("online", isOnline));
     }
 
-    // 메시지 반응 추가 API (HTTP POST)
     @PostMapping("/chat/reaction")
     @ResponseBody
     public ResponseEntity<Void> addReaction(@RequestBody Map<String, Object> request) {
@@ -135,8 +129,6 @@ public class ChatController {
         return ResponseEntity.ok().build();
     }
 
-    // 메시지 번역 API (HTTP GET)
-    // 예: /chat/translate/msg123?lang=EN
     @GetMapping("/chat/translate/{messageId}")
     @ResponseBody
     public ResponseEntity<Map<String, String>> translateMessage(

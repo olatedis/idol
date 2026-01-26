@@ -2,8 +2,11 @@ package com.bit.idol.voteservice.service;
 
 import com.bit.idol.voteservice.dto.MyVoteRecordDto;
 import com.bit.idol.voteservice.dto.VoteInfo;
+import com.bit.idol.voteservice.dto.notification.NotificationEventDto;
+import com.bit.idol.voteservice.dto.notification.TargetType;
 import com.bit.idol.voteservice.entity.Vote;
 import com.bit.idol.voteservice.entity.VoteRecord;
+import com.bit.idol.voteservice.producer.NotificationProducer;
 import com.bit.idol.voteservice.repository.CandidateRepository;
 import com.bit.idol.voteservice.repository.VoteRecordRepository;
 import com.bit.idol.voteservice.repository.VoteRepository;
@@ -18,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -32,26 +37,33 @@ public class VoteService {
     private final VoteReader voteReader;
     private final VoteRecordRepository voteRecordRepository;
     private final CandidateRepository candidateRepository;
+    private final NotificationProducer notificationProducer;
 
-    // 투표 생성 (Cache Warming 적용)
     @Transactional
     @CachePut(value = "voteInfo", key = "#result.id")
     public VoteInfo createVote(Vote vote) {
         Vote savedVote = voteRepository.save(vote);
+        
+        TargetType targetType = TargetType.ALL;
+        String targetId = null;
+        
+        if (savedVote.getTargetGroupId() != null) {
+            targetType = TargetType.GROUP_SUB;
+            targetId = String.valueOf(savedVote.getTargetGroupId());
+        }
+
+        // 메시지 내용 제거 (이벤트만 발송)
+        sendVoteNotification(savedVote, "VOTE_OPENED", targetType, targetId);
+        
         return VoteInfo.from(savedVote);
     }
 
-    // 투표 참여 (서킷 브레이커 적용)
     @Transactional
     @CircuitBreaker(name = "redis-vote", fallbackMethod = "castVoteFallback")
     public String castVote(int voteId, int userId, int candidateNumber, String clientIp) {
-
-        // 0. IP 기반 어뷰징 체크
         validateIp(clientIp);
 
-        // 1. 투표 정보 조회
         VoteInfo vote = voteReader.getVoteInfo(voteId);
-
         LocalDateTime now = LocalDateTime.now();
 
         if (now.isBefore(vote.getStartDate())) {
@@ -62,24 +74,23 @@ public class VoteService {
             throw new RuntimeException("투표가 이미 종료되었습니다.");
         }
 
-        // 2. Redis 키 생성 및 TTL 계산
         String redisKey = "vote:" + voteId + ":user:" + userId;
         Duration ttl = Duration.between(now, vote.getEndDate());
 
-        // 3. Redis를 통한 중복 체크
         Boolean isVoted = redisTemplate.opsForValue().setIfAbsent(redisKey, "voted", ttl);
 
         if (Boolean.FALSE.equals(isVoted)) {
             throw new RuntimeException("이미 투표에 참여하였습니다.");
         }
 
-        // 4. 카프카로 메세지 전송 (UUID 추가)
         sendToKafka(voteId, userId, candidateNumber, redisKey);
+
+        // 메시지 내용 제거
+        sendVoteNotification(null, "VOTE_COMPLETED", TargetType.USER, String.valueOf(userId));
 
         return "투표가 완료되었습니다.";
     }
 
-    // Fallback 메서드
     public String castVoteFallback(int voteId, int userId, int candidateNumber, String clientIp, Throwable t) {
         log.warn("Redis 장애 감지! DB 기반 투표로 전환합니다. Error: {}", t.getMessage());
 
@@ -90,7 +101,6 @@ public class VoteService {
         }
 
         try {
-            // UUID 생성
             String uuid = UUID.randomUUID().toString();
             String message = uuid + ":" + voteId + ":" + userId + ":" + candidateNumber;
             kafkaTemplate.send("vote-topic", message);
@@ -102,9 +112,7 @@ public class VoteService {
     }
 
     private void sendToKafka(int voteId, int userId, int candidateNumber, String redisKey) {
-        // UUID 생성 (멱등성 보장용)
         String uuid = UUID.randomUUID().toString();
-        // 포맷: uuid:voteId:userId:candidateNumber
         String message = uuid + ":" + voteId + ":" + userId + ":" + candidateNumber;
 
         try {
@@ -115,7 +123,6 @@ public class VoteService {
         }
     }
 
-    // IP 검증 로직
     private void validateIp(String ipAddress) {
         String key = "vote:limit:ip:" + ipAddress;
         Long count = redisTemplate.opsForValue().increment(key);
@@ -129,7 +136,6 @@ public class VoteService {
         }
     }
 
-    // 투표 취소
     @Transactional
     public void cancelVote(int voteId, int userId) {
         VoteRecord record = voteRecordRepository.findByVoteIdAndUserId(voteId, userId)
@@ -152,9 +158,34 @@ public class VoteService {
         }
     }
 
-    // 내 투표 기록 조회 (QueryDSL)
     @Transactional(readOnly = true)
     public List<MyVoteRecordDto> getMyVoteRecords(int userId) {
         return voteRecordRepository.findMyVoteRecords(userId);
+    }
+
+    private void sendVoteNotification(Vote vote, String type, TargetType targetType, String targetId) {
+        try {
+            Map<String, String> args = new HashMap<>();
+            
+            String redirectUrl = "/vote";
+            if (vote != null) {
+                args.put("voteTitle", vote.getTitle());
+                redirectUrl = "/vote/" + vote.getId();
+            }
+
+            NotificationEventDto event = NotificationEventDto.builder()
+                    .eventId(UUID.randomUUID().toString())
+                    .type(type)
+                    .targetType(targetType)
+                    .targetId(targetId)
+                    .args(args) // 메시지 없이 변수만 전달
+                    .redirectUrl(redirectUrl)
+                    .occurredAt(LocalDateTime.now())
+                    .build();
+            
+            notificationProducer.send(event);
+        } catch (Exception e) {
+            log.error("알림 발송 실패: {}", e.getMessage());
+        }
     }
 }

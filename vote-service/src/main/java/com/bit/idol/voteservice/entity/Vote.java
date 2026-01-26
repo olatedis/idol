@@ -23,6 +23,9 @@ public class Vote {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
 
+    // 특정 그룹 대상 투표인 경우 (null이면 전체 대상)
+    private Long targetGroupId;
+
     @Enumerated(EnumType.STRING)
     private VoteStatus status = VoteStatus.OPEN;
 
