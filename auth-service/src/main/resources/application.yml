@@ -26,7 +26,7 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-# gRPC Server 설정 (추가됨)
+# gRPC Server 설정
 grpc:
   server:
     port: 9091
@@ -46,8 +46,8 @@ eureka:
 
 jwt:
   secret: ${JWT_SECRET:your-very-long-and-secure-random-string-idol-link-project}
-  access-expiration: 3600000
-  refresh-expiration: 1209600000
+  access-expiration: 1200000 # 20분 (20 * 60 * 1000)
+  refresh-expiration: 1209600000 # 2주
 
 management:
   tracing:
