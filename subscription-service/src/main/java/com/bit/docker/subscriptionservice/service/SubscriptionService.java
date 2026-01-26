@@ -8,7 +8,10 @@ import com.bit.docker.subscriptionservice.repository.GroupSubscriptionRepository
 import com.bit.docker.subscriptionservice.repository.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +28,10 @@ public class SubscriptionService {
     private final GroupSubscriptionRepository groupSubscriptionRepository;
     private final StringRedisTemplate redisTemplate;
     private final SubscriptionEventProducer eventProducer;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+
+    @Value("${amount.idol.sub}")
+    private int idolSubscriptionAmount;
 
     private static final String KEY_PREFIX_IDOL = "sub:";
     private static final String KEY_PREFIX_GROUP = "gsub:";
@@ -59,22 +66,62 @@ public class SubscriptionService {
 
         redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.PENDING.name());
 
-//         결제 완료 이후에 해야함.
-//        // 개인 구독 이벤트
-//        eventProducer.publish(
-//                "subscription.created",
-//                SubscriptionEvent.builder()
-//                        .eventType("CREATED")
-//                        .targetType(SubscriptionEvent.TargetType.IDOL)
-//                        .userId(userId)
-//                        .idolId(request.getIdolId())
-//                        .groupId(0)
-//                        .occurredAt(LocalDateTime.now())
-//                        .build()
-//        );
-//
+
+        PaymentEvent event = new PaymentEvent(
+                        userId,
+                        null,
+                        "SUBSCRIPTION",
+                        subscription.getId(),
+                        idolSubscriptionAmount
+                );
+
+        kafkaTemplate.send("payment.requested", event.toJson());
+
+
+
         log.info("개인(아이돌) 구독 준비 완료: userId={}, idolId={}", userId, request.getIdolId());
         return SubscriptionDto.fromEntity(subscription);
+    }
+
+    @KafkaListener(
+            topics = "payment.completed",
+            groupId = "subscription-service"
+    )
+    public void consume(String message) {
+
+        PaymentEvent event =
+                PaymentEvent.fromJson(message);
+
+        if (!"SUBSCRIPTION".equals(event.getDomain())) {
+            return;
+        }
+
+        Subscription subscription =
+                subscriptionRepository
+                        .findByUserIdAndIdolIdAndStatus(
+                                event.getUserId(),
+                                event.getTargetId(),
+                                SubscriptionStatus.PENDING
+                        )
+                        .orElseThrow();
+
+        subscription.activate();
+
+        eventProducer.publish(
+                "subscription.created",
+                SubscriptionEvent.builder()
+                        .eventType("CREATED")
+                        .targetType(SubscriptionEvent.TargetType.IDOL)
+                        .userId(subscription.getUserId())
+                        .idolId(subscription.getIdolId())
+                        .groupId(0)
+                        .occurredAt(LocalDateTime.now())
+                        .build()
+        );
+
+        log.info("개인(아이돌) 구독 완료: userId={}, idolId={}", subscription.getUserId(), subscription.getIdolId());
+
+
     }
 
     // 개인(아이돌) 구독 해지
@@ -273,7 +320,7 @@ public class SubscriptionService {
     }
 
 
-    public boolean isActiveIdolSubscriber(int userId, Long idolId) {
+    public boolean isActiveIdolSubscriber(int userId, int idolId) {
         return subscriptionRepository.existsByUserIdAndIdolIdAndStatus(
                 userId,
                 idolId,
