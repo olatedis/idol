@@ -8,7 +8,7 @@
         <processorPath useClasspath="false">
           <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.36/5a30490a6e14977d97d9c73c924c1f1b5311ea95/lombok-1.18.36.jar" />
         </processorPath>
-        <module name="subscription-service.main" />
+        <module name="board-service.main" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -27,6 +27,9 @@
       <module name="auth-service" options="-parameters" />
       <module name="auth-service.main" options="-parameters" />
       <module name="auth-service.test" options="-parameters" />
+      <module name="board-service" options="-parameters" />
+      <module name="board-service.main" options="-parameters" />
+      <module name="board-service.test" options="-parameters" />
       <module name="chat-service" options="-parameters" />
       <module name="chat-service.main" options="-parameters" />
       <module name="chat-service.test" options="-parameters" />
