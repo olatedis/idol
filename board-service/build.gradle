@@ -24,21 +24,53 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
+/**
+ * ✅ Spring Cloud 의존성 버전 정합(BOM)
+ * - OpenFeign / Eureka / Tracing 등을 안정적으로 받기 위해 필요
+ */
+ext {
+    set('springCloudVersion', "2024.0.0")
+}
 
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+dependencies {
+    // Core
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // (선택) 게이트웨이 헤더 신뢰 방식이면 Security 제거도 가능
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // Kafka (notify-request-topic producer)
     implementation 'org.springframework.kafka:spring-kafka'
 
+    // Redis session (정말 쓸 때만 유지)
     implementation 'org.springframework.session:spring-session-data-redis'
 
+    // ✅ OpenFeign (현재 에러 원인 해결)
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+    // Eureka Client
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+    // Actuator + Tracing(Zipkin)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+
+    // Lombok / Devtools / DB
     compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'com.mysql:mysql-connector-j'
 
-    annotationProcessor 'org.projectlombok:lombok'
+    // Tests
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'org.springframework.security:spring-security-test'
