@@ -29,11 +29,10 @@ public class PaymentController {
 
     @PostMapping("/ready")
     public ResponseEntity<PaymentCreateResponse> createPayment(
-            @RequestHeader("X-User-Id") int userId,
             @RequestBody PaymentCreateRequest request
     ) {
         PaymentCreateResponse response =
-                paymentService.createPayment(request, userId);
+                paymentService.createPayment(request);
         return ResponseEntity.ok(response);
     }
     @GetMapping("/{orderId}")

@@ -24,7 +24,7 @@ public class PaymentService {
 
 
     @Transactional
-    public PaymentCreateResponse createPayment(PaymentCreateRequest request, int userId) {
+    public PaymentCreateResponse createPayment(PaymentCreateRequest request) {
 
         String orderId = UUID.randomUUID().toString();
 
@@ -33,7 +33,7 @@ public class PaymentService {
                 request.getAmount(),
                 request.getDomain(),
                 request.getTargetId(),
-                userId
+                request.getUserId()
         );
 
         paymentRepository.save(payment);

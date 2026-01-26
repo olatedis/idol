@@ -1,9 +1,7 @@
 package com.bit.docker.paymentservice.infra.kafka;
 
 import com.bit.docker.paymentservice.domain.dto.PaymentCreateRequest;
-import com.bit.docker.paymentservice.service.PaymentEventProducerService;
 import com.bit.docker.paymentservice.domain.dto.PaymentEvent;
-import com.bit.docker.paymentservice.domain.entity.Payment;
 import com.bit.docker.paymentservice.infra.persistence.PaymentRepository;
 import com.bit.docker.paymentservice.service.PaymentService;
 import lombok.AllArgsConstructor;
@@ -31,12 +29,13 @@ public class ReservationEventConsumer {
                 PaymentEvent.fromJson(message);
 
         PaymentCreateRequest payment = new PaymentCreateRequest(
+                event.getUserId(),
                 event.getAmount(),
                 event.getDomain(),
                 event.getTargetId()
         );
 
-//        paymentService.createPayment(payment, userId);
+        paymentService.createPayment(payment);
 
     }
 }
