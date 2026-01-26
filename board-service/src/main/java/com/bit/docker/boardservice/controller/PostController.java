@@ -9,6 +9,7 @@ import com.bit.docker.boardservice.exception.ApiException;
 import com.bit.docker.boardservice.service.PostService;
 import com.bit.docker.boardservice.service.Role;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/board/posts")
+@Slf4j
 public class PostController {
 
     private final PostService postService;
@@ -30,6 +32,7 @@ public class PostController {
             Pageable pageable
     ) {
         Page<PostListResponse> page = postService.selectAll(boardType, idolId, groupId, pageable);
+        log.info("테스트 디버그");
         return ResponseEntity.ok(page);
     }
 

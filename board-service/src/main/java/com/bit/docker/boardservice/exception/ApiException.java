@@ -12,4 +12,7 @@ public class ApiException extends RuntimeException {
         super(message);
         this.status = status;
     }
+    //삭제할예정
+
+    // pr
 }

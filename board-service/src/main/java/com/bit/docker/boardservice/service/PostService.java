@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -223,12 +224,13 @@ public class PostService {
         if (post.getGroupId() != null) args.put("groupId", String.valueOf(post.getGroupId()));
         event.setArgs(args);
 
-        // TODO: 프론트 라우팅은 프로젝트에 맞게 조정
         String redirectUrl;
         if (post.getBoardType() == BoardType.IDOL) {
-            redirectUrl = "/board/idols/" + post.getIdolId() + "/posts/" + post.getPostId();
+            redirectUrl = "/board/posts/" + post.getPostId()
+                    + "?boardType=IDOL&idolId=" + post.getIdolId();
         } else {
-            redirectUrl = "/board/groups/" + post.getGroupId() + "/posts/" + post.getPostId();
+            redirectUrl = "/board/posts/" + post.getPostId()
+                    + "?boardType=GROUP&groupId=" + post.getGroupId();
         }
         event.setRedirectUrl(redirectUrl);
 
