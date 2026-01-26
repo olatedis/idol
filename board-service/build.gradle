@@ -44,9 +44,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
-    // (선택) 게이트웨이 헤더 신뢰 방식이면 Security 제거도 가능
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-
     // Kafka (notify-request-topic producer)
     implementation 'org.springframework.kafka:spring-kafka'
 

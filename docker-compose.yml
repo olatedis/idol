@@ -54,7 +54,7 @@ services:
     image: mysql:8.0
     container_name: idol-db
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} # .env 파일에서 로드
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} # ..env 파일에서 로드
       TZ: Asia/Seoul
       MYSQL_ROOT_HOST: '%'
     ports:
