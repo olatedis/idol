@@ -1,23 +1,42 @@
 package com.bit.docker.paymentservice.infra.kafka;
 
-import com.bit.docker.paymentservice.application.PaymentService;
 import com.bit.docker.paymentservice.domain.dto.PaymentCreateRequest;
-import com.bit.docker.paymentservice.domain.enumtype.PaymentDomain;
+import com.bit.docker.paymentservice.service.PaymentEventProducerService;
+import com.bit.docker.paymentservice.domain.dto.PaymentEvent;
+import com.bit.docker.paymentservice.domain.entity.Payment;
+import com.bit.docker.paymentservice.infra.persistence.PaymentRepository;
+import com.bit.docker.paymentservice.service.PaymentService;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@Transactional
+@Slf4j
+@AllArgsConstructor
 public class ReservationEventConsumer {
 
+    private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
 
-    public ReservationEventConsumer(PaymentService paymentService) {
-        this.paymentService = paymentService;
-    }
+    @KafkaListener(
+            topics = "payment.requested",
+            groupId = "payment-service"
+    )
+    public void consume(String message) {
 
-    @KafkaListener(topics = "payment-created")
-    public void consume(int targetId, int amount, PaymentDomain domain, int userId) {
-        PaymentCreateRequest request = new PaymentCreateRequest( targetId, domain, amount);
-        paymentService.createPayment(request,  userId);
+        PaymentEvent event =
+                PaymentEvent.fromJson(message);
+
+        PaymentCreateRequest payment = new PaymentCreateRequest(
+                event.getAmount(),
+                event.getDomain(),
+                event.getTargetId()
+        );
+
+//        paymentService.createPayment(payment, userId);
+
     }
 }

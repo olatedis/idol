@@ -32,4 +32,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Inte
           AND s.status = :status
     """)
     List<Integer> selectUserIdsByIdolIdAndStatus(@Param("idolId") int idolId, @Param("status") SubscriptionStatus status);
+
+    Optional<Subscription> findByUserIdAndIdolIdAndStatus(int userId, int idolId, SubscriptionStatus subscriptionStatus);
 }

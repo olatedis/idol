@@ -1,5 +1,6 @@
 package com.bit.docker.subscriptionservice.dto;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,6 +24,22 @@ public class SubscriptionEvent {
     private TargetType targetType; // targetType=GROUP일때
     public enum TargetType {
         IDOL, GROUP
+    }
+
+    public String toJson() {
+        try {
+            return new ObjectMapper().writeValueAsString(this);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static SubscriptionEvent fromJson(String json) {
+        try {
+            return new ObjectMapper().readValue(json, SubscriptionEvent.class);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
 

@@ -29,7 +29,7 @@ public class InternalSubscriptionController {
     // idol 게시판 상세 열람용: userId가 idolId 유료구독(active) 중인지
     @GetMapping("/idols/{idolId}/users/{userId}/active")
     public ResponseEntity<Boolean> isActiveIdolSubscriber(
-            @PathVariable("idolId") Long idolId,
+            @PathVariable("idolId") int idolId,
             @PathVariable("userId") int userId
     ) {
         return ResponseEntity.ok(subscriptionService.isActiveIdolSubscriber(userId, idolId));

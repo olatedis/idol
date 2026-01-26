@@ -1,6 +1,7 @@
 package com.bit.docker.paymentservice.domain.dto;
 
 import com.bit.docker.paymentservice.domain.enumtype.PaymentDomain;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -12,5 +13,21 @@ public class PaymentEvent {
     private PaymentDomain domain;
     private int targetId;
     private int amount;
+
+    public String toJson() {
+        try {
+            return new ObjectMapper().writeValueAsString(this);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static PaymentEvent fromJson(String json) {
+        try {
+            return new ObjectMapper().readValue(json, PaymentEvent.class);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
 
