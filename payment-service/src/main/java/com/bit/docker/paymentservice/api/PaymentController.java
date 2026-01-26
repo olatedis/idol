@@ -1,7 +1,7 @@
 package com.bit.docker.paymentservice.api;
 
 
-import com.bit.docker.paymentservice.application.PaymentService;
+import com.bit.docker.paymentservice.service.PaymentService;
 import com.bit.docker.paymentservice.domain.dto.*;
 import com.bit.docker.paymentservice.domain.entity.Payment;
 import com.bit.docker.paymentservice.infra.persistence.PaymentRepository;
@@ -29,11 +29,10 @@ public class PaymentController {
 
     @PostMapping("/ready")
     public ResponseEntity<PaymentCreateResponse> createPayment(
-            @RequestHeader("X-User-Id") int userId,
             @RequestBody PaymentCreateRequest request
     ) {
         PaymentCreateResponse response =
-                paymentService.createPayment(request, userId);
+                paymentService.createPayment(request);
         return ResponseEntity.ok(response);
     }
     @GetMapping("/{orderId}")

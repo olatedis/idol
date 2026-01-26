@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentCreateRequest {
+    private int userId;
     private int amount;
     private PaymentDomain domain; // 결제 요청 서비스
     private int targetId; // 결제 상품 아이디

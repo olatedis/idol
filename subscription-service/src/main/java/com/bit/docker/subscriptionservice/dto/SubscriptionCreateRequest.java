@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 public class SubscriptionCreateRequest {
 
     @NotNull
-    private Long idolId;
+    private int idolId;
 
     private boolean autoRenew;
 }

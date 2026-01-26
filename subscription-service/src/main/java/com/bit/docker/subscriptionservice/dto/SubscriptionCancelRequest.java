@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 public class SubscriptionCancelRequest {
 
     @NotNull
-    private Long idolId;
+    private int idolId;
 }
 

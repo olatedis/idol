@@ -29,13 +29,13 @@ public class GroupSubscription {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
     @Column(name = "user_id", nullable = false)
     private int userId;
 
     @Column(name = "group_id", nullable = false)
-    private Long groupId;
+    private int groupId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

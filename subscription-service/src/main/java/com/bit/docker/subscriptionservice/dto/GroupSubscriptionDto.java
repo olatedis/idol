@@ -16,9 +16,9 @@ import java.time.LocalDateTime;
 public class GroupSubscriptionDto {
 
     // 그룹 구독 DTO
-    private Long subscriptionId;
+    private int subscriptionId;
     private int userId;
-    private Long groupId;
+    private int groupId;
     private SubscriptionStatus status;
     private LocalDateTime startedAt;
     private LocalDateTime expiredAt;

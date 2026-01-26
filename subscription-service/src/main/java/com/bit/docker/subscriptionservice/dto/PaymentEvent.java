@@ -1,6 +1,5 @@
-package com.bit.docker.paymentservice.domain.dto;
+package com.bit.docker.subscriptionservice.dto;
 
-import com.bit.docker.paymentservice.domain.enumtype.PaymentDomain;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -10,9 +9,10 @@ import lombok.Getter;
 public class PaymentEvent {
     private int userId;
     private String orderId;
-    private PaymentDomain domain;
+    private String domain;
     private int targetId;
     private int amount;
+
 
     public String toJson() {
         try {

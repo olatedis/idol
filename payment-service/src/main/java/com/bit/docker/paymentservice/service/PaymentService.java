@@ -1,4 +1,4 @@
-package com.bit.docker.paymentservice.application;
+package com.bit.docker.paymentservice.service;
 
 import com.bit.docker.paymentservice.domain.dto.*;
 import com.bit.docker.paymentservice.domain.entity.Payment;
@@ -22,33 +22,9 @@ public class PaymentService {
     private final PaymentEventProducerService  paymentEventProducerService;
     private final TossPgClient tossPgClient;
 
-    @Transactional
-    public void confirmPayment(
-            String paymentKey,
-            String orderId,
-            int amount
-    ) {
-        Payment payment = paymentRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("결제 없음"));
-
-        TossConfirmResponse response = tossPgClient.confirm(
-                new TossConfirmRequest(paymentKey, orderId, amount)
-        );
-
-        if (!"DONE".equals(response.getStatus())) {
-            payment.fail();
-            return;
-        }
-
-        payment.complete(response.getPaymentKey(), response.getTotalAmount());
-
-        // 결제 완료 이벤트 발행
-        paymentEventProducer.publishPaymentCompleted(payment);
-    }
-
 
     @Transactional
-    public PaymentCreateResponse createPayment(PaymentCreateRequest request, int userId) {
+    public PaymentCreateResponse createPayment(PaymentCreateRequest request) {
 
         String orderId = UUID.randomUUID().toString();
 
@@ -57,7 +33,7 @@ public class PaymentService {
                 request.getAmount(),
                 request.getDomain(),
                 request.getTargetId(),
-                userId
+                request.getUserId()
         );
 
         paymentRepository.save(payment);
