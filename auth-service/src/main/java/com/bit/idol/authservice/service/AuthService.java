@@ -36,10 +36,6 @@ public class AuthService {
             throw new RuntimeException("Your account has been banned.");
         }
 
-        // [DEBUG] 비밀번호 해시값 확인용 로그
-        log.info("DEBUG: Input Password='{}', Encoded='{}'", password, bCryptPasswordEncoder.encode(password));
-        log.info("DEBUG: DB Password='{}'", user.getPassword());
-
         // 3. 비밀번호 검증
         if (!bCryptPasswordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Invalid password");
