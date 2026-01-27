@@ -5,9 +5,15 @@ import lombok.Data;
 
 @Data
 public class PostWriteRequest {
+
     private BoardType boardType;
-    private long idolId; // boardType=IDOL일 경우
-    private long groupId; // boardType=GROUP일 경우
+
+    // IDOL_* 게시판에서 사용 (GROUP_* 에서는 null)
+    private Long idolId;
+
+    // GROUP_* 게시판에서 사용 (IDOL_* 에서는 null)
+    private Long groupId;
+
     private String title;
     private String content;
 }

@@ -328,4 +328,13 @@ public class SubscriptionService {
         );
     }
 
+    public boolean isActiveGroupSubscriber(int userId, int groupId) {
+        return groupSubscriptionRepository.existsByUserIdAndGroupIdAndStatus(
+                userId,
+                groupId,
+                SubscriptionStatus.ACTIVE
+        );
+    }
+
+
 }

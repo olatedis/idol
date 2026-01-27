@@ -22,7 +22,7 @@ public interface UserInternalClient {
     );
 
     // Group 멤버 여부 (그룹 엔티티 만든 뒤 user-service에서 구현)
-    @GetMapping("internal/users/groups/{groupId}/members/{userId}/exists")
+    @GetMapping("/internal/users/groups/{groupId}/members/{userId}/exists")
     boolean isGroupMember(
             @PathVariable("groupId") Long groupId,
             @PathVariable("userId") Integer userId
@@ -34,6 +34,4 @@ public interface UserInternalClient {
             @PathVariable("agencyUserId") Integer agencyUserId,
             @PathVariable("groupId") Long groupId
     );
-
-
 }

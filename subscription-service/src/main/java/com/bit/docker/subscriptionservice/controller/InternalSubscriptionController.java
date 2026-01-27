@@ -35,4 +35,12 @@ public class InternalSubscriptionController {
         return ResponseEntity.ok(subscriptionService.isActiveIdolSubscriber(userId, idolId));
     }
 
+    // group 게시판 상세 열람용: userId가 groupId 구독(active) 중인지
+    @GetMapping("/groups/{groupId}/users/{userId}/active")
+    public ResponseEntity<Boolean> isActiveGroupSubscriber(
+            @PathVariable("groupId") int groupId,
+            @PathVariable("userId") int userId
+    ) {
+        return ResponseEntity.ok(subscriptionService.isActiveGroupSubscriber(userId, groupId));
+    }
 }
