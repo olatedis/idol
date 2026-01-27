@@ -45,3 +45,8 @@ management:
   zipkin:
     tracing:
       endpoint: http://localhost:9411/api/v2/spans
+
+
+amount:
+  idol:
+    sub: 15000

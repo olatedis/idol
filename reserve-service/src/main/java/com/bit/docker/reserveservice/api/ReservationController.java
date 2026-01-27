@@ -14,10 +14,10 @@ public class ReservationController {
     }
 
     @PostMapping
-    public Long reserve(
-            @RequestParam Long userId,
-            @RequestParam Long concertId,
-            @RequestParam Long seatId
+    public int reserve(
+            @RequestParam int userId,
+            @RequestParam int concertId,
+            @RequestParam int seatId
     ) {
         return reservationCommandService
                 .reserve(userId, concertId, seatId);

@@ -15,17 +15,8 @@ import org.springframework.stereotype.Service;
 public class PaymentEventProducerService {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
-    private final ObjectMapper objectMapper;
 
-    public void publishCompleted(Payment payment) {
-        PaymentEvent event =
-                new PaymentEvent(
-                        payment.getUserId(),
-                        payment.getOrderId(),
-                        payment.getDomain(),
-                        payment.getTargetId(),
-                        payment.getAmount()
-                );
+    public void publish(PaymentEvent event) {
 
         kafkaTemplate.send("payment.completed", event.toJson());
     }

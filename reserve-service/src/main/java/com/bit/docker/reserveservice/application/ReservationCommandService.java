@@ -1,31 +1,28 @@
 package com.bit.docker.reserveservice.application;
 
+import com.bit.docker.reserveservice.domain.dto.PaymentEvent;
 import com.bit.docker.reserveservice.domain.entity.Reservation;
 import com.bit.docker.reserveservice.infra.kafka.ReservationEventProducer;
-import com.bit.docker.reserveservice.infra.persistence.ReservationRepository;
+import com.bit.docker.reserveservice.infra.repository.ReservationRepository;
 import com.bit.docker.reserveservice.infra.redis.SeatLockRepository;
+import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@AllArgsConstructor
 public class ReservationCommandService {
 
     private final ReservationRepository reservationRepository;
     private final SeatLockRepository seatLockRepository;
     private final ReservationEventProducer eventProducer;
 
-    public ReservationCommandService(
-            ReservationRepository reservationRepository,
-            SeatLockRepository seatLockRepository,
-            ReservationEventProducer eventProducer
-    ) {
-        this.reservationRepository = reservationRepository;
-        this.seatLockRepository = seatLockRepository;
-        this.eventProducer = eventProducer;
-    }
+    @Value("${concert.reservation.amount}")
+    private int amount;
 
     @Transactional
-    public Long reserve(Long userId, Long concertId, Long seatId) {
+    public int reserve(int userId, int concertId, int seatId) {
 
         boolean locked = seatLockRepository.lock(concertId, seatId, userId);
         if (!locked) {
@@ -37,7 +34,14 @@ public class ReservationCommandService {
 
         reservationRepository.save(reservation);
 
-        eventProducer.publishReservationCreated(reservation.getId());
+        PaymentEvent event = new PaymentEvent(
+                userId,
+                null,
+                "Reservation-service",
+                seatId,
+                amount
+        );
+        eventProducer.publishReservationCreated(event);
 
         return reservation.getId();
     }
