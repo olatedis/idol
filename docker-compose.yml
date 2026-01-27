@@ -11,6 +11,7 @@ services:
     volumes:
       - ./data/zookeeper/data:/var/lib/zookeeper/data
       - ./data/zookeeper/log:/var/lib/zookeeper/log
+      - ./data/zookeeper/datalog:/var/lib/zookeeper/datalog
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -27,8 +28,10 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
     volumes:
       - ./data/kafka/data:/var/lib/kafka/data
+    restart: always
 
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
@@ -54,7 +57,7 @@ services:
     image: mysql:8.0
     container_name: idol-db
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} # ..env 파일에서 로드
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       TZ: Asia/Seoul
       MYSQL_ROOT_HOST: '%'
     ports:
@@ -63,7 +66,6 @@ services:
       - ./data/mysql/data:/var/lib/mysql
       - ./data/mysql/init:/docker-entrypoint-initdb.d
 
-  # MongoDB
   mongo:
     image: mongo:latest
     container_name: idol-mongo
@@ -78,19 +80,17 @@ services:
     ports:
       - "9411:9411"
 
-  # Elasticsearch (검색 엔진)
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
     container_name: idol-elasticsearch
     environment:
       - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # 메모리 제한
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
       - "9200:9200"
     volumes:
       - ./data/elasticsearch/data:/usr/share/elasticsearch/data
 
-  # Kibana (데이터 시각화)
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.10
     container_name: idol-kibana
@@ -100,3 +100,14 @@ services:
       - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+
+  # 부하 테스트 도구 (k6) - 필요할 때만 실행
+  k6:
+    image: grafana/k6:latest
+    container_name: idol-k6
+    profiles: ["tools"] # 'tools' 프로파일로 실행해야만 켜짐
+    volumes:
+      - ./test.js:/test.js
+    command: run /test.js
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
