@@ -19,6 +19,14 @@ spring:
         static: ap-northeast-2
       stack:
         auto: false
+    
+    # Feign Client 타임아웃 설정 (OpenAI 등 외부 API 호출 시 필요)
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: 5000 # 5초
+            readTimeout: 5000    # 5초
 
   # MongoDB 설정
   data:
@@ -38,7 +46,7 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
-      compression-type: lz4 # 메시지 압축 적용 (성능 향상)
+      compression-type: lz4
     consumer:
       group-id: chat-service-group
       auto-offset-reset: latest
@@ -99,3 +107,11 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         waitDurationInOpenState: 10s
         failureRateThreshold: 50
+
+# OpenAI 설정
+openai:
+  api-key: sk-dummy-key-please-change-me
+
+# DeepL 설정 (번역)
+deepl:
+  api-key: fake-key # 실제 키가 없으면 더미 번역 반환
