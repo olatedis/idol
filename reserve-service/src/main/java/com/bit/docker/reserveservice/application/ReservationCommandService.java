@@ -22,7 +22,7 @@ public class ReservationCommandService {
     private int amount;
 
     @Transactional
-    public Long reserve(Long userId, Long concertId, Long seatId) {
+    public int reserve(int userId, int concertId, int seatId) {
 
         boolean locked = seatLockRepository.lock(concertId, seatId, userId);
         if (!locked) {

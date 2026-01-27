@@ -14,16 +14,16 @@ public class SeatLockRepository {
         this.redisTemplate = redisTemplate;
     }
 
-    public boolean lock(Long concertId, Long seatId, Long userId) {
+    public boolean lock(int concertId, int seatId, int userId) {
         String key = "seat:lock:%d:%d".formatted(concertId, seatId);
 
         Boolean success = redisTemplate.opsForValue()
-                .setIfAbsent(key, userId.toString(), Duration.ofMinutes(3));
+                .setIfAbsent(key, String.valueOf(userId), Duration.ofMinutes(3));
 
         return Boolean.TRUE.equals(success);
     }
 
-    public void unlock(Long concertId, Long seatId) {
+    public void unlock(int concertId, int seatId) {
         redisTemplate.delete("seat:lock:%d:%d".formatted(concertId, seatId));
     }
 }

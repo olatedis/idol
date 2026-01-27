@@ -18,13 +18,13 @@ public class Reservation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
-    private Long userId;
+    private int userId;
 
-    private Long concertId;
+    private int concertId;
 
-    private Long seatId;
+    private int seatId;
 
     @Enumerated(EnumType.STRING)
     private ReservationStatus status;
@@ -34,7 +34,7 @@ public class Reservation {
     protected Reservation() {
     }
 
-    private Reservation(Long userId, Long concertId, Long seatId) {
+    private Reservation(int userId, int concertId, int seatId) {
         this.userId = userId;
         this.concertId = concertId;
         this.seatId = seatId;
@@ -42,7 +42,7 @@ public class Reservation {
         this.createdAt = LocalDateTime.now();
     }
 
-    public static Reservation create(Long userId, Long concertId, Long seatId) {
+    public static Reservation create(int userId, int concertId, int seatId) {
         return new Reservation(userId, concertId, seatId);
     }
 
