@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+
 @Data
 @Entity
 @Table(name = "posts", indexes = {
@@ -19,11 +20,12 @@ public class Post {
     private Long postId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private BoardType boardType;
 
-    private Long idolId;
-    private Long groupId;
+    private Long idolId; // IDOL_* 게시판에서만 사용
+
+    private Long groupId; // GROUP_* 게시판에서만 사용
 
     @Column(nullable = false)
     private Integer authorId; // 작성자 userId

@@ -46,8 +46,8 @@ public class PostService {
         post.setIdolId(req.getIdolId());
         post.setGroupId(req.getGroupId());
         post.setAuthorId(userId);
-        post.setTitle(nz(req.getTitle()));
-        post.setContent(nz(req.getContent()));
+        post.setTitle(requireNonBlank(req.getTitle()));
+        post.setContent(requireNonBlank(req.getContent()));
 
         Post saved = postRepository.save(post);
 
@@ -60,11 +60,8 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("post not found"));
 
-        // A안: IDOL 게시판은 "상세(content)"는 구독자만 (USER만 제한)
-        if (post.getBoardType() == BoardType.IDOL && role == Role.USER) {
-            boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId);
-            if (!ok) throw new RuntimeException("subscription required");
-        }
+        // OFFICIAL/FAN 모두 상세보기(content)는 구독자만
+        requireReadSubscription(post, userId, role);
 
         return toResponse(post);
     }
@@ -74,13 +71,20 @@ public class PostService {
         validateBoardScope(boardType, idolId, groupId);
 
         Page<Post> page;
-        if (boardType == BoardType.IDOL) {
+
+        // IDOL_* 목록(나중에 쓰일수도? 아이돌게시판&아이돌팬게시판조회)
+        if (boardType == BoardType.IDOL_OFFICIAL || boardType == BoardType.IDOL_FAN) {
             page = postRepository.findByBoardTypeAndIdolIdOrderByCreatedAtDesc(boardType, idolId, pageable);
-        } else if (boardType == BoardType.GROUP) {
+        }
+        // GROUP_* 목록
+        else if (boardType == BoardType.GROUP_OFFICIAL || boardType == BoardType.GROUP_FAN) {
             page = postRepository.findByBoardTypeAndGroupIdOrderByCreatedAtDesc(boardType, groupId, pageable);
-        } else {
+        }
+        // 그 외 케이스는 없음
+        else {
             page = postRepository.findByBoardTypeOrderByCreatedAtDesc(boardType, pageable);
         }
+
         return page.map(this::toListResponse);
     }
 
@@ -91,8 +95,8 @@ public class PostService {
 
         requireUpdatePermission(post, userId, role);
 
-        if (req.getTitle() != null) post.setTitle(nz(req.getTitle()));
-        if (req.getContent() != null) post.setContent(nz(req.getContent()));
+        if (req.getTitle() != null) post.setTitle(requireNonBlank(req.getTitle()));
+        if (req.getContent() != null) post.setContent(requireNonBlank(req.getContent()));
 
         Post saved = postRepository.save(post);
         return toResponse(saved);
@@ -110,20 +114,26 @@ public class PostService {
 
     // Validation & Permission
 
+    // 누구 소속 게시판인지확인하고 아이디 할당
     private void validateBoardScope(BoardType boardType, Long idolId, Long groupId) {
         if (boardType == null) throw new RuntimeException("boardType is required");
 
-        if (boardType == BoardType.IDOL) {
+        // IDOL_* : idolId 필수, groupId 금지
+        if (boardType == BoardType.IDOL_OFFICIAL || boardType == BoardType.IDOL_FAN) {
             if (idolId == null) throw new RuntimeException("idolId is required for IDOL board");
             if (groupId != null) throw new RuntimeException("groupId must be null for IDOL board");
-        } else if (boardType == BoardType.GROUP) {
+            return;
+        }
+
+        // GROUP_* : groupId 필수, idolId 금지
+        if (boardType == BoardType.GROUP_OFFICIAL || boardType == BoardType.GROUP_FAN) {
             if (groupId == null) throw new RuntimeException("groupId is required for GROUP board");
             if (idolId != null) throw new RuntimeException("idolId must be null for GROUP board");
-        } else { // FAN
-            if (idolId != null || groupId != null) {
-                throw new RuntimeException("idolId/groupId must be null for FAN board");
-            }
+            return;
         }
+
+        // enum 확장/오류 케이스 대비
+        throw new RuntimeException("invalid boardType");
     }
 
     private void requireCreatePermission(BoardType boardType, Long idolId, Long groupId, Integer userId, Role role) {
@@ -132,13 +142,24 @@ public class PostService {
         // ADMIN은 모든 것 가능
         if (role == Role.ADMIN) return;
 
-        if (boardType == BoardType.FAN) {
-            // FAN 게시판: USER는 작성 가능, IDOL/AGENCY는 보통 작성 막음
-            if (role == Role.USER) return;
-            throw new RuntimeException("forbidden");
+        // IDOL_FAN: 팬(USER)만 작성 + 구독자만
+        if (boardType == BoardType.IDOL_FAN) {
+            if (role != Role.USER) throw new RuntimeException("forbidden");
+            boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(idolId, userId);
+            if (!ok) throw new RuntimeException("subscription required");
+            return;
         }
 
-        if (boardType == BoardType.IDOL) {
+        // GROUP_FAN: 팬(USER)만 작성 + 구독자만
+        if (boardType == BoardType.GROUP_FAN) {
+            if (role != Role.USER) throw new RuntimeException("forbidden");
+            boolean ok = subscriptionInternalClient.isActiveGroupSubscriber(groupId, userId);
+            if (!ok) throw new RuntimeException("subscription required");
+            return;
+        }
+
+        // IDOL_OFFICIAL: IDOL/AGENCY만 작성 가능
+        if (boardType == BoardType.IDOL_OFFICIAL) {
             // IDOL/AGENCY만 작성 가능
             if (role == Role.IDOL) {
                 boolean ok = userInternalClient.isIdolOwner(idolId, userId);
@@ -153,7 +174,8 @@ public class PostService {
             throw new RuntimeException("forbidden");
         }
 
-        if (boardType == BoardType.GROUP) {
+        // GROUP_OFFICIAL: 그룹 멤버(IDOL) 또는 AGENCY 가능
+        if (boardType == BoardType.GROUP_OFFICIAL) {
             // 그룹 게시판: 그룹 멤버 IDOL 또는 AGENCY 가능
             if (role == Role.IDOL) {
                 boolean ok = userInternalClient.isGroupMember(groupId, userId);
@@ -178,13 +200,14 @@ public class PostService {
         if (role == Role.ADMIN) return;
 
         // FAN 게시판: USER는 본인 글만 수정 가능
-        if (post.getBoardType() == BoardType.FAN) {
+        if (post.getBoardType() == BoardType.IDOL_FAN || post.getBoardType() == BoardType.GROUP_FAN) {
             if (role == Role.USER && post.getAuthorId().equals(userId)) return;
             throw new RuntimeException("forbidden");
         }
 
-        // IDOL/GROUP 게시판 수정: IDOL/AGENCY만, 범위 검증 포함
-        if (post.getBoardType() == BoardType.IDOL) {
+        // IDOL_OFFICIAL 수정: IDOL/AGENCY만
+        if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
+            // IDOL/GROUP 게시판 수정: IDOL/AGENCY만, 범위 검증 포함
             if (role == Role.IDOL) {
                 boolean ok = userInternalClient.isIdolOwner(post.getIdolId(), userId);
                 if (!ok) throw new RuntimeException("forbidden");
@@ -198,7 +221,8 @@ public class PostService {
             throw new RuntimeException("forbidden");
         }
 
-        if (post.getBoardType() == BoardType.GROUP) {
+        // GROUP_OFFICIAL 수정: IDOL(멤버)/AGENCY만
+        if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
             if (role == Role.IDOL) {
                 boolean ok = userInternalClient.isGroupMember(post.getGroupId(), userId);
                 if (!ok) throw new RuntimeException("forbidden");
@@ -215,25 +239,51 @@ public class PostService {
         throw new RuntimeException("forbidden");
     }
 
+
     private void requireDeletePermission(Post post, Integer userId, Role role) {
-        // 삭제 정책은 수정과 동일하게 두는 게 일반적
+        // 삭제 권한은 수정과 동일
         requireUpdatePermission(post, userId, role);
     }
+
+    private void requireReadSubscription(Post post, Integer userId, Role role) {
+        // ADMIN은 읽기제한 없음
+        if (role == Role.ADMIN) return;
+
+        // 개인이든 그룹이든 상세조회는 구독자만
+        if (post.getBoardType() == BoardType.IDOL_OFFICIAL || post.getBoardType() == BoardType.IDOL_FAN) {
+            boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId);
+            if (!ok) throw new RuntimeException("subscription required");
+            return;
+        }
+
+        if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
+            boolean ok = subscriptionInternalClient.isActiveGroupSubscriber(post.getGroupId(), userId);
+            if (!ok) throw new RuntimeException("subscription required");
+            return;
+        }
+    }
+
 
     // Notify
 
     private void publishNewPostNotify(Post post) {
-        // FAN 게시판은 기본 “구독 알림” 없음
-        if (post.getBoardType() == BoardType.FAN) return;
+        // FAN 게시판은 기본 알림 없음
+        if (post.getBoardType() == BoardType.IDOL_FAN || post.getBoardType() == BoardType.GROUP_FAN) return;
+
+        // OFFICIAL만 알림 발송
+        if (post.getBoardType() != BoardType.IDOL_OFFICIAL && post.getBoardType() != BoardType.GROUP_OFFICIAL) return;
 
         NotifyRequestEvent event = new NotifyRequestEvent();
         event.setEventId(UUID.randomUUID().toString());
         event.setType("BOARD_NEW_POST");
 
-        if (post.getBoardType() == BoardType.IDOL) {
+        // IDOL_OFFICIAL -> IDOL_SUB
+        if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
             event.setTargetType(NotifyTargetType.IDOL_SUB.name());
             event.setTargetId(String.valueOf(post.getIdolId()));
-        } else if (post.getBoardType() == BoardType.GROUP) {
+        }
+        // GROUP_OFFICIAL -> GROUP_SUB
+        else if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
             event.setTargetType(NotifyTargetType.GROUP_SUB.name());
             event.setTargetId(String.valueOf(post.getGroupId()));
         }
@@ -247,12 +297,12 @@ public class PostService {
         event.setArgs(args);
 
         String redirectUrl;
-        if (post.getBoardType() == BoardType.IDOL) {
+        if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
             redirectUrl = "/board/posts/" + post.getPostId()
-                    + "?boardType=IDOL&idolId=" + post.getIdolId();
+                    + "?boardType=IDOL_OFFICIAL&idolId=" + post.getIdolId();
         } else {
             redirectUrl = "/board/posts/" + post.getPostId()
-                    + "?boardType=GROUP&groupId=" + post.getGroupId();
+                    + "?boardType=GROUP_OFFICIAL&groupId=" + post.getGroupId();
         }
         event.setRedirectUrl(redirectUrl);
 
@@ -278,7 +328,7 @@ public class PostService {
         return res;
     }
 
-    private String nz(String s) {
+    private String requireNonBlank(String s) {
         if (s == null) return "";
         String t = s.trim();
         if (t.isEmpty()) throw new RuntimeException("empty string not allowed");
