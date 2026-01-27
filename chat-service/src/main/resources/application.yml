@@ -20,24 +20,25 @@ spring:
       stack:
         auto: false
 
-  # MongoDB 설정 (채팅 내역 저장)
+  # MongoDB 설정
   data:
     mongodb:
       host: localhost
       port: 27017
       database: idol_chat
 
-    # Redis 설정 (Pub/Sub 및 채팅방 관리)
+    # Redis 설정
     redis:
       host: localhost
       port: 6379
 
-  # Kafka 설정 (Producer & Consumer)
+  # Kafka 설정
   kafka:
     bootstrap-servers: localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      compression-type: lz4 # 메시지 압축 적용 (성능 향상)
     consumer:
       group-id: chat-service-group
       auto-offset-reset: latest
@@ -50,11 +51,11 @@ spring:
       max-file-size: 20MB
       max-request-size: 20MB
 
-# gRPC Client 설정 (수정됨)
+# gRPC Client 설정
 grpc:
   client:
-    auth-service: # 이름 변경
-      address: static://localhost:9091 # 포트 변경
+    auth-service:
+      address: static://localhost:9091
       negotiation-type: plaintext
 
 # Swagger 설정
