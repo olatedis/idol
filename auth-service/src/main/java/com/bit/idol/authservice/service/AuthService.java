@@ -27,6 +27,7 @@ public class AuthService {
     public Map<String, String> login(String username, String password) {
         // 1. 사용자 정보 조회 (Feign)
         UserDto user = userFeignClient.getUserInfo(username);
+        
         if (user == null) {
             throw new RuntimeException("User not found");
         }

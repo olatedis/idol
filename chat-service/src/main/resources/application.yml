@@ -19,25 +19,34 @@ spring:
         static: ap-northeast-2
       stack:
         auto: false
+    
+    # Feign Client 타임아웃 설정
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: 5000
+            readTimeout: 5000
 
-  # MongoDB 설정 (채팅 내역 저장)
+  # MongoDB 설정
   data:
     mongodb:
       host: localhost
       port: 27017
       database: idol_chat
 
-    # Redis 설정 (Pub/Sub 및 채팅방 관리)
+    # Redis 설정
     redis:
       host: localhost
       port: 6379
 
-  # Kafka 설정 (Producer & Consumer)
+  # Kafka 설정
   kafka:
     bootstrap-servers: localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      compression-type: lz4
     consumer:
       group-id: chat-service-group
       auto-offset-reset: latest
@@ -50,11 +59,11 @@ spring:
       max-file-size: 20MB
       max-request-size: 20MB
 
-# gRPC Client 설정 (수정됨)
+# gRPC Client 설정
 grpc:
   client:
-    auth-service: # 이름 변경
-      address: static://localhost:9091 # 포트 변경
+    auth-service:
+      address: static://localhost:9091
       negotiation-type: plaintext
 
 # Swagger 설정
@@ -71,6 +80,13 @@ eureka:
     prefer-ip-address: true
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
   tracing:
     sampling:
       probability: 1.0
@@ -98,3 +114,11 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         waitDurationInOpenState: 10s
         failureRateThreshold: 50
+
+# OpenAI 설정
+openai:
+  api-key: sk-dummy-key-please-change-me
+
+# DeepL 설정 (번역)
+deepl:
+  api-key: fake-key

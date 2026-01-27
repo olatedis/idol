@@ -11,11 +11,13 @@ import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
 import com.bit.idol.userservice.entity.UserStatus;
 import com.bit.idol.userservice.producer.NotificationProducer;
+import com.bit.idol.userservice.producer.UserSyncProducer;
 import com.bit.idol.userservice.repository.BanHistoryRepository;
 import com.bit.idol.userservice.repository.UserRepository;
 import com.bit.idol.userservice.repository.UserViewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -41,8 +43,10 @@ public class UserService {
     private final CacheManager cacheManager;
     private final S3Service s3Service;
     private final StringRedisTemplate redisTemplate;
-    private final NotificationProducer notificationProducer; // 알림 프로듀서 추가
+    private final NotificationProducer notificationProducer;
+    private final UserSyncProducer userSyncProducer;
 
+    // 일반 조회 (MongoDB 사용 - 비밀번호 없음)
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
     public UserDto getUserByUsername(String username) {
         return userViewRepository.findByUsername(username)
@@ -50,9 +54,15 @@ public class UserService {
                 .orElseGet(() -> {
                     User user = userRepository.findByUsername(username)
                             .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
-                    syncToMongo(user);
                     return UserDto.fromEntity(user);
                 });
+    }
+
+    // 로그인용 조회 (MySQL 사용 - 비밀번호 포함)
+    public UserDto getUserForLogin(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+        return UserDto.fromEntity(user);
     }
 
     @Cacheable(value = "user:info:id", key = "#userId", unless = "#result == null")
@@ -62,7 +72,6 @@ public class UserService {
                 .orElseGet(() -> {
                     User user = userRepository.findById(userId)
                             .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-                    syncToMongo(user);
                     return UserDto.fromEntity(user);
                 });
     }
@@ -102,7 +111,8 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
-        syncToMongo(user);
+        userSyncProducer.send(user.getId(), "CREATE");
+        
         log.info("회원가입 완료: username={}, userId={}", user.getUsername(), user.getId());
     }
 
@@ -110,7 +120,6 @@ public class UserService {
     public UserDto registerSocialUser(UserDto userDto) {
         return userRepository.findByProviderAndProviderId(userDto.getProvider(), userDto.getProviderId())
                 .map(user -> {
-                    syncToMongo(user);
                     return UserDto.fromEntity(user);
                 })
                 .orElseGet(() -> {
@@ -129,14 +138,16 @@ public class UserService {
                             .build();
 
                     User savedUser = userRepository.save(newUser);
-                    syncToMongo(savedUser);
+                    userSyncProducer.send(savedUser.getId(), "CREATE");
+                    
                     log.info("소셜 회원가입 완료: provider={}, userId={}", userDto.getProvider(), savedUser.getId());
                     return UserDto.fromEntity(savedUser);
                 });
     }
 
     @Transactional
-    public void updateUserInfo(int userId, UserUpdateDto userUpdateDto) {
+    @CachePut(value = "user:info:id", key = "#userId")
+    public UserDto updateUserInfo(int userId, UserUpdateDto userUpdateDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -146,13 +157,16 @@ public class UserService {
         if (userUpdateDto.getAddress() != null) user.setAddress(userUpdateDto.getAddress());
         if (userUpdateDto.getImgUrl() != null) user.setImgUrl(userUpdateDto.getImgUrl());
 
-        syncToMongo(user);
-        evictUserCache(user);
+        userSyncProducer.send(user.getId(), "UPDATE");
+        updateUsernameCache(user);
+        
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
+        return UserDto.fromEntity(user);
     }
 
     @Transactional
-    public String updateProfileImage(int userId, MultipartFile file) {
+    @CachePut(value = "user:info:id", key = "#userId")
+    public UserDto updateProfileImage(int userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -163,13 +177,15 @@ public class UserService {
         String fileUrl = s3Service.uploadFile(file);
         user.setImgUrl(fileUrl);
         
-        syncToMongo(user);
-        evictUserCache(user);
-        return fileUrl;
+        userSyncProducer.send(user.getId(), "UPDATE");
+        updateUsernameCache(user);
+        
+        return UserDto.fromEntity(user);
     }
 
     @Transactional
-    public void changePassword(int userId, PasswordChangeDto passwordChangeDto) {
+    @CachePut(value = "user:info:id", key = "#userId")
+    public UserDto changePassword(int userId, PasswordChangeDto passwordChangeDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -178,24 +194,23 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(passwordChangeDto.getNewPassword()));
-        evictUserCache(user);
-
-        // 알림 발송
+        
         sendPasswordChangedNotification(user);
+        
+        return UserDto.fromEntity(user);
     }
 
     @Transactional
-    public int resetPassword(String email, String newPassword) {
+    @CachePut(value = "user:info:id", key = "#result.userId")
+    public UserDto resetPassword(String email, String newPassword) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
         user.setPassword(passwordEncoder.encode(newPassword));
-        evictUserCache(user);
 
-        // 알림 발송
         sendPasswordChangedNotification(user);
 
-        return user.getId();
+        return UserDto.fromEntity(user);
     }
 
     @Transactional
@@ -208,12 +223,14 @@ public class UserService {
         }
 
         userRepository.delete(user);
-        userViewRepository.deleteById(userId);
+        userSyncProducer.send(userId, "DELETE");
+        
         evictUserCache(user);
     }
 
     @Transactional
-    public void increaseReportCount(int userId) {
+    @CachePut(value = "user:info:id", key = "#userId")
+    public UserDto increaseReportCount(int userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -232,16 +249,19 @@ public class UserService {
             log.warn("유저 자동 일시정지 처리: userId={}", userId);
         }
         
-        syncToMongo(user);
-        evictUserCache(user);
+        userSyncProducer.send(user.getId(), "UPDATE");
+        updateUsernameCache(user);
+        
+        return UserDto.fromEntity(user);
     }
 
     @Transactional
-    public void updateUserStatus(int userId, UserStatus newStatus, String reason) {
+    @CachePut(value = "user:info:id", key = "#userId")
+    public UserDto updateUserStatus(int userId, UserStatus newStatus, String reason) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.getStatus() == newStatus) return;
+        if (user.getStatus() == newStatus) return UserDto.fromEntity(user);
 
         user.setStatus(newStatus);
 
@@ -256,33 +276,11 @@ public class UserService {
                 .build();
         banHistoryRepository.save(history);
 
-        syncToMongo(user);
-        evictUserCache(user);
+        userSyncProducer.send(user.getId(), "UPDATE");
+        updateUsernameCache(user);
         
         log.info("유저 상태 변경 완료: userId={}, status={}", userId, newStatus);
-    }
-
-    private void syncToMongo(User user) {
-        try {
-            UserView userView = UserView.builder()
-                    .id(user.getId())
-                    .username(user.getUsername())
-                    .nickname(user.getNickname())
-                    .email(user.getEmail())
-                    .phone(user.getPhone())
-                    .address(user.getAddress())
-                    .imgUrl(user.getImgUrl())
-                    .role(user.getRole().name())
-                    .provider(user.getProvider())
-                    .providerId(user.getProviderId())
-                    .status(user.getStatus().name())
-                    .reportCount(user.getReportCount())
-                    .build();
-            
-            userViewRepository.save(userView);
-        } catch (Exception e) {
-            log.error("MongoDB 동기화 실패: {}", e.getMessage());
-        }
+        return UserDto.fromEntity(user);
     }
 
     private UserDto convertViewToDto(UserView view) {
@@ -310,8 +308,15 @@ public class UserService {
             log.warn("캐시 삭제 중 오류 발생: {}", e.getMessage());
         }
     }
+    
+    private void updateUsernameCache(User user) {
+        try {
+            Objects.requireNonNull(cacheManager.getCache("user:info:username")).put(user.getUsername(), UserDto.fromEntity(user));
+        } catch (Exception e) {
+            log.warn("username 캐시 갱신 실패: {}", e.getMessage());
+        }
+    }
 
-    // 알림 발송 헬퍼 메서드
     private void sendPasswordChangedNotification(User user) {
         NotificationEventDto event = NotificationEventDto.builder()
                 .eventId(UUID.randomUUID().toString())

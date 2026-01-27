@@ -18,6 +18,7 @@ public class ChatProducer {
     
     private static final String CHAT_TOPIC = "chat-message-topic";
     private static final String REPORT_TOPIC = "user-report-topic";
+    private static final String AI_CHECK_TOPIC = "chat-ai-check-topic"; // 추가됨
 
     // 채팅 메시지 전송 (Kafka)
     public void sendChatMessage(ChatMessageDto messageDto) {
@@ -31,10 +32,21 @@ public class ChatProducer {
         }
     }
 
-    // 신고 메시지 전송 (기존 ReportProducer 기능 통합)
+    // 신고 메시지 전송
     public void sendReport(int userId) {
         String message = String.valueOf(userId);
         kafkaTemplate.send(REPORT_TOPIC, message);
         log.info("신고 메시지 Kafka 전송: userId={}", userId);
+    }
+
+    // AI 검사 요청 전송 (추가됨)
+    public void sendAiCheck(ChatMessageDto messageDto) {
+        try {
+            String jsonMessage = objectMapper.writeValueAsString(messageDto);
+            kafkaTemplate.send(AI_CHECK_TOPIC, jsonMessage);
+            log.debug("AI 검사 요청 Kafka 전송: msgId={}", messageDto.getId());
+        } catch (JsonProcessingException e) {
+            log.error("AI 검사 요청 JSON 변환 실패", e);
+        }
     }
 }

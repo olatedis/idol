@@ -26,8 +26,13 @@ dependencies {
     // 1. 핵심: 유레카 서버 의존성
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
 
-    // 2. 모니터링 및 관리를 위한 Actuator
+    // 2. 모니터링 및 관리를 위한 Actuator & Prometheus
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
+    // Zipkin & Micrometer Tracing
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

@@ -5,6 +5,7 @@ import com.bit.idol.chatservice.dto.notification.NotificationEventDto;
 import com.bit.idol.chatservice.dto.notification.TargetType;
 import com.bit.idol.chatservice.entity.ChatMessage;
 import com.bit.idol.chatservice.filter.ChatFilter;
+import com.bit.idol.chatservice.filter.SuspiciousWordFilter;
 import com.bit.idol.chatservice.producer.ChatProducer;
 import com.bit.idol.chatservice.producer.NotificationProducer;
 import com.bit.idol.chatservice.repository.ChatRepository;
@@ -30,9 +31,10 @@ public class ChatService {
 
     private final ChatRepository chatRepository;
     private final ChatFilter chatFilter;
+    private final SuspiciousWordFilter suspiciousWordFilter; // 의심 필터 추가
     private final ChatProducer chatProducer;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final NotificationProducer notificationProducer; // 알림 프로듀서 추가
+    private final NotificationProducer notificationProducer;
 
     // 도배 방지 설정 (3초에 1회)
     private static final long RATE_LIMIT_SECONDS = 3;
@@ -43,14 +45,14 @@ public class ChatService {
         // 0. 도배 방지 (USER인 경우만)
         if ("USER".equals(messageDto.getSenderRole())) {
             String limitKey = "chat:limit:" + messageDto.getSenderId();
-            if (Boolean.TRUE.equals(redisTemplate.hasKey(limitKey))) {
+            if (redisTemplate.hasKey(limitKey)) {
                 throw new RuntimeException("메시지를 너무 빠르게 보낼 수 없습니다. 잠시 후 다시 시도해주세요.");
             }
             redisTemplate.opsForValue().set(limitKey, "1", Duration.ofSeconds(RATE_LIMIT_SECONDS));
         }
 
         try {
-            // 1. 메시지 검열
+            // 1. 메시지 검열 (Aho-Corasick: 즉시 차단)
             String filteredContent = chatFilter.filter(messageDto.getContent());
             messageDto.setContent(filteredContent);
         } catch (RuntimeException e) {
@@ -67,32 +69,36 @@ public class ChatService {
                 .senderRole(messageDto.getSenderRole())
                 .content(messageDto.getContent())
                 .type(messageDto.getType())
-                .parentId(messageDto.getParentId()) // 답장 기능
+                .parentId(messageDto.getParentId())
                 .createdAt(LocalDateTime.now())
                 .build();
         
         ChatMessage savedMessage = chatRepository.save(chatMessage);
         
-        // DTO에 저장된 ID(MongoDB ID) 세팅
         messageDto.setId(savedMessage.getId());
 
-        // 3. Redis 캐싱 (최신 메시지 저장)
+        // 3. Redis 캐싱
         String cacheKey = "chat:room:" + messageDto.getIdolId();
         redisTemplate.opsForList().leftPush(cacheKey, messageDto);
         redisTemplate.opsForList().trim(cacheKey, 0, CACHE_SIZE - 1);
 
-        // 4. Kafka로 전송 (채팅방 브로드캐스팅)
+        // 4. Kafka로 전송 (실시간 채팅)
         chatProducer.sendChatMessage(messageDto);
         
         log.info("메시지 처리 완료: room={}, id={}", messageDto.getIdolId(), savedMessage.getId());
 
-        // 5. 알림 발송 (비동기 처리 권장)
+        // 5. 알림 발송
         sendNotification(messageDto);
+
+        // 6. AI 비동기 검사 요청 (의심스러운 경우만)
+        if (suspiciousWordFilter.isSuspicious(messageDto.getContent())) {
+            log.info("의심 메시지 감지 -> AI 검사 요청: msgId={}", messageDto.getId());
+            chatProducer.sendAiCheck(messageDto);
+        }
     }
 
     private void sendNotification(ChatMessageDto messageDto) {
         try {
-            // 1. 아이돌이 보낸 메시지인 경우 -> 구독자 전체 알림
             if ("IDOL".equals(messageDto.getSenderRole())) {
                 Map<String, String> args = new HashMap<>();
                 args.put("idolName", messageDto.getSenderNickname());
@@ -111,11 +117,8 @@ public class ChatService {
                 notificationProducer.send(event);
             }
 
-            // 2. 답장(Reply)인 경우 -> 원글 작성자에게 알림
             if (messageDto.getParentId() != null && !messageDto.getParentId().isEmpty()) {
-                // 원글 조회 (MongoDB)
                 chatRepository.findById(messageDto.getParentId()).ifPresent(parentMsg -> {
-                    // 자기 자신에게 쓴 답장은 알림 제외
                     if (parentMsg.getSenderId() != messageDto.getSenderId()) {
                         Map<String, String> args = new HashMap<>();
                         args.put("replierName", messageDto.getSenderNickname());
@@ -135,11 +138,10 @@ public class ChatService {
                 });
             }
         } catch (Exception e) {
-            log.error("알림 발송 중 오류 (비즈니스 로직 영향 없음): {}", e.getMessage());
+            log.error("알림 발송 중 오류: {}", e.getMessage());
         }
     }
 
-    // 메시지 반응 추가 (좋아요, 하트 등)
     public void addReaction(String messageId, String reactionType, Long idolId) {
         ChatMessage message = chatRepository.findById(messageId)
                 .orElseThrow(() -> new RuntimeException("메시지를 찾을 수 없습니다."));
@@ -177,7 +179,6 @@ public class ChatService {
         log.info("반응 추가 완료: msgId={}, type={}", messageId, reactionType);
     }
 
-    // 메시지 회수 (Soft Delete)
     public void deleteMessage(String messageId, Long idolId, int userId) {
         ChatMessage message = chatRepository.findById(messageId)
                 .orElseThrow(() -> new RuntimeException("메시지를 찾을 수 없습니다."));

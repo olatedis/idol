@@ -50,6 +50,13 @@ jwt:
   refresh-expiration: 1209600000 # 2주
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
   tracing:
     sampling:
       probability: 1.0
