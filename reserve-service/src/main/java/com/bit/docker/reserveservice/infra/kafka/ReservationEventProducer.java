@@ -1,18 +1,18 @@
 package com.bit.docker.reserveservice.infra.kafka;
 
+import com.bit.docker.reserveservice.domain.dto.PaymentEvent;
+import lombok.AllArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
+@AllArgsConstructor
 public class ReservationEventProducer {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public ReservationEventProducer(KafkaTemplate<String, Object> kafkaTemplate) {
-        this.kafkaTemplate = kafkaTemplate;
-    }
 
-    public void publishReservationCreated(Long reservationId) {
-        kafkaTemplate.send("reservation-created", reservationId);
+    public void publishReservationCreated(PaymentEvent event) {
+        kafkaTemplate.send("reservation-created", event.toJson());
     }
 }
