@@ -78,16 +78,18 @@ public class InternalUserController {
 
     // ========================================================================
 
-    // 비밀번호 재설정 (Auth Service에서 호출) - 반환값 Integer로 변경
+    // 비밀번호 재설정 (Auth Service에서 호출)
     @PostMapping("/password/reset")
     public ResponseEntity<Integer> resetPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         String newPassword = request.get("newPassword");
         
         log.info("비밀번호 재설정 요청 (Internal): email={}", email);
-        int userId = userService.resetPassword(email, newPassword);
         
-        return ResponseEntity.ok(userId);
+        // UserService가 UserDto를 반환하도록 변경되었으므로 수정
+        UserDto updatedUser = userService.resetPassword(email, newPassword);
+        
+        return ResponseEntity.ok(updatedUser.getUserId());
     }
 
     // 신고 횟수 증가 (Chat Service 등에서 호출)

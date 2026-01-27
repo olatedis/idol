@@ -45,7 +45,6 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         log.info("내 정보 조회 요청: userId={}", userId);
-        // getUserInfo -> getUserById로 변경 (CQRS 적용)
         return ResponseEntity.ok(userService.getUserById(userId));
     }
 
@@ -73,7 +72,11 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("접근 권한이 없습니다.");
         }
         log.info("프로필 이미지 변경 요청: userId={}", userId);
-        String fileUrl = userService.updateProfileImage(userId, file);
+        
+        // UserService가 UserDto를 반환하도록 변경되었으므로 수정
+        UserDto updatedUser = userService.updateProfileImage(userId, file);
+        String fileUrl = updatedUser.getImgUrl();
+
         log.info("프로필 이미지 변경 완료: userId={}, url={}", userId, fileUrl);
         return ResponseEntity.ok(fileUrl);
     }
