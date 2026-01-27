@@ -16,6 +16,7 @@ import com.bit.idol.userservice.repository.UserRepository;
 import com.bit.idol.userservice.repository.UserViewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -41,7 +42,7 @@ public class UserService {
     private final CacheManager cacheManager;
     private final S3Service s3Service;
     private final StringRedisTemplate redisTemplate;
-    private final NotificationProducer notificationProducer; // 알림 프로듀서 추가
+    private final NotificationProducer notificationProducer;
 
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
     public UserDto getUserByUsername(String username) {
@@ -136,7 +137,8 @@ public class UserService {
     }
 
     @Transactional
-    public void updateUserInfo(int userId, UserUpdateDto userUpdateDto) {
+    @CachePut(value = "user:info:id", key = "#userId")
+    public UserDto updateUserInfo(int userId, UserUpdateDto userUpdateDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -147,12 +149,18 @@ public class UserService {
         if (userUpdateDto.getImgUrl() != null) user.setImgUrl(userUpdateDto.getImgUrl());
 
         syncToMongo(user);
-        evictUserCache(user);
+        // evictUserCache(user); // 제거됨 (CachePut으로 대체)
+        
+        // username 캐시도 갱신 필요 (닉네임 변경 시 등)
+        updateUsernameCache(user);
+        
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
+        return UserDto.fromEntity(user);
     }
 
     @Transactional
-    public String updateProfileImage(int userId, MultipartFile file) {
+    @CachePut(value = "user:info:id", key = "#userId")
+    public UserDto updateProfileImage(int userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -164,12 +172,14 @@ public class UserService {
         user.setImgUrl(fileUrl);
         
         syncToMongo(user);
-        evictUserCache(user);
-        return fileUrl;
+        updateUsernameCache(user);
+        
+        return UserDto.fromEntity(user);
     }
 
     @Transactional
-    public void changePassword(int userId, PasswordChangeDto passwordChangeDto) {
+    @CachePut(value = "user:info:id", key = "#userId")
+    public UserDto changePassword(int userId, PasswordChangeDto passwordChangeDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -178,24 +188,25 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(passwordChangeDto.getNewPassword()));
-        evictUserCache(user);
-
+        
         // 알림 발송
         sendPasswordChangedNotification(user);
+        
+        return UserDto.fromEntity(user);
     }
 
     @Transactional
-    public int resetPassword(String email, String newPassword) {
+    @CachePut(value = "user:info:id", key = "#result.userId")
+    public UserDto resetPassword(String email, String newPassword) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
         user.setPassword(passwordEncoder.encode(newPassword));
-        evictUserCache(user);
 
         // 알림 발송
         sendPasswordChangedNotification(user);
 
-        return user.getId();
+        return UserDto.fromEntity(user);
     }
 
     @Transactional
@@ -209,11 +220,12 @@ public class UserService {
 
         userRepository.delete(user);
         userViewRepository.deleteById(userId);
-        evictUserCache(user);
+        evictUserCache(user); // 탈퇴는 삭제가 맞음
     }
 
     @Transactional
-    public void increaseReportCount(int userId) {
+    @CachePut(value = "user:info:id", key = "#userId")
+    public UserDto increaseReportCount(int userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -233,15 +245,18 @@ public class UserService {
         }
         
         syncToMongo(user);
-        evictUserCache(user);
+        updateUsernameCache(user);
+        
+        return UserDto.fromEntity(user);
     }
 
     @Transactional
-    public void updateUserStatus(int userId, UserStatus newStatus, String reason) {
+    @CachePut(value = "user:info:id", key = "#userId")
+    public UserDto updateUserStatus(int userId, UserStatus newStatus, String reason) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.getStatus() == newStatus) return;
+        if (user.getStatus() == newStatus) return UserDto.fromEntity(user);
 
         user.setStatus(newStatus);
 
@@ -257,9 +272,10 @@ public class UserService {
         banHistoryRepository.save(history);
 
         syncToMongo(user);
-        evictUserCache(user);
+        updateUsernameCache(user);
         
         log.info("유저 상태 변경 완료: userId={}, status={}", userId, newStatus);
+        return UserDto.fromEntity(user);
     }
 
     private void syncToMongo(User user) {
@@ -310,8 +326,16 @@ public class UserService {
             log.warn("캐시 삭제 중 오류 발생: {}", e.getMessage());
         }
     }
+    
+    // username 캐시 수동 갱신 (CachePut은 하나의 키만 지원하므로)
+    private void updateUsernameCache(User user) {
+        try {
+            Objects.requireNonNull(cacheManager.getCache("user:info:username")).put(user.getUsername(), UserDto.fromEntity(user));
+        } catch (Exception e) {
+            log.warn("username 캐시 갱신 실패: {}", e.getMessage());
+        }
+    }
 
-    // 알림 발송 헬퍼 메서드
     private void sendPasswordChangedNotification(User user) {
         NotificationEventDto event = NotificationEventDto.builder()
                 .eventId(UUID.randomUUID().toString())
