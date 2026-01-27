@@ -11,6 +11,7 @@ import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
 import com.bit.idol.userservice.entity.UserStatus;
 import com.bit.idol.userservice.producer.NotificationProducer;
+import com.bit.idol.userservice.producer.UserSyncProducer;
 import com.bit.idol.userservice.repository.BanHistoryRepository;
 import com.bit.idol.userservice.repository.UserRepository;
 import com.bit.idol.userservice.repository.UserViewRepository;
@@ -43,6 +44,7 @@ public class UserService {
     private final S3Service s3Service;
     private final StringRedisTemplate redisTemplate;
     private final NotificationProducer notificationProducer;
+    private final UserSyncProducer userSyncProducer; // 동기화 프로듀서 추가
 
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
     public UserDto getUserByUsername(String username) {
@@ -51,7 +53,6 @@ public class UserService {
                 .orElseGet(() -> {
                     User user = userRepository.findByUsername(username)
                             .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
-                    syncToMongo(user);
                     return UserDto.fromEntity(user);
                 });
     }
@@ -63,7 +64,6 @@ public class UserService {
                 .orElseGet(() -> {
                     User user = userRepository.findById(userId)
                             .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-                    syncToMongo(user);
                     return UserDto.fromEntity(user);
                 });
     }
@@ -103,7 +103,8 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
-        syncToMongo(user);
+        userSyncProducer.send(user.getId(), "CREATE"); // 비동기 동기화
+        
         log.info("회원가입 완료: username={}, userId={}", user.getUsername(), user.getId());
     }
 
@@ -111,7 +112,7 @@ public class UserService {
     public UserDto registerSocialUser(UserDto userDto) {
         return userRepository.findByProviderAndProviderId(userDto.getProvider(), userDto.getProviderId())
                 .map(user -> {
-                    syncToMongo(user);
+                    // syncToMongo(user); // 제거됨 (이미 동기화되어 있다고 가정)
                     return UserDto.fromEntity(user);
                 })
                 .orElseGet(() -> {
@@ -130,7 +131,8 @@ public class UserService {
                             .build();
 
                     User savedUser = userRepository.save(newUser);
-                    syncToMongo(savedUser);
+                    userSyncProducer.send(savedUser.getId(), "CREATE"); // 비동기 동기화
+                    
                     log.info("소셜 회원가입 완료: provider={}, userId={}", userDto.getProvider(), savedUser.getId());
                     return UserDto.fromEntity(savedUser);
                 });
@@ -148,10 +150,7 @@ public class UserService {
         if (userUpdateDto.getAddress() != null) user.setAddress(userUpdateDto.getAddress());
         if (userUpdateDto.getImgUrl() != null) user.setImgUrl(userUpdateDto.getImgUrl());
 
-        syncToMongo(user);
-        // evictUserCache(user); // 제거됨 (CachePut으로 대체)
-        
-        // username 캐시도 갱신 필요 (닉네임 변경 시 등)
+        userSyncProducer.send(user.getId(), "UPDATE"); // 비동기 동기화
         updateUsernameCache(user);
         
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
@@ -171,7 +170,7 @@ public class UserService {
         String fileUrl = s3Service.uploadFile(file);
         user.setImgUrl(fileUrl);
         
-        syncToMongo(user);
+        userSyncProducer.send(user.getId(), "UPDATE"); // 비동기 동기화
         updateUsernameCache(user);
         
         return UserDto.fromEntity(user);
@@ -189,7 +188,6 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(passwordChangeDto.getNewPassword()));
         
-        // 알림 발송
         sendPasswordChangedNotification(user);
         
         return UserDto.fromEntity(user);
@@ -203,7 +201,6 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
 
-        // 알림 발송
         sendPasswordChangedNotification(user);
 
         return UserDto.fromEntity(user);
@@ -219,8 +216,9 @@ public class UserService {
         }
 
         userRepository.delete(user);
-        userViewRepository.deleteById(userId);
-        evictUserCache(user); // 탈퇴는 삭제가 맞음
+        userSyncProducer.send(userId, "DELETE"); // 비동기 삭제
+        
+        evictUserCache(user);
     }
 
     @Transactional
@@ -244,7 +242,7 @@ public class UserService {
             log.warn("유저 자동 일시정지 처리: userId={}", userId);
         }
         
-        syncToMongo(user);
+        userSyncProducer.send(user.getId(), "UPDATE"); // 비동기 동기화
         updateUsernameCache(user);
         
         return UserDto.fromEntity(user);
@@ -271,34 +269,11 @@ public class UserService {
                 .build();
         banHistoryRepository.save(history);
 
-        syncToMongo(user);
+        userSyncProducer.send(user.getId(), "UPDATE"); // 비동기 동기화
         updateUsernameCache(user);
         
         log.info("유저 상태 변경 완료: userId={}, status={}", userId, newStatus);
         return UserDto.fromEntity(user);
-    }
-
-    private void syncToMongo(User user) {
-        try {
-            UserView userView = UserView.builder()
-                    .id(user.getId())
-                    .username(user.getUsername())
-                    .nickname(user.getNickname())
-                    .email(user.getEmail())
-                    .phone(user.getPhone())
-                    .address(user.getAddress())
-                    .imgUrl(user.getImgUrl())
-                    .role(user.getRole().name())
-                    .provider(user.getProvider())
-                    .providerId(user.getProviderId())
-                    .status(user.getStatus().name())
-                    .reportCount(user.getReportCount())
-                    .build();
-            
-            userViewRepository.save(userView);
-        } catch (Exception e) {
-            log.error("MongoDB 동기화 실패: {}", e.getMessage());
-        }
     }
 
     private UserDto convertViewToDto(UserView view) {
@@ -327,7 +302,6 @@ public class UserService {
         }
     }
     
-    // username 캐시 수동 갱신 (CachePut은 하나의 키만 지원하므로)
     private void updateUsernameCache(User user) {
         try {
             Objects.requireNonNull(cacheManager.getCache("user:info:username")).put(user.getUsername(), UserDto.fromEntity(user));
