@@ -51,7 +51,7 @@ public class ReservationEventProducer {
         reservation.confirm();
 
         kafkaTemplate.send(
-                "reservation.created",
+                "notify-request-topic",
                 ReservationEvent.builder()
                         .eventType("CREATED")
                         .targetType(ReservationEvent.TargetType.USER)
@@ -62,7 +62,7 @@ public class ReservationEventProducer {
                         .toJson()
         );
 
-        log.info("좌석 결제 완료: userId={}, concert={}", reservation.getUserId(), reservation.getConcertId());
+        log.info("좌석 결제 완료: userId={}, concert={}, seat={}", reservation.getUserId(), reservation.getConcertId(), reservation.getSeatId());
 
 
     }
