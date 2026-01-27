@@ -65,16 +65,6 @@ public class AuthController {
         return ResponseEntity.ok(newTokens);
     }
 
-    // 토큰 검증 API (벤치마크용)
-    @GetMapping("/verify")
-    public ResponseEntity<Map<String, Object>> verifyToken(@RequestHeader("Authorization") String token) {
-        if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
-        Map<String, Object> result = authService.verifyToken(token);
-        return ResponseEntity.ok(result);
-    }
-
     // --- 이메일 인증 API ---
 
     @PostMapping("/email/send")

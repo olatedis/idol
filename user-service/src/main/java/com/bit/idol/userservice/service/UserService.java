@@ -44,8 +44,9 @@ public class UserService {
     private final S3Service s3Service;
     private final StringRedisTemplate redisTemplate;
     private final NotificationProducer notificationProducer;
-    private final UserSyncProducer userSyncProducer; // 동기화 프로듀서 추가
+    private final UserSyncProducer userSyncProducer;
 
+    // 일반 조회 (MongoDB 사용 - 비밀번호 없음)
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
     public UserDto getUserByUsername(String username) {
         return userViewRepository.findByUsername(username)
@@ -55,6 +56,13 @@ public class UserService {
                             .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
                     return UserDto.fromEntity(user);
                 });
+    }
+
+    // 로그인용 조회 (MySQL 사용 - 비밀번호 포함)
+    public UserDto getUserForLogin(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+        return UserDto.fromEntity(user);
     }
 
     @Cacheable(value = "user:info:id", key = "#userId", unless = "#result == null")
@@ -103,7 +111,7 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
-        userSyncProducer.send(user.getId(), "CREATE"); // 비동기 동기화
+        userSyncProducer.send(user.getId(), "CREATE");
         
         log.info("회원가입 완료: username={}, userId={}", user.getUsername(), user.getId());
     }
@@ -130,7 +138,7 @@ public class UserService {
                             .build();
 
                     User savedUser = userRepository.save(newUser);
-                    userSyncProducer.send(savedUser.getId(), "CREATE"); // 비동기 동기화
+                    userSyncProducer.send(savedUser.getId(), "CREATE");
                     
                     log.info("소셜 회원가입 완료: provider={}, userId={}", userDto.getProvider(), savedUser.getId());
                     return UserDto.fromEntity(savedUser);
@@ -149,7 +157,7 @@ public class UserService {
         if (userUpdateDto.getAddress() != null) user.setAddress(userUpdateDto.getAddress());
         if (userUpdateDto.getImgUrl() != null) user.setImgUrl(userUpdateDto.getImgUrl());
 
-        userSyncProducer.send(user.getId(), "UPDATE"); // 비동기 동기화
+        userSyncProducer.send(user.getId(), "UPDATE");
         updateUsernameCache(user);
         
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
@@ -169,7 +177,7 @@ public class UserService {
         String fileUrl = s3Service.uploadFile(file);
         user.setImgUrl(fileUrl);
         
-        userSyncProducer.send(user.getId(), "UPDATE"); // 비동기 동기화
+        userSyncProducer.send(user.getId(), "UPDATE");
         updateUsernameCache(user);
         
         return UserDto.fromEntity(user);
@@ -215,7 +223,7 @@ public class UserService {
         }
 
         userRepository.delete(user);
-        userSyncProducer.send(userId, "DELETE"); // 비동기 삭제
+        userSyncProducer.send(userId, "DELETE");
         
         evictUserCache(user);
     }
@@ -241,7 +249,7 @@ public class UserService {
             log.warn("유저 자동 일시정지 처리: userId={}", userId);
         }
         
-        userSyncProducer.send(user.getId(), "UPDATE"); // 비동기 동기화
+        userSyncProducer.send(user.getId(), "UPDATE");
         updateUsernameCache(user);
         
         return UserDto.fromEntity(user);
@@ -268,7 +276,7 @@ public class UserService {
                 .build();
         banHistoryRepository.save(history);
 
-        userSyncProducer.send(user.getId(), "UPDATE"); // 비동기 동기화
+        userSyncProducer.send(user.getId(), "UPDATE");
         updateUsernameCache(user);
         
         log.info("유저 상태 변경 완료: userId={}, status={}", userId, newStatus);

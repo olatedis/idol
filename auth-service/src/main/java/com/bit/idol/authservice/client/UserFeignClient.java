@@ -11,7 +11,8 @@ import java.util.Map;
 
 @FeignClient(name = "user-service")
 public interface UserFeignClient {
-    @GetMapping("/internal/users/info/{username}")
+    // 로그인용 유저 정보 조회 (비밀번호 포함)
+    @GetMapping("/internal/users/login/{username}")
     UserDto getUserInfo(@PathVariable("username") String username);
 
     @GetMapping("/internal/users/info/id/{userId}")
@@ -21,7 +22,7 @@ public interface UserFeignClient {
     @PostMapping("/users/social")
     UserDto registerSocialUser(@RequestBody UserDto userDto);
 
-    // 비밀번호 재설정 (내부 호출용) - 반환값 int로 변경
+    // 비밀번호 재설정 (내부 호출용)
     @PostMapping("/internal/users/password/reset")
     int resetPassword(@RequestBody Map<String, String> request);
 }

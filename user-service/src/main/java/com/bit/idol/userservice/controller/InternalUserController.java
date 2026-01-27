@@ -26,6 +26,12 @@ public class InternalUserController {
         return ResponseEntity.ok(userService.getUserByUsername(username));
     }
 
+    // 로그인용 유저 정보 조회 (비밀번호 포함, MySQL 직접 조회)
+    @GetMapping("/login/{username}")
+    public ResponseEntity<UserDto> getUserForLogin(@PathVariable("username") String username) {
+        return ResponseEntity.ok(userService.getUserForLogin(username));
+    }
+
     @GetMapping("/info/id/{userId}")
     public ResponseEntity<UserDto> getUserInfoById(@PathVariable("userId") int userId) {
         return ResponseEntity.ok(userService.getUserById(userId));
@@ -86,7 +92,6 @@ public class InternalUserController {
         
         log.info("비밀번호 재설정 요청 (Internal): email={}", email);
         
-        // UserService가 UserDto를 반환하도록 변경되었으므로 수정
         UserDto updatedUser = userService.resetPassword(email, newPassword);
         
         return ResponseEntity.ok(updatedUser.getUserId());
