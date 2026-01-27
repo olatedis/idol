@@ -31,7 +31,7 @@ public class AuthController {
     private final PasswordResetService passwordResetService;
     private final UserFeignClient userFeignClient;
     private final RateLimiterService rateLimiterService;
-    private final StringRedisTemplate redisTemplate; // 토큰 삭제용 추가
+    private final StringRedisTemplate redisTemplate;
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequestDto request) {
@@ -65,11 +65,20 @@ public class AuthController {
         return ResponseEntity.ok(newTokens);
     }
 
+    // 토큰 검증 API (벤치마크용)
+    @GetMapping("/verify")
+    public ResponseEntity<Map<String, Object>> verifyToken(@RequestHeader("Authorization") String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        Map<String, Object> result = authService.verifyToken(token);
+        return ResponseEntity.ok(result);
+    }
+
     // --- 이메일 인증 API ---
 
     @PostMapping("/email/send")
     public ResponseEntity<String> sendEmail(@RequestBody Map<String, String> request, HttpServletRequest servletRequest) {
-        // Rate Limiting 적용
         String clientIp = getClientIp(servletRequest);
         Bucket bucket = rateLimiterService.resolveBucket(clientIp);
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
@@ -92,15 +101,13 @@ public class AuthController {
         String email = request.get("email");
         String code = request.get("code");
         String token = verificationService.verifyCode(email, code);
-        return ResponseEntity.ok(token); // 인증 성공 시 토큰 반환
+        return ResponseEntity.ok(token);
     }
 
     // --- 비밀번호 재설정 API ---
 
-    // 1. 재설정 링크 발송 요청
     @PostMapping("/password/reset-request")
     public ResponseEntity<String> requestPasswordReset(@RequestBody Map<String, String> request, HttpServletRequest servletRequest) {
-        // Rate Limiting 적용 (비밀번호 찾기도 제한)
         String clientIp = getClientIp(servletRequest);
         Bucket bucket = rateLimiterService.resolveBucket(clientIp);
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
@@ -114,40 +121,33 @@ public class AuthController {
         return ResponseEntity.ok("비밀번호 재설정 링크가 이메일로 발송되었습니다.");
     }
 
-    // 2. 토큰 유효성 확인 (프론트엔드 진입 시 호출)
     @GetMapping("/password/check-token")
     public ResponseEntity<String> checkResetToken(@RequestParam("token") String token) {
         String email = passwordResetService.verifyToken(token);
-        return ResponseEntity.ok(email); // 유효하면 이메일 반환
+        return ResponseEntity.ok(email);
     }
 
-    // 3. 비밀번호 변경 수행
     @PostMapping("/password/reset")
     public ResponseEntity<String> resetPassword(@RequestBody Map<String, String> request) {
         String token = request.get("token");
         String newPassword = request.get("newPassword");
 
-        // 토큰 검증
         String email = passwordResetService.verifyToken(token);
 
-        // User Service 호출하여 비밀번호 변경 및 userId 획득
         Map<String, String> resetRequest = new HashMap<>();
         resetRequest.put("email", email);
         resetRequest.put("newPassword", newPassword);
         
         int userId = userFeignClient.resetPassword(resetRequest);
 
-        // ★ 핵심: 해당 유저의 모든 Refresh Token 삭제 (강제 로그아웃)
         redisTemplate.delete("RT:" + userId);
         log.info("비밀번호 변경으로 인한 전체 로그아웃 처리: userId={}", userId);
 
-        // 이메일 인증 토큰 삭제 (재사용 방지)
         passwordResetService.deleteToken(token);
 
         return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다. 다시 로그인해주세요.");
     }
 
-    // 클라이언트 IP 추출 유틸 메서드
     private String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {

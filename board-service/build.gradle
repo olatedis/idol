@@ -50,7 +50,7 @@ dependencies {
     // Redis session (정말 쓸 때만 유지)
     implementation 'org.springframework.session:spring-session-data-redis'
 
-    // ✅ OpenFeign (현재 에러 원인 해결)
+    // OpenFeign
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
     // Eureka Client
