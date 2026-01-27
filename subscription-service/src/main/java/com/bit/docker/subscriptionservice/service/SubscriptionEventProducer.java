@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class SubscriptionEventProducer {
 
-    private final KafkaTemplate<String, SubscriptionEvent> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     public void publish(String topic, SubscriptionEvent event) {
-        kafkaTemplate.send(topic, event);
+        kafkaTemplate.send(topic, event.toJson());
         log.info("Kafka 이벤트 발행: topic={}, eventType={}, targetType={}, userId={}, idolId={}, groupId={}",
                 topic,
                 event.getEventType(),
