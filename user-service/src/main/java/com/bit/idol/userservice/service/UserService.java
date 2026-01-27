@@ -112,7 +112,6 @@ public class UserService {
     public UserDto registerSocialUser(UserDto userDto) {
         return userRepository.findByProviderAndProviderId(userDto.getProvider(), userDto.getProviderId())
                 .map(user -> {
-                    // syncToMongo(user); // 제거됨 (이미 동기화되어 있다고 가정)
                     return UserDto.fromEntity(user);
                 })
                 .orElseGet(() -> {
