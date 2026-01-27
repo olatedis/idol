@@ -31,8 +31,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     
-    // Actuator (Zipkin 연동 필수)
+    // Actuator & Prometheus (모니터링)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
     
     // WebClient (외부 API 호출용)
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
@@ -51,7 +52,7 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
-    // gRPC Client & Protobuf (추가됨)
+    // gRPC Client & Protobuf
     implementation "net.devh:grpc-client-spring-boot-starter:${grpcSpringBootVersion}"
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"
     implementation "io.grpc:grpc-stub:${grpcVersion}"
@@ -86,7 +87,7 @@ dependencyManagement {
     }
 }
 
-// Protobuf 설정 (추가됨)
+// Protobuf 설정
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:${protobufVersion}"

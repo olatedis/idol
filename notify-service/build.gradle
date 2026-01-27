@@ -17,6 +17,10 @@ repositories {
     mavenCentral()
 }
 
+ext {
+    set('springCloudVersion', "2024.0.0")
+}
+
 dependencies {
     // REST API
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -41,6 +45,17 @@ dependencies {
     // Validation (필요 시 DTO 검증용)
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
+    // MSA
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+    // Actuator & Prometheus (모니터링)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
+    // Zipkin & Micrometer Tracing
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -50,6 +65,12 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
 
 
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
 }
 
 tasks.named('test') {

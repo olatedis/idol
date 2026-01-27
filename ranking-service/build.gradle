@@ -33,6 +33,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
+    // Actuator & Prometheus (모니터링)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
     // MSA (Eureka)
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 

@@ -20,13 +20,13 @@ spring:
       stack:
         auto: false
     
-    # Feign Client 타임아웃 설정 (OpenAI 등 외부 API 호출 시 필요)
+    # Feign Client 타임아웃 설정
     openfeign:
       client:
         config:
           default:
-            connectTimeout: 5000 # 5초
-            readTimeout: 5000    # 5초
+            connectTimeout: 5000
+            readTimeout: 5000
 
   # MongoDB 설정
   data:
@@ -80,6 +80,13 @@ eureka:
     prefer-ip-address: true
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
   tracing:
     sampling:
       probability: 1.0
@@ -114,4 +121,4 @@ openai:
 
 # DeepL 설정 (번역)
 deepl:
-  api-key: fake-key # 실제 키가 없으면 더미 번역 반환
+  api-key: fake-key

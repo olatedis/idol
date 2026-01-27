@@ -41,12 +41,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis' // reactive 제거 (일반 redis 사용 권장)
     runtimeOnly 'com.mysql:mysql-connector-j'
 
-    // Actuator & Monitoring
+    // Actuator & Prometheus (모니터링)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
 
     implementation 'org.springframework.kafka:spring-kafka'
 
-    // Zipkin & Tracing (Spring Boot 3.x 스타일)
+    // Zipkin & Micrometer Tracing
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
