@@ -31,6 +31,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     
+    // Actuator (Zipkin 연동 필수)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    
     // WebClient (외부 API 호출용)
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
