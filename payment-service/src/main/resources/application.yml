@@ -45,10 +45,6 @@ toss:
   client-key: test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq
   base-url: https://api.tosspayments.com
 
-#  아이돌 구독료
-amount:
-  idol:
-    sub: 15000
 
 eureka:
   client:

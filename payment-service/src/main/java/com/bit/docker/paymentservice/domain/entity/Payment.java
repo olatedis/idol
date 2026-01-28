@@ -12,7 +12,12 @@ import java.time.LocalDateTime;
 @Table(
         name = "payment",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = "targetId")
+                @UniqueConstraint(columnNames = "orderId")
+        },
+        indexes = {
+                @Index(name = "idx_user_id", columnList = "user_id"),
+                @Index(name = "idx_order_id", columnList = "order_id"),
+                @Index(name = "idx_status", columnList = "status")
         }
 )
 public class Payment {
@@ -31,12 +36,16 @@ public class Payment {
     private int amount;     // 최종 결제 금액
 
     private String paymentKey;   // PG가 내려준 결제 키
-    private String orderId;        // 시스템 주문 번호
+    
+    @Column(unique = true, nullable = false)
+    private String orderId;        // 시스템 주문 번호 (Idempotency key)
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
 
     private LocalDateTime createdAt;
+    
+    private LocalDateTime completedAt;  // 결제 완료 시간
 
     protected Payment() {
     }
@@ -74,6 +83,7 @@ public class Payment {
         this.paymentKey = paymentKey;
         this.amount = amount;
         this.status = PaymentStatus.COMPLETED;
+        this.completedAt = LocalDateTime.now();
     }
 
     public void fail() {

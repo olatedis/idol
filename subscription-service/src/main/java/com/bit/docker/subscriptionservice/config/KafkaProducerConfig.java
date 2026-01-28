@@ -1,6 +1,5 @@
 package com.bit.docker.subscriptionservice.config;
 
-import com.bit.docker.subscriptionservice.dto.SubscriptionEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
@@ -17,7 +16,7 @@ import java.util.Map;
 public class KafkaProducerConfig {
 
     @Bean
-    public ProducerFactory<String, SubscriptionEvent> producerFactory(
+    public ProducerFactory<String, String> producerFactory(
             KafkaProperties properties
     ) {
         Map<String, Object> config = new HashMap<>(properties.buildProducerProperties());
@@ -26,8 +25,8 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, SubscriptionEvent> kafkaTemplate(
-            ProducerFactory<String, SubscriptionEvent> producerFactory
+    public KafkaTemplate<String, String> kafkaTemplate(
+            ProducerFactory<String, String> producerFactory
     ) {
         return new KafkaTemplate<>(producerFactory);
     }
