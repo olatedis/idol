@@ -58,7 +58,7 @@ public class PostService {
     @Transactional(readOnly = true)
     public PostResponse selectOne(Long postId, Integer userId, Role role) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("post not found"));
+                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
 
         // OFFICIAL/FAN 모두 상세보기(content)는 구독자만
         requireReadSubscription(post, userId, role);
@@ -72,7 +72,7 @@ public class PostService {
 
         Page<Post> page;
 
-        // IDOL_* 목록(나중에 쓰일수도? 아이돌게시판&아이돌팬게시판조회)
+        // IDOL_* 목록
         if (boardType == BoardType.IDOL_OFFICIAL || boardType == BoardType.IDOL_FAN) {
             page = postRepository.findByBoardTypeAndIdolIdOrderByCreatedAtDesc(boardType, idolId, pageable);
         }
@@ -91,7 +91,7 @@ public class PostService {
     @Transactional
     public PostResponse update(Long postId, PostUpdateRequest req, Integer userId, Role role) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("post not found"));
+                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
 
         requireUpdatePermission(post, userId, role);
 
@@ -105,7 +105,7 @@ public class PostService {
     @Transactional
     public void delete(Long postId, Integer userId, Role role) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("post not found"));
+                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
 
         requireDeletePermission(post, userId, role);
 
@@ -116,45 +116,45 @@ public class PostService {
 
     // 누구 소속 게시판인지확인하고 아이디 할당
     private void validateBoardScope(BoardType boardType, Long idolId, Long groupId) {
-        if (boardType == null) throw new RuntimeException("boardType is required");
+        if (boardType == null) throw new RuntimeException("게시판 타입은 필수입니다.");
 
         // IDOL_* : idolId 필수, groupId 금지
         if (boardType == BoardType.IDOL_OFFICIAL || boardType == BoardType.IDOL_FAN) {
-            if (idolId == null) throw new RuntimeException("idolId is required for IDOL board");
-            if (groupId != null) throw new RuntimeException("groupId must be null for IDOL board");
+            if (idolId == null) throw new RuntimeException("아이돌 게시판에는 아이돌 ID가 필수입니다.");
+            if (groupId != null) throw new RuntimeException("아이돌 게시판에는 그룹 ID가 없어야 합니다.");
             return;
         }
 
         // GROUP_* : groupId 필수, idolId 금지
         if (boardType == BoardType.GROUP_OFFICIAL || boardType == BoardType.GROUP_FAN) {
-            if (groupId == null) throw new RuntimeException("groupId is required for GROUP board");
-            if (idolId != null) throw new RuntimeException("idolId must be null for GROUP board");
+            if (groupId == null) throw new RuntimeException("그룹 게시판에는 그룹 ID가 필수입니다.");
+            if (idolId != null) throw new RuntimeException("그룹 게시판에는 아이돌 ID가 없어야 합니다.");
             return;
         }
 
         // enum 확장/오류 케이스 대비
-        throw new RuntimeException("invalid boardType");
+        throw new RuntimeException("유효하지 않은 게시판 타입입니다.");
     }
 
     private void requireCreatePermission(BoardType boardType, Long idolId, Long groupId, Integer userId, Role role) {
-        if (role == null) throw new RuntimeException("role is required");
+        if (role == null) throw new RuntimeException("권한 정보가 필요합니다.");
 
         // ADMIN은 모든 것 가능
         if (role == Role.ADMIN) return;
 
         // IDOL_FAN: 팬(USER)만 작성 + 구독자만
         if (boardType == BoardType.IDOL_FAN) {
-            if (role != Role.USER) throw new RuntimeException("forbidden");
+            if (role != Role.USER) throw new RuntimeException("접근 권한이 없습니다.");
             boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(idolId, userId);
-            if (!ok) throw new RuntimeException("subscription required");
+            if (!ok) throw new RuntimeException("구독이 필요합니다.");
             return;
         }
 
         // GROUP_FAN: 팬(USER)만 작성 + 구독자만
         if (boardType == BoardType.GROUP_FAN) {
-            if (role != Role.USER) throw new RuntimeException("forbidden");
+            if (role != Role.USER) throw new RuntimeException("접근 권한이 없습니다.");
             boolean ok = subscriptionInternalClient.isActiveGroupSubscriber(groupId, userId);
-            if (!ok) throw new RuntimeException("subscription required");
+            if (!ok) throw new RuntimeException("구독이 필요합니다.");
             return;
         }
 
@@ -163,15 +163,15 @@ public class PostService {
             // IDOL/AGENCY만 작성 가능
             if (role == Role.IDOL) {
                 boolean ok = userInternalClient.isIdolOwner(idolId, userId);
-                if (!ok) throw new RuntimeException("forbidden");
+                if (!ok) throw new RuntimeException("접근 권한이 없습니다.");
                 return;
             }
             if (role == Role.AGENCY) {
                 boolean ok = userInternalClient.canAgencyManageIdol(userId, idolId);
-                if (!ok) throw new RuntimeException("forbidden");
+                if (!ok) throw new RuntimeException("접근 권한이 없습니다.");
                 return;
             }
-            throw new RuntimeException("forbidden");
+            throw new RuntimeException("접근 권한이 없습니다.");
         }
 
         // GROUP_OFFICIAL: 그룹 멤버(IDOL) 또는 AGENCY 가능
@@ -179,22 +179,22 @@ public class PostService {
             // 그룹 게시판: 그룹 멤버 IDOL 또는 AGENCY 가능
             if (role == Role.IDOL) {
                 boolean ok = userInternalClient.isGroupMember(groupId, userId);
-                if (!ok) throw new RuntimeException("forbidden");
+                if (!ok) throw new RuntimeException("접근 권한이 없습니다.");
                 return;
             }
             if (role == Role.AGENCY) {
                 boolean ok = userInternalClient.canAgencyManageGroup(userId, groupId);
-                if (!ok) throw new RuntimeException("forbidden");
+                if (!ok) throw new RuntimeException("접근 권한이 없습니다.");
                 return;
             }
-            throw new RuntimeException("forbidden");
+            throw new RuntimeException("접근 권한이 없습니다.");
         }
 
-        throw new RuntimeException("forbidden");
+        throw new RuntimeException("접근 권한이 없습니다.");
     }
 
     private void requireUpdatePermission(Post post, Integer userId, Role role) {
-        if (role == null) throw new RuntimeException("role is required");
+        if (role == null) throw new RuntimeException("권한 정보가 필요합니다.");
 
         // ADMIN은 모든 것 가능
         if (role == Role.ADMIN) return;
@@ -202,7 +202,7 @@ public class PostService {
         // FAN 게시판: USER는 본인 글만 수정 가능
         if (post.getBoardType() == BoardType.IDOL_FAN || post.getBoardType() == BoardType.GROUP_FAN) {
             if (role == Role.USER && post.getAuthorId().equals(userId)) return;
-            throw new RuntimeException("forbidden");
+            throw new RuntimeException("접근 권한이 없습니다.");
         }
 
         // IDOL_OFFICIAL 수정: IDOL/AGENCY만
@@ -210,33 +210,33 @@ public class PostService {
             // IDOL/GROUP 게시판 수정: IDOL/AGENCY만, 범위 검증 포함
             if (role == Role.IDOL) {
                 boolean ok = userInternalClient.isIdolOwner(post.getIdolId(), userId);
-                if (!ok) throw new RuntimeException("forbidden");
+                if (!ok) throw new RuntimeException("접근 권한이 없습니다.");
                 return;
             }
             if (role == Role.AGENCY) {
                 boolean ok = userInternalClient.canAgencyManageIdol(userId, post.getIdolId());
-                if (!ok) throw new RuntimeException("forbidden");
+                if (!ok) throw new RuntimeException("접근 권한이 없습니다.");
                 return;
             }
-            throw new RuntimeException("forbidden");
+            throw new RuntimeException("접근 권한이 없습니다.");
         }
 
         // GROUP_OFFICIAL 수정: IDOL(멤버)/AGENCY만
         if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
             if (role == Role.IDOL) {
                 boolean ok = userInternalClient.isGroupMember(post.getGroupId(), userId);
-                if (!ok) throw new RuntimeException("forbidden");
+                if (!ok) throw new RuntimeException("접근 권한이 없습니다.");
                 return;
             }
             if (role == Role.AGENCY) {
                 boolean ok = userInternalClient.canAgencyManageGroup(userId, post.getGroupId());
-                if (!ok) throw new RuntimeException("forbidden");
+                if (!ok) throw new RuntimeException("접근 권한이 없습니다.");
                 return;
             }
-            throw new RuntimeException("forbidden");
+            throw new RuntimeException("접근 권한이 없습니다.");
         }
 
-        throw new RuntimeException("forbidden");
+        throw new RuntimeException("접근 권한이 없습니다.");
     }
 
 
@@ -252,13 +252,13 @@ public class PostService {
         // 개인이든 그룹이든 상세조회는 구독자만
         if (post.getBoardType() == BoardType.IDOL_OFFICIAL || post.getBoardType() == BoardType.IDOL_FAN) {
             boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId);
-            if (!ok) throw new RuntimeException("subscription required");
+            if (!ok) throw new RuntimeException("구독이 필요합니다.");
             return;
         }
 
         if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
             boolean ok = subscriptionInternalClient.isActiveGroupSubscriber(post.getGroupId(), userId);
-            if (!ok) throw new RuntimeException("subscription required");
+            if (!ok) throw new RuntimeException("구독이 필요합니다.");
             return;
         }
     }
@@ -331,7 +331,7 @@ public class PostService {
     private String requireNonBlank(String s) {
         if (s == null) return "";
         String t = s.trim();
-        if (t.isEmpty()) throw new RuntimeException("empty string not allowed");
+        if (t.isEmpty()) throw new RuntimeException("빈 문자열은 허용되지 않습니다.");
         return t;
     }
 }

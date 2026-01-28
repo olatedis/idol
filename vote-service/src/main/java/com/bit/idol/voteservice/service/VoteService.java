@@ -1,6 +1,8 @@
 package com.bit.idol.voteservice.service;
 
+import com.bit.idol.voteservice.client.UserFeignClient;
 import com.bit.idol.voteservice.dto.MyVoteRecordDto;
+import com.bit.idol.voteservice.dto.UserDto;
 import com.bit.idol.voteservice.dto.VoteInfo;
 import com.bit.idol.voteservice.dto.notification.NotificationEventDto;
 import com.bit.idol.voteservice.dto.notification.TargetType;
@@ -38,6 +40,9 @@ public class VoteService {
     private final VoteRecordRepository voteRecordRepository;
     private final CandidateRepository candidateRepository;
     private final NotificationProducer notificationProducer;
+    private final UserFeignClient userFeignClient;
+
+    private static final String BLACKLIST_KEY = "vote:blacklist:ip";
 
     @Transactional
     @CachePut(value = "voteInfo", key = "#result.id")
@@ -52,7 +57,6 @@ public class VoteService {
             targetId = String.valueOf(savedVote.getTargetGroupId());
         }
 
-        // 메시지 내용 제거 (이벤트만 발송)
         sendVoteNotification(savedVote, "VOTE_OPENED", targetType, targetId);
         
         return VoteInfo.from(savedVote);
@@ -74,6 +78,18 @@ public class VoteService {
             throw new RuntimeException("투표가 이미 종료되었습니다.");
         }
 
+        // 뉴비 차단 (Newbie Ban)
+        try {
+            UserDto user = userFeignClient.getUserInfoById(userId);
+            if (user != null && user.getCreatedAt() != null) {
+                if (user.getCreatedAt().isAfter(vote.getStartDate())) {
+                    throw new RuntimeException("투표 기간 중 가입한 계정은 참여할 수 없습니다.");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("유저 정보 조회 실패 (뉴비 체크 건너뜀): {}", e.getMessage());
+        }
+
         String redisKey = "vote:" + voteId + ":user:" + userId;
         Duration ttl = Duration.between(now, vote.getEndDate());
 
@@ -85,7 +101,6 @@ public class VoteService {
 
         sendToKafka(voteId, userId, candidateNumber, redisKey);
 
-        // 메시지 내용 제거
         sendVoteNotification(null, "VOTE_COMPLETED", TargetType.USER, String.valueOf(userId));
 
         return "투표가 완료되었습니다.";
@@ -124,6 +139,11 @@ public class VoteService {
     }
 
     private void validateIp(String ipAddress) {
+        // Redis 기반 블랙리스트 확인
+        if (isBlacklistedIp(ipAddress)) {
+            throw new RuntimeException("비정상적인 접근입니다. (관리자에 의해 차단된 IP)");
+        }
+
         String key = "vote:limit:ip:" + ipAddress;
         Long count = redisTemplate.opsForValue().increment(key);
 
@@ -134,6 +154,22 @@ public class VoteService {
         if (count != null && count > 10) {
             throw new RuntimeException("비정상적인 투표 시도가 감지되었습니다. 잠시 후 다시 시도해주세요.");
         }
+    }
+    
+    private boolean isBlacklistedIp(String ip) {
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(BLACKLIST_KEY, ip));
+    }
+
+    // --- 블랙리스트 관리 메서드 ---
+
+    public void addBlacklistIp(String ip) {
+        redisTemplate.opsForSet().add(BLACKLIST_KEY, ip);
+        log.info("IP 블랙리스트 추가: {}", ip);
+    }
+
+    public void removeBlacklistIp(String ip) {
+        redisTemplate.opsForSet().remove(BLACKLIST_KEY, ip);
+        log.info("IP 블랙리스트 해제: {}", ip);
     }
 
     @Transactional
@@ -178,7 +214,7 @@ public class VoteService {
                     .type(type)
                     .targetType(targetType)
                     .targetId(targetId)
-                    .args(args) // 메시지 없이 변수만 전달
+                    .args(args)
                     .redirectUrl(redirectUrl)
                     .occurredAt(LocalDateTime.now())
                     .build();

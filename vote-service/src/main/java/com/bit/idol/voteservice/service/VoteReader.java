@@ -2,7 +2,9 @@ package com.bit.idol.voteservice.service;
 
 import com.bit.idol.voteservice.dto.VoteDetailDto;
 import com.bit.idol.voteservice.dto.VoteInfo;
+import com.bit.idol.voteservice.entity.Candidate;
 import com.bit.idol.voteservice.entity.Vote;
+import com.bit.idol.voteservice.repository.CandidateRepository;
 import com.bit.idol.voteservice.repository.VoteRecordRepository;
 import com.bit.idol.voteservice.repository.VoteRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,14 +21,21 @@ public class VoteReader {
 
     private final VoteRepository voteRepository;
     private final VoteRecordRepository voteRecordRepository;
+    private final CandidateRepository candidateRepository; // 추가됨
 
     // 투표 정보 조회 (캐싱 적용, sync=true로 Cache Stampede 방지)
-    // 주로 내부 로직(투표 참여 등)에서 사용
     @Cacheable(value = "voteInfo", key = "#voteId", sync = true)
     public VoteInfo getVoteInfo(int voteId) {
         Vote vote = voteRepository.findById(voteId)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 투표입니다."));
         return VoteInfo.from(vote);
+    }
+
+    // 후보자 정보 조회 (캐싱 적용 - 배치 처리 최적화용)
+    @Cacheable(value = "candidateInfo", key = "#voteId + ':' + #candidateNumber", unless = "#result == null")
+    public Candidate getCandidate(int voteId, int candidateNumber) {
+        return candidateRepository.findByVoteIdAndCandidateNumber(voteId, candidateNumber)
+                .orElseThrow(() -> new RuntimeException("후보자 없음"));
     }
 
     // 투표 목록 조회 (페이징 + 검색)

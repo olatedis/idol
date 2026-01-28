@@ -53,7 +53,7 @@ public class UserService {
                 .map(this::convertViewToDto)
                 .orElseGet(() -> {
                     User user = userRepository.findByUsername(username)
-                            .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+                            .orElseThrow(() -> new RuntimeException("해당 사용자 이름의 사용자를 찾을 수 없습니다: " + username));
                     return UserDto.fromEntity(user);
                 });
     }
@@ -61,7 +61,7 @@ public class UserService {
     // 로그인용 조회 (MySQL 사용 - 비밀번호 포함)
     public UserDto getUserForLogin(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+                .orElseThrow(() -> new RuntimeException("해당 사용자 이름의 사용자를 찾을 수 없습니다: " + username));
         return UserDto.fromEntity(user);
     }
 
@@ -71,7 +71,7 @@ public class UserService {
                 .map(this::convertViewToDto)
                 .orElseGet(() -> {
                     User user = userRepository.findById(userId)
-                            .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+                            .orElseThrow(() -> new RuntimeException("해당 ID의 사용자를 찾을 수 없습니다: " + userId));
                     return UserDto.fromEntity(user);
                 });
     }
@@ -96,7 +96,7 @@ public class UserService {
         }
 
         if (userRepository.findByUsername(userDto.getUsername()).isPresent()) {
-            throw new RuntimeException("Username already exists");
+            throw new RuntimeException("이미 존재하는 사용자 이름입니다.");
         }
 
         User user = User.builder()
@@ -149,7 +149,7 @@ public class UserService {
     @CachePut(value = "user:info:id", key = "#userId")
     public UserDto updateUserInfo(int userId, UserUpdateDto userUpdateDto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         if (userUpdateDto.getNickname() != null) user.setNickname(userUpdateDto.getNickname());
         if (userUpdateDto.getEmail() != null) user.setEmail(userUpdateDto.getEmail());
@@ -168,7 +168,7 @@ public class UserService {
     @CachePut(value = "user:info:id", key = "#userId")
     public UserDto updateProfileImage(int userId, MultipartFile file) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         if (user.getImgUrl() != null && !user.getImgUrl().isEmpty()) {
             s3Service.deleteFile(user.getImgUrl());
@@ -187,10 +187,10 @@ public class UserService {
     @CachePut(value = "user:info:id", key = "#userId")
     public UserDto changePassword(int userId, PasswordChangeDto passwordChangeDto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         if (!passwordEncoder.matches(passwordChangeDto.getCurrentPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid current password");
+            throw new RuntimeException("현재 비밀번호가 일치하지 않습니다.");
         }
 
         user.setPassword(passwordEncoder.encode(passwordChangeDto.getNewPassword()));
@@ -204,7 +204,7 @@ public class UserService {
     @CachePut(value = "user:info:id", key = "#result.userId")
     public UserDto resetPassword(String email, String newPassword) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+                .orElseThrow(() -> new RuntimeException("해당 이메일의 사용자를 찾을 수 없습니다: " + email));
 
         user.setPassword(passwordEncoder.encode(newPassword));
 
@@ -216,10 +216,10 @@ public class UserService {
     @Transactional
     public void withdrawUser(int userId, String checkPassword) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         if (!passwordEncoder.matches(checkPassword, user.getPassword())) {
-            throw new RuntimeException("Invalid password");
+            throw new RuntimeException("비밀번호가 일치하지 않습니다.");
         }
 
         userRepository.delete(user);
@@ -232,7 +232,7 @@ public class UserService {
     @CachePut(value = "user:info:id", key = "#userId")
     public UserDto increaseReportCount(int userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         user.setReportCount(user.getReportCount() + 1);
         
@@ -259,7 +259,7 @@ public class UserService {
     @CachePut(value = "user:info:id", key = "#userId")
     public UserDto updateUserStatus(int userId, UserStatus newStatus, String reason) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         if (user.getStatus() == newStatus) return UserDto.fromEntity(user);
 

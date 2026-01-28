@@ -70,6 +70,13 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getChatHistory(idolId, lastId, size));
     }
 
+    // 채팅방 미리보기 (마지막 메시지) 조회 API
+    @GetMapping("/chat/preview/{idolId}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getChatPreview(@PathVariable("idolId") Long idolId) {
+        return ResponseEntity.ok(chatService.getChatPreview(idolId));
+    }
+
     @PostMapping("/chat/upload")
     @ResponseBody
     public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {

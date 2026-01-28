@@ -40,11 +40,8 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserDto> getUserInfo(@RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role) {
-        if (!"USER".equals(role)) {
-            log.warn("권한 없는 사용자 접근 시도: userId={}, role={}", userId, role);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        log.info("내 정보 조회 요청: userId={}", userId);
+        // 모든 권한 허용 (USER, IDOL, AGENCY, ADMIN)
+        log.info("내 정보 조회 요청: userId={}, role={}", userId, role);
         return ResponseEntity.ok(userService.getUserById(userId));
     }
 
@@ -52,11 +49,8 @@ public class UserController {
     public ResponseEntity<String> updateUserInfo(@RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
             @Valid @RequestBody UserUpdateDto userUpdateDto) {
-        if (!"USER".equals(role)) {
-            log.warn("권한 없는 사용자 접근 시도 (정보 수정): userId={}, role={}", userId, role);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("접근 권한이 없습니다.");
-        }
-        log.info("회원정보 수정 요청: userId={}", userId);
+        // 모든 권한 허용
+        log.info("회원정보 수정 요청: userId={}, role={}", userId, role);
         userService.updateUserInfo(userId, userUpdateDto);
         log.info("회원정보 수정 완료: userId={}", userId);
         return ResponseEntity.ok("회원정보 수정 완료");
@@ -67,13 +61,9 @@ public class UserController {
     public ResponseEntity<String> updateProfileImage(@RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
             @RequestParam("file") MultipartFile file) {
-        if (!"USER".equals(role)) {
-            log.warn("권한 없는 사용자 접근 시도 (이미지 업로드): userId={}, role={}", userId, role);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("접근 권한이 없습니다.");
-        }
-        log.info("프로필 이미지 변경 요청: userId={}", userId);
+        // 모든 권한 허용
+        log.info("프로필 이미지 변경 요청: userId={}, role={}", userId, role);
         
-        // UserService가 UserDto를 반환하도록 변경되었으므로 수정
         UserDto updatedUser = userService.updateProfileImage(userId, file);
         String fileUrl = updatedUser.getImgUrl();
 
@@ -85,11 +75,8 @@ public class UserController {
     public ResponseEntity<String> changePassword(@RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
             @Valid @RequestBody PasswordChangeDto passwordChangeDto) {
-        if (!"USER".equals(role)) {
-            log.warn("권한 없는 사용자 접근 시도 (비밀번호 변경): userId={}, role={}", userId, role);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("접근 권한이 없습니다.");
-        }
-        log.info("비밀번호 변경 요청: userId={}", userId);
+        // 모든 권한 허용
+        log.info("비밀번호 변경 요청: userId={}, role={}", userId, role);
         userService.changePassword(userId, passwordChangeDto);
         log.info("비밀번호 변경 완료: userId={}", userId);
         return ResponseEntity.ok("비밀번호 변경 완료");
@@ -99,11 +86,8 @@ public class UserController {
     public ResponseEntity<String> withdrawUser(@RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
             @Valid @RequestBody UserWithdrawDto userWithdrawDto) {
-        if (!"USER".equals(role)) {
-            log.warn("권한 없는 사용자 접근 시도 (회원 탈퇴): userId={}, role={}", userId, role);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("접근 권한이 없습니다.");
-        }
-        log.info("회원 탈퇴 요청: userId={}", userId);
+        // 모든 권한 허용
+        log.info("회원 탈퇴 요청: userId={}, role={}", userId, role);
         userService.withdrawUser(userId, userWithdrawDto.getPassword());
         log.info("회원 탈퇴 완료: userId={}", userId);
         return ResponseEntity.ok("회원 탈퇴 완료");

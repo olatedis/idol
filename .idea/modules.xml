@@ -3,10 +3,10 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/api-gateway.main.iml" filepath="$PROJECT_DIR$/.idea/modules/api-gateway.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/board-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/board-service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/com.bit.idol.auth-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/com.bit.idol.auth-service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/frontend/frontend.iml" filepath="$PROJECT_DIR$/frontend/frontend.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/idol.iml" filepath="$PROJECT_DIR$/.idea/idol.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/notify-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/notify-service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/user-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/user-service.main.iml" />
     </modules>
   </component>
