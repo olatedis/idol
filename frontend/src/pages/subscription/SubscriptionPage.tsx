@@ -73,9 +73,9 @@ const SubscriptionPage: React.FC = () => {
     const handleSubscribe = async (idolId: number) => {
         try {
             setLoading(true);
+            setSelectedIdol(idolId);
             setError(null);
 
-            // 1단계: 결제 주문 생성
             const orderResponse = await axios.post(
                 `${API_BASE}/payments/ready`,
                 {
@@ -93,9 +93,8 @@ const SubscriptionPage: React.FC = () => {
 
             const orderId = orderResponse.data.orderId;
 
-            // 2단계: 토스페이먼츠 결제창 호출
             const tossPayments = (window as any).TossPayments(
-                "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq" // 테스트 클라이언트 키
+                "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq"
             );
 
             const idol = idols.find((i) => i.id === idolId);
@@ -115,6 +114,7 @@ const SubscriptionPage: React.FC = () => {
             console.error("구독 오류:", err);
         } finally {
             setLoading(false);
+            setSelectedIdol(null);
         }
     };
 

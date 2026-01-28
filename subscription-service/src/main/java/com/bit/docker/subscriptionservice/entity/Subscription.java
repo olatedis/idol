@@ -65,4 +65,18 @@ public class Subscription {
         this.status = SubscriptionStatus.EXPIRED;
         this.expiredAt = LocalDateTime.now();
     }
+
+    /**
+     * 구독이 활성 상태인지 확인
+     */
+    public boolean isActive() {
+        return this.status == SubscriptionStatus.ACTIVE;
+    }
+
+    /**
+     * 구독이 유효한 상태인지 확인 (활성 또는 대기 중)
+     */
+    public boolean isValid() {
+        return this.status == SubscriptionStatus.ACTIVE || this.status == SubscriptionStatus.PENDING;
+    }
 }

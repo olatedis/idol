@@ -1,0 +1,139 @@
+.fail-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+}
+
+.result-card {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    text-align: center;
+}
+
+.result-card.error-card {
+    border-top: 4px solid #ff6b6b;
+}
+
+.result-card .icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.result-card h1 {
+    margin: 0 0 15px 0;
+    font-size: 2rem;
+    color: #333;
+}
+
+.result-card .message {
+    font-size: 1.1rem;
+    color: #666;
+    margin: 0 0 20px 0;
+}
+
+.error-details {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px 0;
+    text-align: left;
+}
+
+.error-details p {
+    margin: 8px 0;
+    color: #856404;
+    font-size: 0.95rem;
+}
+
+.error-details strong {
+    color: #333;
+}
+
+.help-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: left;
+}
+
+.help-section h2 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.help-section ul {
+    margin: 0;
+    padding-left: 20px;
+    list-style-type: disc;
+}
+
+.help-section li {
+    margin: 8px 0;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.actions button {
+    flex: 1;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-retry {
+    background-color: #ff6b6b;
+    color: white;
+}
+
+.btn-retry:hover {
+    background-color: #ee5a52;
+    transform: translateY(-2px);
+}
+
+.btn-home {
+    background-color: #667eea;
+    color: white;
+}
+
+.btn-home:hover {
+    background-color: #5568d3;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 600px) {
+    .result-card {
+        padding: 30px 20px;
+    }
+
+    .result-card .icon {
+        font-size: 3rem;
+    }
+
+    .result-card h1 {
+        font-size: 1.5rem;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+}
