@@ -1,7 +1,6 @@
 package com.bit.idol.notifyservice.kafka;
 
 import com.bit.idol.notifyservice.entity.Notification;
-import com.bit.idol.notifyservice.entity.TargetType;
 import com.bit.idol.notifyservice.repository.NotificationRepository;
 import com.bit.idol.notifyservice.sse.NotificationSsePublisher;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,28 +32,33 @@ public class NotificationEventHandler {
         try {
             JsonNode root = om.readTree(rawJson);
 
-            // 필수 필드 파싱
-            String eventId = text(root, "eventId");   // uuid
-            String type = text(root, "type");   // 알림 종류
-            String targetTypeStr = text(root, "targetType");   // USER/ALL/IDOL_SUB/GROUP_SUB
-            String targetId = text(root, "targetId");   // USER면 userId, ALL이면 null 가능
-            String redirectUrl = text(root, "redirectUrl");   // 클릭 이동 링크
-            String occurredAtStr = text(root, "occurredAt");   // ISO 문자열
-            JsonNode argsNode = root.get("args");   // Map<String,String>
+            // 필수 필드 파싱 (fanout 이벤트는 USER 단위로 들어온다는 전제)
+            String eventId = text(root, "eventId");          // "원본UUID:userId" 형태
+            String type = text(root, "type");               // 알림 종류
+            String targetTypeStr = text(root, "targetType");// 기대값: "USER"
+            String targetId = text(root, "targetId");       // userId
+            String redirectUrl = text(root, "redirectUrl"); // 클릭 이동 링크
+            String occurredAtStr = text(root, "occurredAt");// ISO 문자열
+            JsonNode argsNode = root.get("args");           // Map<String,String>
 
-            if (blank(eventId) || blank(type) || blank(targetTypeStr) || blank(redirectUrl) || blank(occurredAtStr)) {
+            if (blank(eventId) || blank(type) || blank(redirectUrl) || blank(occurredAtStr)) {
                 return;
             }
 
-            TargetType targetType;
+            // fanout-topic에서는 USER만 온다. 아니면 무시.
+            if (!"USER".equals(targetTypeStr)) {
+                return;
+            }
+
+            // USER면 targetId(userId)는 필수
+            if (blank(targetId)) {
+                return;
+            }
+
+            int receiverId;
             try {
-                targetType = TargetType.valueOf(targetTypeStr);
+                receiverId = Integer.parseInt(targetId);
             } catch (Exception e) {
-                return;
-            }
-
-            // targetType=ALL이면 targetId는 null 허용, 그 외는 targetId가 필요
-            if (targetType != TargetType.ALL && blank(targetId)) {
                 return;
             }
 
@@ -78,9 +82,8 @@ public class NotificationEventHandler {
 
             Notification n = Notification.create();
             n.setEventId(eventId);
+            n.setReceiverId(receiverId);
             n.setType(type);
-            n.setTargetType(targetType);
-            n.setTargetId(targetId);
             n.setRedirectUrl(redirectUrl);
             n.setOccurredAt(occurredAt);
             n.setArgsJson(argsJson);
@@ -88,12 +91,11 @@ public class NotificationEventHandler {
             try {
                 Notification saved = notificationRepo.save(n);
 
-                if (saved.getTargetType() == TargetType.USER && !blank(saved.getTargetId())) {
-                    int userId = Integer.parseInt(saved.getTargetId());
-                    ssePublisher.pushToUser(userId, saved);
-                }
+                // 저장 성공 시 SSE 푸시
+                ssePublisher.pushToUser(saved.getReceiverId(), saved);
 
             } catch (DataIntegrityViolationException dup) {
+                // 유니크(event_id) 충돌이면 그냥 무시(중복 처리)
             }
 
         } catch (Exception ignore) {

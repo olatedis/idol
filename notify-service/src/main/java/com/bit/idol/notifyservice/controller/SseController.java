@@ -1,11 +1,9 @@
 package com.bit.idol.notifyservice.controller;
 
-import com.bit.idol.notifyservice.security.JwtUserIdExtractor;
 import com.bit.idol.notifyservice.sse.SseEmitterRegistry;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -13,17 +11,13 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class SseController {
 
     private final SseEmitterRegistry registry;
-    private final JwtUserIdExtractor userIdExtractor;
 
-    public SseController(SseEmitterRegistry registry, JwtUserIdExtractor userIdExtractor) {
+    public SseController(SseEmitterRegistry registry) {
         this.registry = registry;
-        this.userIdExtractor = userIdExtractor;
     }
 
     @GetMapping(value = "/sse/notifications", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter subscribe(Authentication authentication) {
-        Jwt jwt = (Jwt) authentication.getPrincipal();
-        int userId = userIdExtractor.extractUserId(jwt);
+    public SseEmitter subscribe(@RequestHeader("X-User-Id") int userId) {
 
         // 30분 유지(원하면 늘리기)
         SseEmitter emitter = new SseEmitter(30L * 60L * 1000L);
