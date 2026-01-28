@@ -10,6 +10,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -39,7 +41,9 @@ public class UserDto {
     private String providerId;
 
     private UserStatus status;
-    private int reportCount; // 추가됨
+    private int reportCount;
+
+    private LocalDateTime createdAt; // 가입일 추가
 
     // 이메일 인증 토큰 (회원가입 시 필수)
     private String verificationToken;
@@ -58,7 +62,8 @@ public class UserDto {
                 .provider(user.getProvider())
                 .providerId(user.getProviderId())
                 .status(user.getStatus())
-                .reportCount(user.getReportCount()) // 추가됨
+                .reportCount(user.getReportCount())
+                .createdAt(user.getCreatedAt()) // 추가됨
                 .build();
     }
 }

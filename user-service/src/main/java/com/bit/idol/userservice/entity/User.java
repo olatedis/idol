@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users", indexes = {
@@ -58,4 +61,8 @@ public class User {
     @Column(nullable = false)
     @Builder.Default
     private int reportCount = 0; // 누적 신고 횟수
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdAt; // 가입일 (뉴비 차단용)
 }
