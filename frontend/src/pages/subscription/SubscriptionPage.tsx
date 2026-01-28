@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect} from "react";
 import axios from "axios";
-import { loadTossPaymentsScript } from "../../utils/tossPayments";
+import {loadTossPaymentsScript} from "../../utils/tossPayments";
 import "./SubscriptionPage.css";
 
 type SubscriptionPlan = "MONTHLY" | "ANNUAL";
@@ -41,8 +41,14 @@ const SubscriptionPage: React.FC = () => {
 
     const fetchIdols = async () => {
         try {
-            const response = await axios.get(`${API_BASE}/idols`);
-            setIdols(response.data);
+            const response = await fetch(`${API_BASE}/idols`, {
+                method: "GET",
+            headers: {
+                "X-User-Id": userId
+            }
+            });
+            const data = await response.json();
+            setIdols(data);
         } catch (err) {
             console.error("아이돌 목록 조회 실패:", err);
             setError("아이돌 목록을 불러올 수 없습니다.");
@@ -51,7 +57,7 @@ const SubscriptionPage: React.FC = () => {
 
     const fetchMySubscriptions = async () => {
         try {
-            const response = await axios.get(`${API_BASE}/subscriptions/user/${userId}`);
+            const response = await axios.get(`${API_BASE}/subscriptions/me`);
             setMySubscriptions(response.data);
         } catch (err) {
             console.error("내 구독 조회 실패:", err);
@@ -63,8 +69,15 @@ const SubscriptionPage: React.FC = () => {
 
         try {
             setLoading(true);
-            await axios.post(`${API_BASE}/subscriptions/cancel/${idolId}`, {
-                userId: parseInt(userId),
+            await fetch(`${API_BASE}/subscriptions/cancel`, {
+                method:"POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-User-Id": userId
+                },
+                body: JSON.stringify({
+                    "idolId": idolId
+                })
             });
             setError(null);
             fetchMySubscriptions();
@@ -160,7 +173,6 @@ const SubscriptionPage: React.FC = () => {
         <div className="subscription-container">
             <div className="subscription-header">
                 <h1>아이돌 구독</h1>
-                <p>좋아하는 아이돌을 구독하고 특별한 콘텐츠를 즐기세요!</p>
             </div>
 
             {error && <div className="error-message">{error}</div>}
@@ -229,7 +241,7 @@ const SubscriptionPage: React.FC = () => {
                             <div key={idol.id} className="idol-card">
                                 <div className="idol-image-placeholder">
                                     {idol.imageUrl ? (
-                                        <img src={idol.imageUrl} alt={idol.name} />
+                                        <img src={idol.imageUrl} alt={idol.name}/>
                                     ) : (
                                         <div className="placeholder">🎬</div>
                                     )}
