@@ -29,17 +29,17 @@ public class AuthService {
         UserDto user = userFeignClient.getUserInfo(username);
         
         if (user == null) {
-            throw new RuntimeException("User not found");
+            throw new RuntimeException("사용자를 찾을 수 없습니다.");
         }
 
         // 2. 차단 여부 확인 (BANNED 상태면 로그인 불가)
         if ("BANNED".equals(user.getStatus())) {
-            throw new RuntimeException("Your account has been banned.");
+            throw new RuntimeException("계정이 정지되었습니다.");
         }
 
         // 3. 비밀번호 검증
         if (!bCryptPasswordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid password");
+            throw new RuntimeException("비밀번호가 일치하지 않습니다.");
         }
 
         // 4. 토큰 생성
@@ -91,7 +91,7 @@ public class AuthService {
         // 3. 토큰 일치 여부 확인
         if (storedRefreshToken == null) {
             // 이미 로그아웃되었거나 만료된 경우
-            throw new RuntimeException("Refresh Token expired or not found");
+            throw new RuntimeException("Refresh Token이 만료되었거나 존재하지 않습니다.");
         }
 
         if (!storedRefreshToken.equals(refreshToken)) {
@@ -99,20 +99,20 @@ public class AuthService {
             log.warn("토큰 탈취 감지! userId={}", userId);
             // 해당 유저의 모든 Refresh Token 삭제 (강제 로그아웃)
             redisTemplate.delete("RT:" + userId);
-            throw new RuntimeException("Invalid Refresh Token (Token Theft Detected)");
+            throw new RuntimeException("유효하지 않은 Refresh Token입니다. (토큰 탈취 의심)");
         }
 
         // 4. 사용자 정보 조회 (Feign)
         UserDto user = userFeignClient.getUserInfoById(userId);
         if (user == null) {
-            throw new RuntimeException("User not found");
+            throw new RuntimeException("사용자를 찾을 수 없습니다.");
         }
 
         // 5. 차단 여부 확인 (재발급 시에도 체크)
         if ("BANNED".equals(user.getStatus())) {
             // 차단된 유저라면 Refresh Token 삭제 후 예외 발생
             redisTemplate.delete("RT:" + userId);
-            throw new RuntimeException("Your account has been banned.");
+            throw new RuntimeException("계정이 정지되었습니다.");
         }
 
         // 6. 새로운 토큰 쌍 발급 (Access + Refresh)
