@@ -17,10 +17,15 @@ spring:
             allowedMethods:
               - GET
               - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
             allowedHeaders: "*"
-            allowCredentials: true # 특정 Origin을 명시했으므로 true 가능 (쿠키/인증헤더 허용)
+            allowCredentials: true
 
       routes:
+        # --- Core Services ---
         - id: auth-service
           uri: lb://AUTH-SERVICE
           predicates:
@@ -31,6 +36,23 @@ spring:
           predicates:
             - Path=/users/**, /reports/**, /internal/**
 
+        # --- Community Services ---
+        - id: chat-service
+          uri: lb://CHAT-SERVICE
+          predicates:
+            - Path=/chat/**, /ws-chat/**
+
+        - id: board-service
+          uri: lb://BOARD-SERVICE
+          predicates:
+            - Path=/board/posts/**, /board/comments/**
+
+        - id: search-service
+          uri: lb://SEARCH-SERVICE
+          predicates:
+            - Path=/search/**
+
+        # --- Activity Services ---
         - id: voting-service
           uri: lb://VOTING-SERVICE
           predicates:
@@ -41,12 +63,34 @@ spring:
           predicates:
             - Path=/ws-ranking/**, /api/rankings/**
 
-        - id: chat-service
-          uri: lb://CHAT-SERVICE
+        - id: concert-service
+          uri: lb://CONCERT-SERVICE
           predicates:
-            - Path=/chat/**, /ws-chat/**
+            - Path=/concerts/**
 
-        # Swagger API Docs 라우팅
+        - id: reserve-service
+          uri: lb://RESERVE-SERVICE
+          predicates:
+            - Path=/reservations/**
+
+        # --- Support Services ---
+        - id: payment-service
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/payments/**
+
+        - id: subscription-service
+          uri: lb://SUBSCRIPTION-SERVICE
+          predicates:
+            - Path=/subscriptions/**
+
+        # --- Notify Service ---
+        - id: notify-service
+          uri: lb://NOTIFY-SERVICE
+          predicates:
+            - Path=/sse/notifications, /notify/**
+
+        # --- Swagger API Docs ---
         - id: openapi-auth
           uri: lb://AUTH-SERVICE
           predicates:
@@ -74,6 +118,62 @@ spring:
             - Path=/v3/api-docs/chat-service
           filters:
             - RewritePath=/v3/api-docs/chat-service, /v3/api-docs
+            
+        - id: openapi-board
+          uri: lb://BOARD-SERVICE
+          predicates:
+            - Path=/v3/api-docs/board-service
+          filters:
+            - RewritePath=/v3/api-docs/board-service, /v3/api-docs
+
+        - id: openapi-search
+          uri: lb://SEARCH-SERVICE
+          predicates:
+            - Path=/v3/api-docs/search-service
+          filters:
+            - RewritePath=/v3/api-docs/search-service, /v3/api-docs
+
+        - id: openapi-concert
+          uri: lb://CONCERT-SERVICE
+          predicates:
+            - Path=/v3/api-docs/concert-service
+          filters:
+            - RewritePath=/v3/api-docs/concert-service, /v3/api-docs
+
+        - id: openapi-payment
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/v3/api-docs/payment-service
+          filters:
+            - RewritePath=/v3/api-docs/payment-service, /v3/api-docs
+            
+        - id: openapi-ranking
+          uri: lb://RANKING-SERVICE
+          predicates:
+            - Path=/v3/api-docs/ranking-service
+          filters:
+            - RewritePath=/v3/api-docs/ranking-service, /v3/api-docs
+
+        - id: openapi-reserve
+          uri: lb://RESERVE-SERVICE
+          predicates:
+            - Path=/v3/api-docs/reserve-service
+          filters:
+            - RewritePath=/v3/api-docs/reserve-service, /v3/api-docs
+
+        - id: openapi-subscription
+          uri: lb://SUBSCRIPTION-SERVICE
+          predicates:
+            - Path=/v3/api-docs/subscription-service
+          filters:
+            - RewritePath=/v3/api-docs/subscription-service, /v3/api-docs
+            
+        - id: openapi-notify
+          uri: lb://NOTIFY-SERVICE
+          predicates:
+            - Path=/v3/api-docs/notify-service
+          filters:
+            - RewritePath=/v3/api-docs/notify-service, /v3/api-docs
 
       discovery:
         locator:
@@ -88,10 +188,26 @@ springdoc:
         url: /v3/api-docs/auth-service
       - name: User Service
         url: /v3/api-docs/user-service
-      - name: Vote Service
-        url: /v3/api-docs/vote-service
       - name: Chat Service
         url: /v3/api-docs/chat-service
+      - name: Vote Service
+        url: /v3/api-docs/vote-service
+      - name: Board Service
+        url: /v3/api-docs/board-service
+      - name: Search Service
+        url: /v3/api-docs/search-service
+      - name: Concert Service
+        url: /v3/api-docs/concert-service
+      - name: Payment Service
+        url: /v3/api-docs/payment-service
+      - name: Ranking Service
+        url: /v3/api-docs/ranking-service
+      - name: Reserve Service
+        url: /v3/api-docs/reserve-service
+      - name: Subscription Service
+        url: /v3/api-docs/subscription-service
+      - name: Notify Service
+        url: /v3/api-docs/notify-service
     path: /swagger-ui.html
 
 eureka:
@@ -105,7 +221,21 @@ eureka:
 
 jwt:
   secret: ${JWT_SECRET:your-very-long-and-secure-random-string-idol-link-project}
-  white-list-path: /auth/login, /auth/reissue, /users/register, /ws-ranking/**, /api/rankings/**, /v3/api-docs/**, /swagger-ui/**, /swagger-ui.html, /webjars/**
+  white-list-path: 
+    - /auth/login
+    - /auth/reissue
+    - /users/register
+    - /ws-ranking/**
+    - /ws-chat/**
+    - /sse/notifications
+    - /api/rankings/**
+    - /search/**
+    - /board/posts/** # 게시글 조회 허용
+    - /concerts/** # 콘서트 목록 조회 허용
+    - /v3/api-docs/**
+    - /swagger-ui/**
+    - /swagger-ui.html
+    - /webjars/**
 
 logging:
   level:
