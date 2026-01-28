@@ -31,18 +31,16 @@ public class ChatService {
 
     private final ChatRepository chatRepository;
     private final ChatFilter chatFilter;
-    private final SuspiciousWordFilter suspiciousWordFilter; // 의심 필터 추가
+    private final SuspiciousWordFilter suspiciousWordFilter;
     private final ChatProducer chatProducer;
     private final RedisTemplate<String, Object> redisTemplate;
     private final NotificationProducer notificationProducer;
 
-    // 도배 방지 설정 (3초에 1회)
     private static final long RATE_LIMIT_SECONDS = 3;
-    // Redis 캐싱 개수 (최신 50개)
     private static final int CACHE_SIZE = 50;
 
     public void processMessage(ChatMessageDto messageDto) {
-        // 0. 도배 방지 (USER인 경우만)
+        // 0. 도배 방지
         if ("USER".equals(messageDto.getSenderRole())) {
             String limitKey = "chat:limit:" + messageDto.getSenderId();
             if (redisTemplate.hasKey(limitKey)) {
@@ -52,7 +50,7 @@ public class ChatService {
         }
 
         try {
-            // 1. 메시지 검열 (Aho-Corasick: 즉시 차단)
+            // 1. 메시지 검열
             String filteredContent = chatFilter.filter(messageDto.getContent());
             messageDto.setContent(filteredContent);
         } catch (RuntimeException e) {
@@ -77,12 +75,20 @@ public class ChatService {
         
         messageDto.setId(savedMessage.getId());
 
-        // 3. Redis 캐싱
+        // 3. Redis 캐싱 (최신 메시지 목록)
         String cacheKey = "chat:room:" + messageDto.getIdolId();
         redisTemplate.opsForList().leftPush(cacheKey, messageDto);
         redisTemplate.opsForList().trim(cacheKey, 0, CACHE_SIZE - 1);
 
-        // 4. Kafka로 전송 (실시간 채팅)
+        // ★ 3-1. Redis 미리보기 캐싱 (마지막 메시지 하나만 저장)
+        String previewKey = "chat:preview:" + messageDto.getIdolId();
+        Map<String, Object> previewData = new HashMap<>();
+        previewData.put("content", messageDto.getContent());
+        previewData.put("sender", messageDto.getSenderNickname());
+        previewData.put("time", LocalDateTime.now().toString());
+        redisTemplate.opsForValue().set(previewKey, previewData);
+
+        // 4. Kafka로 전송
         chatProducer.sendChatMessage(messageDto);
         
         log.info("메시지 처리 완료: room={}, id={}", messageDto.getIdolId(), savedMessage.getId());
@@ -90,11 +96,39 @@ public class ChatService {
         // 5. 알림 발송
         sendNotification(messageDto);
 
-        // 6. AI 비동기 검사 요청 (의심스러운 경우만)
+        // 6. AI 비동기 검사
         if (suspiciousWordFilter.isSuspicious(messageDto.getContent())) {
             log.info("의심 메시지 감지 -> AI 검사 요청: msgId={}", messageDto.getId());
             chatProducer.sendAiCheck(messageDto);
         }
+    }
+
+    // 미리보기 조회 메서드 추가
+    public Map<String, Object> getChatPreview(Long idolId) {
+        String previewKey = "chat:preview:" + idolId;
+        Object data = redisTemplate.opsForValue().get(previewKey);
+        
+        if (data != null) {
+            return (Map<String, Object>) data;
+        }
+        
+        // 캐시 없으면 DB에서 조회 (Fallback)
+        Pageable pageable = PageRequest.of(0, 1);
+        List<ChatMessage> messages = chatRepository.findByIdolIdOrderByIdDesc(idolId, pageable);
+        
+        if (!messages.isEmpty()) {
+            ChatMessage lastMsg = messages.get(0);
+            Map<String, Object> preview = new HashMap<>();
+            preview.put("content", lastMsg.getContent());
+            preview.put("sender", lastMsg.getSenderNickname());
+            preview.put("time", lastMsg.getCreatedAt().toString());
+            
+            // 다시 캐싱
+            redisTemplate.opsForValue().set(previewKey, preview);
+            return preview;
+        }
+        
+        return null; // 메시지 없음
     }
 
     private void sendNotification(ChatMessageDto messageDto) {
