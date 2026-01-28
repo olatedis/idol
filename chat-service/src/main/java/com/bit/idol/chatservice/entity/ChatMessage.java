@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -12,6 +14,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Document(collection = "chat_messages")
+@CompoundIndexes({
+    @CompoundIndex(name = "idx_idol_id_desc", def = "{'idolId': 1, '_id': -1}")
+})
 @Getter
 @Builder
 @NoArgsConstructor
@@ -32,12 +37,10 @@ public class ChatMessage {
     private String parentId;
 
     // 반응 기능 (이모지별 카운트)
-    // 예: { "HEART": 10, "LIKE": 5 }
     @Builder.Default
     private Map<String, Integer> reactions = new HashMap<>();
 
     // 번역 기능 (언어별 번역본 캐싱)
-    // 예: { "EN": "Hello", "JA": "こんにちは" }
     @Builder.Default
     private Map<String, String> translations = new HashMap<>();
 
