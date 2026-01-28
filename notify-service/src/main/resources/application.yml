@@ -6,7 +6,7 @@ spring:
     name: notify-service
 
   datasource:
-    url: jdbc:mysql://localhost:3306/idoldbname
+    url: jdbc:mysql://localhost:3307/idol_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
     username: root
     password: ${DB_PASSWORD:1234}
     driver-class-name: com.mysql.cj.jdbc.Driver
