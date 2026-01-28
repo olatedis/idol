@@ -30,8 +30,6 @@ public class SubscriptionService {
     private final SubscriptionEventProducer eventProducer;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    @Value("${amount.idol.sub}")
-    private int idolSubscriptionAmount;
 
     private static final String KEY_PREFIX_IDOL = "sub:";
     private static final String KEY_PREFIX_GROUP = "gsub:";
@@ -54,11 +52,11 @@ public class SubscriptionService {
                     }
                 });
 
-
         Subscription subscription = Subscription.builder()
                 .userId(userId)
                 .idolId(request.getIdolId())
                 .status(SubscriptionStatus.PENDING)
+                .plan(request.getPlan())
                 .autoRenew(request.isAutoRenew())
                 .build();
 
@@ -66,20 +64,18 @@ public class SubscriptionService {
 
         redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.PENDING.name());
 
-
         PaymentEvent event = new PaymentEvent(
-                        userId,
-                        null,
-                        "SUBSCRIPTION",
-                        subscription.getId(),
-                        idolSubscriptionAmount
-                );
+                userId,
+                null,
+                "SUBSCRIPTION",
+                subscription.getId(),
+                request.getPlan().getAmount()
+        );
 
         kafkaTemplate.send("payment.requested", event.toJson());
 
-
-
-        log.info("개인(아이돌) 구독 준비 완료: userId={}, idolId={}", userId, request.getIdolId());
+        log.info("개인(아이돌) 구독 준비 완료: userId={}, idolId={}, plan={}, amount={}", 
+                userId, request.getIdolId(), request.getPlan(), request.getPlan().getAmount());
         return SubscriptionDto.fromEntity(subscription);
     }
 

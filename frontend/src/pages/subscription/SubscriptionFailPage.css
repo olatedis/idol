@@ -1,139 +1,125 @@
+/* Peach Fizz - 2024 Pantone Color */
+:root {
+    --peach-fizz: #EF95B3;
+    --peach-fizz-light: #F7C5DA;
+    --peach-fizz-dark: #E67A99;
+}
+
 .fail-container {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #fafafa;
     padding: 20px;
 }
 
-.result-card {
+.error-card {
     background: white;
-    border-radius: 16px;
-    padding: 40px;
-    max-width: 600px;
+    border-radius: 8px;
+    padding: 32px;
+    max-width: 500px;
     width: 100%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     text-align: center;
+    border-top: 3px solid #d32f2f;
 }
 
-.result-card.error-card {
-    border-top: 4px solid #ff6b6b;
+.error-card .icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
 }
 
-.result-card .icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
+.error-card h1 {
+    margin: 0 0 8px 0;
+    font-size: 1.6rem;
+    color: #1a1a1a;
+    font-weight: 600;
 }
 
-.result-card h1 {
-    margin: 0 0 15px 0;
-    font-size: 2rem;
-    color: #333;
-}
-
-.result-card .message {
-    font-size: 1.1rem;
+.error-card .error-message {
+    font-size: 0.9rem;
     color: #666;
-    margin: 0 0 20px 0;
+    margin: 0 0 16px 0;
+    line-height: 1.5;
 }
 
 .error-details {
-    background: #fff3cd;
-    border-left: 4px solid #ffc107;
-    border-radius: 8px;
-    padding: 15px;
-    margin: 20px 0;
+    background: #fff5f5;
+    border-left: 3px solid #d32f2f;
+    border-radius: 6px;
+    padding: 16px;
+    margin: 16px 0;
     text-align: left;
+}
+
+.error-details h2 {
+    margin: 0 0 8px 0;
+    color: #1a1a1a;
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
 .error-details p {
-    margin: 8px 0;
-    color: #856404;
-    font-size: 0.95rem;
-}
-
-.error-details strong {
-    color: #333;
-}
-
-.help-section {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 20px;
-    margin: 20px 0;
-    text-align: left;
-}
-
-.help-section h2 {
-    margin: 0 0 15px 0;
-    color: #333;
-    font-size: 1.1rem;
-}
-
-.help-section ul {
     margin: 0;
-    padding-left: 20px;
-    list-style-type: disc;
+    color: #666;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    word-break: break-all;
 }
 
-.help-section li {
-    margin: 8px 0;
-    color: #555;
-    font-size: 0.95rem;
-}
-
-.actions {
+.error-actions {
     display: flex;
-    gap: 10px;
-    margin-top: 30px;
+    gap: 8px;
+    margin-top: 24px;
 }
 
-.actions button {
+.error-actions button,
+.error-actions a {
     flex: 1;
-    padding: 14px 24px;
+    padding: 10px 16px;
     border: none;
-    border-radius: 8px;
-    font-size: 1rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-retry {
-    background-color: #ff6b6b;
+    background-color: var(--peach-fizz);
     color: white;
 }
 
 .btn-retry:hover {
-    background-color: #ee5a52;
-    transform: translateY(-2px);
+    background-color: var(--peach-fizz-dark);
 }
 
 .btn-home {
-    background-color: #667eea;
-    color: white;
+    background-color: #f5f5f5;
+    color: var(--peach-fizz);
+    border: 1px solid var(--peach-fizz);
 }
 
 .btn-home:hover {
-    background-color: #5568d3;
-    transform: translateY(-2px);
+    background-color: var(--peach-fizz-light);
 }
 
 @media (max-width: 600px) {
-    .result-card {
-        padding: 30px 20px;
+    .error-card {
+        padding: 24px 16px;
     }
 
-    .result-card .icon {
-        font-size: 3rem;
+    .error-card h1 {
+        font-size: 1.3rem;
     }
 
-    .result-card h1 {
-        font-size: 1.5rem;
-    }
-
-    .actions {
+    .error-actions {
         flex-direction: column;
+        gap: 8px;
     }
 }

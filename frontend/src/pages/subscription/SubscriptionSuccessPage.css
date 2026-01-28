@@ -1,28 +1,35 @@
+/* Peach Fizz - 2024 Pantone Color */
+:root {
+    --peach-fizz: #EF95B3;
+    --peach-fizz-light: #F7C5DA;
+    --peach-fizz-dark: #E67A99;
+}
+
 .success-container {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #fafafa;
     padding: 20px;
 }
 
 .loading {
     background: white;
-    padding: 40px;
-    border-radius: 12px;
+    padding: 32px;
+    border-radius: 8px;
     text-align: center;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .spinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #667eea;
+    border: 3px solid #f0f0f0;
+    border-top: 3px solid var(--peach-fizz);
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     animation: spin 1s linear infinite;
-    margin: 0 auto 20px;
+    margin: 0 auto 16px;
 }
 
 @keyframes spin {
@@ -35,65 +42,68 @@
 }
 
 .loading p {
-    font-size: 1.1rem;
-    color: #333;
+    font-size: 0.95rem;
+    color: #666;
     margin: 0;
 }
 
 .result-card {
     background: white;
-    border-radius: 16px;
-    padding: 40px;
-    max-width: 600px;
+    border-radius: 8px;
+    padding: 32px;
+    max-width: 500px;
     width: 100%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     text-align: center;
+    border-top: 3px solid #ddd;
 }
 
 .result-card.success {
-    border-top: 4px solid #51cf66;
+    border-top-color: var(--peach-fizz);
 }
 
 .result-card.error {
-    border-top: 4px solid #ff6b6b;
+    border-top-color: #d32f2f;
 }
 
 .result-card .icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
+    font-size: 3rem;
+    margin-bottom: 16px;
 }
 
 .result-card h1 {
-    margin: 0 0 15px 0;
-    font-size: 2rem;
-    color: #333;
+    margin: 0 0 8px 0;
+    font-size: 1.6rem;
+    color: #1a1a1a;
+    font-weight: 600;
 }
 
 .result-card .message {
-    font-size: 1.1rem;
+    font-size: 0.9rem;
     color: #666;
-    margin: 0 0 10px 0;
+    margin: 0 0 16px 0;
 }
 
 .order-id {
     color: #999;
-    font-size: 0.9rem;
-    margin-bottom: 20px;
+    font-size: 0.8rem;
+    margin-bottom: 16px;
 }
 
 .details {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 20px;
-    margin: 20px 0;
+    background: #f5f5f5;
+    border-radius: 6px;
+    padding: 16px;
+    margin: 16px 0;
     text-align: left;
 }
 
 .detail-row {
     display: flex;
     justify-content: space-between;
-    padding: 12px 0;
+    padding: 8px 0;
     border-bottom: 1px solid #eee;
+    font-size: 0.85rem;
 }
 
 .detail-row:last-child {
@@ -106,23 +116,24 @@
 }
 
 .detail-row .value {
-    color: #333;
+    color: #1a1a1a;
     font-weight: 500;
 }
 
 .subscription-info {
-    background: #f0f7ff;
-    border-left: 4px solid #667eea;
-    border-radius: 8px;
-    padding: 20px;
-    margin: 20px 0;
+    background: #fffbfc;
+    border-left: 3px solid var(--peach-fizz);
+    border-radius: 6px;
+    padding: 16px;
+    margin: 16px 0;
     text-align: left;
 }
 
 .subscription-info h2 {
-    margin: 0 0 15px 0;
-    color: #333;
-    font-size: 1.2rem;
+    margin: 0 0 8px 0;
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    font-weight: 600;
 }
 
 .subscription-info ul {
@@ -132,84 +143,81 @@
 }
 
 .subscription-info li {
-    padding: 8px 0;
-    color: #555;
+    padding: 6px 0;
+    color: #666;
+    font-size: 0.85rem;
+    line-height: 1.4;
 }
 
 .actions {
     display: flex;
-    gap: 10px;
-    margin-top: 30px;
+    gap: 8px;
+    margin-top: 24px;
 }
 
 .actions button,
 .actions a {
     flex: 1;
-    padding: 14px 24px;
+    padding: 10px 16px;
     border: none;
-    border-radius: 8px;
-    font-size: 1rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .btn-continue {
-    background-color: #667eea;
+    background-color: var(--peach-fizz);
     color: white;
 }
 
 .btn-continue:hover {
-    background-color: #5568d3;
-    transform: translateY(-2px);
+    background-color: var(--peach-fizz-dark);
 }
 
 .btn-chat {
-    background-color: #51cf66;
-    color: white;
+    background-color: #f5f5f5;
+    color: var(--peach-fizz);
+    border: 1px solid var(--peach-fizz);
 }
 
 .btn-chat:hover {
-    background-color: #40c057;
-    transform: translateY(-2px);
+    background-color: var(--peach-fizz-light);
 }
 
 .btn-back {
     width: 100%;
-    padding: 14px 24px;
-    background-color: #667eea;
+    padding: 10px 16px;
+    background-color: var(--peach-fizz);
     color: white;
     border: none;
-    border-radius: 8px;
-    font-size: 1rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .btn-back:hover {
-    background-color: #5568d3;
-    transform: translateY(-2px);
+    background-color: var(--peach-fizz-dark);
 }
 
 @media (max-width: 600px) {
     .result-card {
-        padding: 30px 20px;
-    }
-
-    .result-card .icon {
-        font-size: 3rem;
+        padding: 24px 16px;
     }
 
     .result-card h1 {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
     }
 
     .actions {
         flex-direction: column;
+        gap: 8px;
     }
 }

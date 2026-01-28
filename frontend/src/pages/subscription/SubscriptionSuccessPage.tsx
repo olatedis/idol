@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./SubscriptionSuccessPage.css";
 
+type SubscriptionPlan = "MONTHLY" | "ANNUAL";
+
 const API_BASE = "http://localhost:8080";
 
 const SubscriptionSuccessPage: React.FC = () => {
@@ -17,6 +19,7 @@ const SubscriptionSuccessPage: React.FC = () => {
     const paymentKeyParam = searchParams.get("paymentKey");
     const amount = searchParams.get("amount");
     const idolId = searchParams.get("idolId");
+    const plan = (searchParams.get("plan") || "MONTHLY") as SubscriptionPlan;
     const userId = localStorage.getItem("userId") || "1";
 
     useEffect(() => {
@@ -71,6 +74,18 @@ const SubscriptionSuccessPage: React.FC = () => {
         navigate("/subscription");
     };
 
+    const getPlanLabel = () => {
+        return plan === "MONTHLY" ? "📅 월간" : "🎁 연간 (10% 할인)";
+    };
+
+    const getRenewalInfo = () => {
+        if (plan === "MONTHLY") {
+            return `매월 ${parseInt(amount || "0").toLocaleString()}원에 자동 갱신됩니다`;
+        } else {
+            return `12개월 동안 ${parseInt(amount || "0").toLocaleString()}원으로 이용할 수 있습니다`;
+        }
+    };
+
     if (loading && confirming) {
         return (
             <div className="success-container">
@@ -113,6 +128,10 @@ const SubscriptionSuccessPage: React.FC = () => {
                             </span>
                         </div>
                         <div className="detail-row">
+                            <span className="label">플랜</span>
+                            <span className="value">{getPlanLabel()}</span>
+                        </div>
+                        <div className="detail-row">
                             <span className="label">결제수단</span>
                             <span className="value">카드 결제</span>
                         </div>
@@ -127,10 +146,11 @@ const SubscriptionSuccessPage: React.FC = () => {
                     <div className="subscription-info">
                         <h2>구독 정보</h2>
                         <ul>
-                            <li>✓ 월간 구독이 활성화되었습니다</li>
-                            <li>✓ 매월 {parseInt(amount || "0").toLocaleString()}원에 자동 갱신됩니다</li>
+                            <li>✓ {getPlanLabel()} 구독이 활성화되었습니다</li>
+                            <li>✓ {getRenewalInfo()}</li>
                             <li>✓ 언제든 구독을 취소할 수 있습니다</li>
                             <li>✓ 이메일로 청구서가 발송됩니다</li>
+                            <li>✓ 🔄 자동 갱신이 활성화되었습니다</li>
                         </ul>
                     </div>
 

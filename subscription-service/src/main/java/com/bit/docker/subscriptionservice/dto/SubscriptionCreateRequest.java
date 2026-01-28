@@ -1,5 +1,6 @@
 package com.bit.docker.subscriptionservice.dto;
 
+import com.bit.docker.subscriptionservice.entity.SubscriptionPlan;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -12,6 +13,9 @@ public class SubscriptionCreateRequest {
 
     @NotNull
     private int idolId;
+
+    @NotNull
+    private SubscriptionPlan plan;  // MONTHLY 또는 ANNUAL
 
     private boolean autoRenew;
 }

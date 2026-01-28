@@ -45,6 +45,12 @@ public class Subscription {
 
     private LocalDateTime expiredAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SubscriptionPlan plan;
+
+    private LocalDateTime nextRenewalAt;  // 다음 갱신 예정 시간
+
     @Column(nullable = false)
     private boolean autoRenew;
 
@@ -54,6 +60,7 @@ public class Subscription {
         }
         this.status = SubscriptionStatus.ACTIVE;
         this.startedAt = LocalDateTime.now();
+        this.nextRenewalAt = LocalDateTime.now().plusMonths(plan.getDurationInMonths());
     }
 
     public void cancel() {
@@ -64,6 +71,14 @@ public class Subscription {
     public void expire() {
         this.status = SubscriptionStatus.EXPIRED;
         this.expiredAt = LocalDateTime.now();
+    }
+
+    public void renew() {
+        if (this.status != SubscriptionStatus.ACTIVE) {
+            throw new IllegalStateException("활성 구독만 갱신 가능");
+        }
+        this.startedAt = LocalDateTime.now();
+        this.nextRenewalAt = LocalDateTime.now().plusMonths(plan.getDurationInMonths());
     }
 
     /**
