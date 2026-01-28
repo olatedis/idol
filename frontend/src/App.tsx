@@ -1,7 +1,7 @@
 import './App.css'
-import PaymentTestPage from "./pages/PaymentTestPage.tsx";
+import PaymentTestPage from "./pages/paymentTest/PaymentTestPage.tsx";
 import {BrowserRouter,Routes,Route} from "react-router-dom";
-import SuccessTestPage from "./pages/SuccessTestPage.tsx";
+import SuccessTestPage from "./pages/paymentTest/SuccessTestPage.tsx";
 
 function App() {
 
