@@ -85,14 +85,14 @@ public class PostController {
         try {
             Role role = Role.from(raw);
             if (role == null) {
-                throw new ResponseStatusException(UNAUTHORIZED, "role is required");
+                throw new ResponseStatusException(UNAUTHORIZED, "권한 정보가 필요합니다.");
             }
             return role;
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
             // raw 값이 enum 변환 실패 등인 경우
-            throw new ResponseStatusException(UNAUTHORIZED, "invalid role", e);
+            throw new ResponseStatusException(UNAUTHORIZED, "유효하지 않은 권한입니다.", e);
         }
     }
 }
