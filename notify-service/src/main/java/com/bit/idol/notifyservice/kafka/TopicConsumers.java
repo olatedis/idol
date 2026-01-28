@@ -1,6 +1,5 @@
 package com.bit.idol.notifyservice.kafka;
 
-import com.bit.idol.notifyservice.entity.TargetType;
 import com.bit.idol.notifyservice.repository.NotificationPreferenceRepository;
 import com.bit.idol.notifyservice.repository.NotificationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,7 +32,6 @@ public class TopicConsumers {
     }
 
     // USER_DELETED 수신 시 Notify 데이터 정리
-    // 새 모델에서는 receiverId가 없으므로 targetType=USER, targetId=userId 로 삭제
     @KafkaListener(topics = "${notify.topics.user:user.events}", groupId = "${notify.consumer.user-group-id:notify-user-group}")
     @Transactional
     public void onUserEvent(String rawJson) {
@@ -45,7 +43,8 @@ public class TopicConsumers {
             int userId = root.path("data").path("userId").asInt(-1);
             if (userId <= 0) return;
 
-            notificationRepo.deleteAllByTarget(TargetType.USER, String.valueOf(userId));
+            // // 유저 알림 전체 삭제 + 설정 삭제
+            notificationRepo.deleteAllByReceiverId(userId);
             prefRepo.deleteByUserId(userId);
 
         } catch (Exception ignore) {

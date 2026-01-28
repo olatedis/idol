@@ -1,9 +1,8 @@
 package com.bit.idol.notifyservice.service;
 
-import com.bit.idol.notifyservice.dto.NotificationListResponse;
 import com.bit.idol.notifyservice.dto.NotificationItemResponse;
+import com.bit.idol.notifyservice.dto.NotificationListResponse;
 import com.bit.idol.notifyservice.entity.Notification;
-import com.bit.idol.notifyservice.entity.TargetType;
 import com.bit.idol.notifyservice.repository.NotificationRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,7 +32,7 @@ public class NotificationService {
         this.om = om;
     }
 
-    // 내 알림 조회: fanout이 USER 단위로 풀어서 targetType=USER, targetId=userId 로 저장된다는 전제
+    // 내 알림 조회: notify DB는 receiverId 기준으로 USER 알림을 저장한다는 전제
     @Transactional(readOnly = true)
     public NotificationListResponse list(int userId, String cursorIso, Integer size) {
         int s = (size == null) ? DEFAULT_SIZE : Math.min(size, MAX_SIZE);
@@ -44,7 +43,7 @@ public class NotificationService {
         }
 
         var pageable = PageRequest.of(0, s);
-        List<Notification> list = repo.findListByCursor(TargetType.USER, String.valueOf(userId), cursor, pageable);
+        List<Notification> list = repo.findListByCursor(userId, cursor, pageable);
 
         NotificationListResponse res = new NotificationListResponse();
         res.items = new ArrayList<>();
@@ -58,9 +57,16 @@ public class NotificationService {
     }
 
     // 특정 알림 단건 조회(필요하면)
+    // // 타인 알림 조회 방지: receiverId가 요청자(userId)인지 검증
     @Transactional(readOnly = true)
-    public NotificationItemResponse getOne(int notificationId) {
+    public NotificationItemResponse getOne(int userId, int notificationId) {
         Notification n = repo.findById(notificationId).orElseThrow(EntityNotFoundException::new);
+
+        // // 소유자 검증(내 알림만 조회 가능)
+        if (n.getReceiverId() != userId) {
+            throw new SecurityException("FORBIDDEN");
+        }
+
         return toResponse(n);
     }
 
@@ -70,8 +76,9 @@ public class NotificationService {
         dto.eventId = n.getEventId();
         dto.type = n.getType();
 
-        dto.targetType = n.getTargetType().name();
-        dto.targetId = n.getTargetId();
+        // // 저장 모델은 receiverId 기반이므로 응답은 USER로 고정
+        dto.targetType = "USER";
+        dto.targetId = String.valueOf(n.getReceiverId());
 
         dto.redirectUrl = n.getRedirectUrl();
         dto.occurredAt = n.getOccurredAt().format(ISO);

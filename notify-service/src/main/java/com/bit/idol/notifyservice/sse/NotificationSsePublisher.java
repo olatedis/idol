@@ -21,8 +21,11 @@ public class NotificationSsePublisher {
         p.setNotificationId(n.getNotificationId());
         p.setEventId(n.getEventId());
         p.setType(n.getType());
-        p.setTargetType(n.getTargetType().name());
-        p.setTargetId(n.getTargetId());
+
+        // // 저장 모델은 receiverId 기반이므로 SSE 페이로드도 USER로 고정
+        p.setTargetType("USER");
+        p.setTargetId(String.valueOf(n.getReceiverId()));
+
         p.setRedirectUrl(n.getRedirectUrl());
         p.setOccurredAt(n.getOccurredAt() != null ? n.getOccurredAt().toString() : null);
         p.setArgs(parseArgs(n.getArgsJson()));

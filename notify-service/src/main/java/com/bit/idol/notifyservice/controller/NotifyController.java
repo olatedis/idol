@@ -27,10 +27,12 @@ public class NotifyController {
     }
 
     // 알림 단건 조회
+    // // 타인 알림 조회 방지 위해 userId도 함께 전달
     @GetMapping("/notifications/{id}")
     public ResponseEntity<NotificationItemResponse> getOne(
+            @RequestHeader("X-User-Id") int userId,
             @PathVariable("id") int notificationId
     ) {
-        return ResponseEntity.ok(notificationService.getOne(notificationId));
+        return ResponseEntity.ok(notificationService.getOne(userId, notificationId));
     }
 }
