@@ -42,6 +42,8 @@ public class VoteService {
     private final NotificationProducer notificationProducer;
     private final UserFeignClient userFeignClient;
 
+    private static final String BLACKLIST_KEY = "vote:blacklist:ip";
+
     @Transactional
     @CachePut(value = "voteInfo", key = "#result.id")
     public VoteInfo createVote(Vote vote) {
@@ -76,7 +78,7 @@ public class VoteService {
             throw new RuntimeException("투표가 이미 종료되었습니다.");
         }
 
-        // ★ 뉴비 차단 (Newbie Ban) 로직 추가
+        // 뉴비 차단 (Newbie Ban)
         try {
             UserDto user = userFeignClient.getUserInfoById(userId);
             if (user != null && user.getCreatedAt() != null) {
@@ -86,8 +88,6 @@ public class VoteService {
             }
         } catch (Exception e) {
             log.warn("유저 정보 조회 실패 (뉴비 체크 건너뜀): {}", e.getMessage());
-            // 유저 서비스 장애 시에는 투표를 막을지, 허용할지 정책 결정 필요
-            // 여기서는 일단 허용 (Fail-Open)
         }
 
         String redisKey = "vote:" + voteId + ":user:" + userId;
@@ -139,11 +139,9 @@ public class VoteService {
     }
 
     private void validateIp(String ipAddress) {
-        // Level 1: IDC/VPN IP 차단 (예시 대역)
-        if (ipAddress.startsWith("10.") || ipAddress.startsWith("192.168.")) {
-            // 내부망 IP는 허용 (테스트용)
-        } else if (isBlacklistedIp(ipAddress)) {
-            throw new RuntimeException("비정상적인 접근입니다. (VPN/Proxy 차단)");
+        // Redis 기반 블랙리스트 확인
+        if (isBlacklistedIp(ipAddress)) {
+            throw new RuntimeException("비정상적인 접근입니다. (관리자에 의해 차단된 IP)");
         }
 
         String key = "vote:limit:ip:" + ipAddress;
@@ -159,9 +157,19 @@ public class VoteService {
     }
     
     private boolean isBlacklistedIp(String ip) {
-        // 실제로는 DB나 Redis에서 블랙리스트 조회
-        // 여기서는 예시로 AWS 대역 일부 차단
-        return ip.startsWith("3.5.") || ip.startsWith("13.124."); 
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(BLACKLIST_KEY, ip));
+    }
+
+    // --- 블랙리스트 관리 메서드 ---
+
+    public void addBlacklistIp(String ip) {
+        redisTemplate.opsForSet().add(BLACKLIST_KEY, ip);
+        log.info("IP 블랙리스트 추가: {}", ip);
+    }
+
+    public void removeBlacklistIp(String ip) {
+        redisTemplate.opsForSet().remove(BLACKLIST_KEY, ip);
+        log.info("IP 블랙리스트 해제: {}", ip);
     }
 
     @Transactional
