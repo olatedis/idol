@@ -33,9 +33,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web' // webmvc -> web 변경
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
-    // Security
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-
     // Database & Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // JPA 추가
     implementation 'org.springframework.boot:spring-boot-starter-data-redis' // reactive 제거 (일반 redis 사용 권장)
