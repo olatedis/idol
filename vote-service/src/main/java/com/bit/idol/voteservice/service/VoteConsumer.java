@@ -36,6 +36,7 @@ public class VoteConsumer {
     private final ObjectMapper objectMapper;
     private final RedisTemplate<String, String> redisTemplate;
     private final JdbcTemplate jdbcTemplate;
+    private final VoteReader voteReader; // 추가됨
 
     @Transactional
     @KafkaListener(topics = "vote-topic", groupId = "vote-group", containerFactory = "kafkaListenerContainerFactory")
@@ -66,11 +67,10 @@ public class VoteConsumer {
 
                 if (Boolean.FALSE.equals(isNew)) continue;
 
-                // 3. 후보자 조회 (캐싱 적용)
+                // 3. 후보자 조회 (Redis 캐싱 + 로컬 캐싱)
                 String cacheKey = voteId + ":" + candidateNumber;
                 Candidate candidate = candidateCache.computeIfAbsent(cacheKey, k -> 
-                        candidateRepository.findByVoteIdAndCandidateNumber(voteId, candidateNumber)
-                                .orElseThrow(() -> new RuntimeException("후보자 없음"))
+                        voteReader.getCandidate(voteId, candidateNumber) // VoteReader 사용
                 );
 
                 // 4. 득표수 집계 (메모리 합산)
