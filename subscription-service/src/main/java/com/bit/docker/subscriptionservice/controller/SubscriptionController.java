@@ -1,7 +1,9 @@
 package com.bit.docker.subscriptionservice.controller;
 
 import com.bit.docker.subscriptionservice.dto.*;
+import com.bit.docker.subscriptionservice.entity.BillingKey;
 import com.bit.docker.subscriptionservice.entity.Role;
+import com.bit.docker.subscriptionservice.service.BillingKeyService;
 import com.bit.docker.subscriptionservice.service.SubscriptionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/subscriptions")
@@ -19,6 +22,7 @@ import java.util.List;
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
+    private final BillingKeyService billingKeyService;
 
     // 개인(아이돌) 구독하기
     @PostMapping
@@ -113,5 +117,99 @@ public class SubscriptionController {
         }
 
         return ResponseEntity.ok(subscriptionService.getMyGroupSubscriptions(userId));
+    }
+
+    // ===== 빌링키 관련 엔드포인트 =====
+
+    /**
+     * 빌링키 발급 요청
+     * POST /subscriptions/billing/authorize
+     * Body: { "idolId": 1, "authKey": "auth_xxx", "plan": "MONTHLY" }
+     */
+    @PostMapping("/billing/authorize")
+    public ResponseEntity<BillingKeyAuthResponse> authorizeBillingKey(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Role") String role,
+            @Valid @RequestBody BillingKeyAuthRequest request
+    ) {
+        if (Role.valueOf(role) != Role.USER) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        try {
+            String customerKey = UUID.randomUUID().toString();
+            BillingKey billingKey = billingKeyService.issueBillingKey(
+                    request.getAuthKey(),
+                    userId,
+                    request.getIdolId(),
+                    customerKey
+            );
+
+            log.info("빌링키 발급 성공: userId={}, idolId={}, plan={}", 
+                    userId, request.getIdolId(), request.getPlan());
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new BillingKeyAuthResponse(
+                            billingKey.getId(),
+                            billingKey.getCardNumber(),
+                            billingKey.getCardIssuer(),
+                            billingKey.getCardType(),
+                            "빌링키가 등록되었습니다. 이제 자동 구독이 활성화됩니다."
+                    ));
+        } catch (Exception e) {
+            log.error("빌링키 발급 실패: userId={}, idolId={}, error={}", 
+                    userId, request.getIdolId(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+                    .body(new BillingKeyAuthResponse(
+                            0,
+                            null,
+                            null,
+                            null,
+                            "빌링키 발급 실패: " + e.getMessage()
+                    ));
+        }
+    }
+
+    /**
+     * 빌링키 존재 여부 확인
+     * GET /subscriptions/billing/{idolId}
+     */
+    @GetMapping("/billing/{idolId}")
+    public ResponseEntity<BillingKeyCheckResponse> checkBillingKey(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Role") String role,
+            @PathVariable int idolId
+    ) {
+        if (Role.valueOf(role) != Role.USER) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        boolean hasKey = billingKeyService.hasBillingKey(userId, idolId);
+        return ResponseEntity.ok(new BillingKeyCheckResponse(hasKey));
+    }
+
+    /**
+     * 빌링키 삭제 (구독 취소)
+     * DELETE /subscriptions/billing/{idolId}
+     */
+    @DeleteMapping("/billing/{idolId}")
+    public ResponseEntity<Void> deleteBillingKey(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Role") String role,
+            @PathVariable int idolId
+    ) {
+        if (Role.valueOf(role) != Role.USER) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        try {
+            billingKeyService.deleteBillingKey(userId, idolId);
+            log.info("빌링키 삭제 성공: userId={}, idolId={}", userId, idolId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("빌링키 삭제 실패: userId={}, idolId={}, error={}", 
+                    userId, idolId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 }
