@@ -3,7 +3,6 @@ package com.bit.docker.paymentservice.service;
 import com.bit.docker.paymentservice.domain.dto.*;
 import com.bit.docker.paymentservice.domain.entity.Payment;
 import com.bit.docker.paymentservice.domain.enumtype.PaymentStatus;
-import com.bit.docker.paymentservice.infra.kafka.PaymentEventProducer;
 import com.bit.docker.paymentservice.infra.persistence.PaymentRepository;
 import com.bit.docker.paymentservice.infra.toss.TossPgClient;
 import lombok.AllArgsConstructor;
@@ -20,7 +19,6 @@ import java.util.UUID;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final PaymentEventProducer paymentEventProducer;
     private final PaymentEventProducerService  paymentEventProducerService;
     private final TossPgClient tossPgClient;
 
