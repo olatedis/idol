@@ -60,7 +60,7 @@ public class ChatService {
             throw e;
         }
 
-        // 2. MongoDB 저장
+        // 2. MongoDB 저장 (PENDING 상태)
         ChatMessage chatMessage = ChatMessage.builder()
                 .idolId(messageDto.getIdolId())
                 .senderId(messageDto.getSenderId())
@@ -70,13 +70,14 @@ public class ChatService {
                 .type(messageDto.getType())
                 .parentId(messageDto.getParentId())
                 .createdAt(LocalDateTime.now())
+                .status("PENDING") // Outbox Pattern
                 .build();
         
         ChatMessage savedMessage = chatRepository.save(chatMessage);
         
         messageDto.setId(savedMessage.getId());
 
-        // 3. Redis 캐싱 (최신 메시지 목록)
+        // 3. Redis 캐싱
         String cacheKey = "chat:room:" + messageDto.getIdolId();
         redisTemplate.opsForList().leftPush(cacheKey, messageDto);
         redisTemplate.opsForList().trim(cacheKey, 0, CACHE_SIZE - 1);
@@ -89,10 +90,19 @@ public class ChatService {
         previewData.put("time", LocalDateTime.now().toString());
         redisTemplate.opsForValue().set(previewKey, previewData);
 
-        // 4. Kafka로 전송
-        chatProducer.sendChatMessage(messageDto);
-        
-        log.info("메시지 처리 완료: room={}, id={}", messageDto.getIdolId(), savedMessage.getId());
+        // 4. Kafka로 전송 (성공 시 SENT 업데이트)
+        try {
+            chatProducer.sendChatMessage(messageDto);
+            
+            // 전송 성공 -> 상태 업데이트
+            savedMessage.setStatus("SENT");
+            chatRepository.save(savedMessage);
+            
+            log.info("메시지 처리 완료: room={}, id={}", messageDto.getIdolId(), savedMessage.getId());
+        } catch (Exception e) {
+            log.error("Kafka 전송 실패 (재전송 대기): {}", e.getMessage());
+            // 예외를 던지지 않고 PENDING 상태로 둠 -> 스케줄러가 처리
+        }
 
         // 5. 알림 발송
         sendNotification(messageDto);
@@ -136,12 +146,10 @@ public class ChatService {
         ChatMessage message = chatRepository.findById(messageId)
                 .orElseThrow(() -> new RuntimeException("메시지를 찾을 수 없습니다."));
 
-        // Redis에 저장 (덮어쓰기)
         String pinKey = "chat:pin:" + idolId;
         ChatMessageDto pinDto = convertToDto(message);
         redisTemplate.opsForValue().set(pinKey, pinDto);
         
-        // 실시간 알림 (PIN 타입으로 전송)
         pinDto.setType("PIN");
         chatProducer.sendChatMessage(pinDto);
 
@@ -152,7 +160,6 @@ public class ChatService {
         String pinKey = "chat:pin:" + idolId;
         redisTemplate.delete(pinKey);
         
-        // 실시간 알림 (UNPIN 타입으로 전송)
         ChatMessageDto unpinEvent = ChatMessageDto.builder()
                 .idolId(idolId)
                 .type("UNPIN")
@@ -172,7 +179,7 @@ public class ChatService {
         return null;
     }
 
-    // --- 미디어 모아보기 (추가됨) ---
+    // --- 미디어 모아보기 ---
 
     public List<ChatMessageDto> getChatMedia(Long idolId, String lastId, int size) {
         Pageable pageable = PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "id"));
