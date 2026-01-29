@@ -75,3 +75,11 @@ resilience4j:
         waitDurationInOpenState: 10s # 차단 후 10초 대기
         failureRateThreshold: 50 # 실패율 50% 이상이면 차단
         eventConsumerBufferSize: 10
+  
+  # RateLimiter 설정 (DB 보호용)
+  ratelimiter:
+    instances:
+      vote-db-protection:
+        limitForPeriod: 500      # 1초에 500개 허용 (DB 스펙에 따라 조절)
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0       # 대기 없이 즉시 거절 (Fail Fast)
