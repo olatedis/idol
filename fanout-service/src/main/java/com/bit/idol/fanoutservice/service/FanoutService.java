@@ -9,7 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 // targetType/targetId 기준으로 USER 단위로 풀어서 notify-fanout-topic으로 보냄
 @Slf4j
@@ -109,7 +111,9 @@ public class FanoutService {
         int sent = 0;
         for (Integer uid : userIds) {
             if (uid == null || uid <= 0) continue;
-            sendToOneUser(req, String.valueOf(uid));
+
+            // IDOL_MESSAGE 스택 계산을 위해 idolId를 fanout 이벤트 args에 함께 전달
+            sendToOneUserWithIdolId(req, String.valueOf(uid), String.valueOf(idolId));
             sent++;
         }
         log.info("fanout IDOL_SUB 완료. eventId={} idolId={} count={}", req.getEventId(), idolId, sent);
@@ -153,7 +157,6 @@ public class FanoutService {
         log.info("fanout GROUP_SUB 완료. eventId={} groupId={} count={}", req.getEventId(), groupId, sent);
     }
 
-
     private void sendToOneUser(NotifyRequestEvent req, String userIdStr) {
         NotifyFanoutEvent out = new NotifyFanoutEvent();
 
@@ -164,6 +167,29 @@ public class FanoutService {
         out.setTargetType(TargetType.USER);
         out.setTargetId(userIdStr);
         out.setArgs(req.getArgs());
+        out.setRedirectUrl(req.getRedirectUrl());
+        out.setOccurredAt(req.getOccurredAt());
+
+        producer.send(fanoutTopic, out);
+    }
+
+    private void sendToOneUserWithIdolId(NotifyRequestEvent req, String userIdStr, String idolIdStr) {
+        NotifyFanoutEvent out = new NotifyFanoutEvent();
+
+        // 유저별로 eventId를 바꿔야 notify-service UNIQUE(event_id)에서 충돌 안 남
+        out.setEventId(req.getEventId() + ":" + userIdStr);
+
+        out.setType(req.getType());
+        out.setTargetType(TargetType.USER);
+        out.setTargetId(userIdStr);
+
+        // args 복사 후 idolId 주입
+        // (원본 targetId(idolId)가 fanout 이후에는 사라지므로 notify-service까지 전달 목적)
+        Map<String, String> args = (req.getArgs() == null) ? new HashMap<>() : new HashMap<>(req.getArgs());
+        args.put("idolId", idolIdStr);
+
+        out.setArgs(args);
+
         out.setRedirectUrl(req.getRedirectUrl());
         out.setOccurredAt(req.getOccurredAt());
 
