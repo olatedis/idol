@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
@@ -15,9 +16,11 @@ import java.util.Map;
 
 @Document(collection = "chat_messages")
 @CompoundIndexes({
-    @CompoundIndex(name = "idx_idol_id_desc", def = "{'idolId': 1, '_id': -1}")
+    @CompoundIndex(name = "idx_idol_id_desc", def = "{'idolId': 1, '_id': -1}"),
+    @CompoundIndex(name = "idx_status_created_at", def = "{'status': 1, 'createdAt': 1}") // 재전송 조회용 인덱스
 })
 @Getter
+@Setter // Setter 추가 (상태 변경용)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -45,4 +48,8 @@ public class ChatMessage {
     private Map<String, String> translations = new HashMap<>();
 
     private LocalDateTime createdAt;
+
+    // --- Outbox Pattern ---
+    @Builder.Default
+    private String status = "PENDING"; // PENDING, SENT
 }
