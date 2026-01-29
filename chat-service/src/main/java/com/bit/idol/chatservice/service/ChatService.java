@@ -80,7 +80,7 @@ public class ChatService {
         redisTemplate.opsForList().leftPush(cacheKey, messageDto);
         redisTemplate.opsForList().trim(cacheKey, 0, CACHE_SIZE - 1);
 
-        // ★ 3-1. Redis 미리보기 캐싱 (마지막 메시지 하나만 저장)
+        // 3-1. Redis 미리보기 캐싱
         String previewKey = "chat:preview:" + messageDto.getIdolId();
         Map<String, Object> previewData = new HashMap<>();
         previewData.put("content", messageDto.getContent());
@@ -103,7 +103,7 @@ public class ChatService {
         }
     }
 
-    // 미리보기 조회 메서드 추가
+    // 미리보기 조회
     public Map<String, Object> getChatPreview(Long idolId) {
         String previewKey = "chat:preview:" + idolId;
         Object data = redisTemplate.opsForValue().get(previewKey);
@@ -112,7 +112,6 @@ public class ChatService {
             return (Map<String, Object>) data;
         }
         
-        // 캐시 없으면 DB에서 조회 (Fallback)
         Pageable pageable = PageRequest.of(0, 1);
         List<ChatMessage> messages = chatRepository.findByIdolIdOrderByIdDesc(idolId, pageable);
         
@@ -123,13 +122,56 @@ public class ChatService {
             preview.put("sender", lastMsg.getSenderNickname());
             preview.put("time", lastMsg.getCreatedAt().toString());
             
-            // 다시 캐싱
             redisTemplate.opsForValue().set(previewKey, preview);
             return preview;
         }
         
-        return null; // 메시지 없음
+        return null;
     }
+
+    // --- 공지사항 (Pinned Message) ---
+
+    public void pinMessage(String messageId, Long idolId) {
+        ChatMessage message = chatRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("메시지를 찾을 수 없습니다."));
+
+        // Redis에 저장 (덮어쓰기)
+        String pinKey = "chat:pin:" + idolId;
+        ChatMessageDto pinDto = convertToDto(message);
+        redisTemplate.opsForValue().set(pinKey, pinDto);
+        
+        // 실시간 알림 (PIN 타입으로 전송)
+        pinDto.setType("PIN");
+        chatProducer.sendChatMessage(pinDto);
+
+        log.info("공지사항 등록 완료: room={}, msgId={}", idolId, messageId);
+    }
+
+    public void unpinMessage(Long idolId) {
+        String pinKey = "chat:pin:" + idolId;
+        redisTemplate.delete(pinKey);
+        
+        // 실시간 알림 (UNPIN 타입으로 전송)
+        ChatMessageDto unpinEvent = ChatMessageDto.builder()
+                .idolId(idolId)
+                .type("UNPIN")
+                .build();
+        chatProducer.sendChatMessage(unpinEvent);
+        
+        log.info("공지사항 해제 완료: room={}", idolId);
+    }
+
+    public ChatMessageDto getPinnedMessage(Long idolId) {
+        String pinKey = "chat:pin:" + idolId;
+        Object data = redisTemplate.opsForValue().get(pinKey);
+        
+        if (data instanceof ChatMessageDto) {
+            return (ChatMessageDto) data;
+        }
+        return null;
+    }
+
+    // --------------------------------
 
     private void sendNotification(ChatMessageDto messageDto) {
         try {
