@@ -71,6 +71,10 @@ dependencies {
     // Aho-Corasick
     implementation 'com.hankcs:aho-corasick-double-array-trie:1.2.3'
 
+    // Caffeine Cache (Local Cache)
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

@@ -1,0 +1,21 @@
+{
+  "analysis": {
+    "tokenizer": {
+      "nori_user_dict": {
+        "type": "nori_tokenizer",
+        "decompound_mode": "mixed",
+        "user_dictionary": "user_dict.txt"
+      }
+    },
+    "analyzer": {
+      "nori_analyzer": {
+        "type": "custom",
+        "tokenizer": "nori_user_dict",
+        "filter": [
+          "nori_readingform",
+          "lowercase"
+        ]
+      }
+    }
+  }
+}

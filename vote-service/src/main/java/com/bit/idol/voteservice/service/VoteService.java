@@ -13,6 +13,8 @@ import com.bit.idol.voteservice.repository.CandidateRepository;
 import com.bit.idol.voteservice.repository.VoteRecordRepository;
 import com.bit.idol.voteservice.repository.VoteRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CachePut;
@@ -106,6 +108,9 @@ public class VoteService {
         return "투표가 완료되었습니다.";
     }
 
+    // Redis 장애 시 실행되는 Fallback 메서드
+    // DB 보호를 위해 RateLimiter 적용 (초당 500건 제한)
+    @RateLimiter(name = "vote-db-protection", fallbackMethod = "rateLimitFallback")
     public String castVoteFallback(int voteId, int userId, int candidateNumber, String clientIp, Throwable t) {
         log.warn("Redis 장애 감지! DB 기반 투표로 전환합니다. Error: {}", t.getMessage());
 
@@ -124,6 +129,21 @@ public class VoteService {
         }
 
         return "투표가 완료되었습니다. (지연 처리)";
+    }
+
+    // RateLimiter에 걸렸을 때 실행되는 Fallback
+    public String rateLimitFallback(int voteId, int userId, int candidateNumber, String clientIp, RequestNotPermitted t) {
+        log.error("DB 보호를 위해 투표 요청 거절: userId={}", userId);
+        throw new RuntimeException("현재 투표량이 많아 잠시 후 다시 시도해주세요.");
+    }
+    
+    // 그 외 예외에 대한 Fallback (RateLimiter 서명과 맞추기 위해 필요할 수 있음)
+    public String rateLimitFallback(int voteId, int userId, int candidateNumber, String clientIp, Throwable t) {
+        if (t instanceof RequestNotPermitted) {
+            return rateLimitFallback(voteId, userId, candidateNumber, clientIp, (RequestNotPermitted) t);
+        }
+        // 원래 예외 다시 던지기
+        throw new RuntimeException(t);
     }
 
     private void sendToKafka(int voteId, int userId, int candidateNumber, String redisKey) {

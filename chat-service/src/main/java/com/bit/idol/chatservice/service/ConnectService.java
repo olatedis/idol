@@ -10,6 +10,7 @@ import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +25,7 @@ public class ConnectService {
     private AuthGrpcServiceGrpc.AuthGrpcServiceBlockingStub authStub;
 
     private final SubscriptionFeignClient subscriptionFeignClient;
-    private final RedisTemplate<String, Object> redisTemplate; // Redis 추가
+    private final RedisTemplate<String, Object> redisTemplate;
 
     private static final String SESSION_KEY_PREFIX = "chat:session:";
 
@@ -55,15 +56,16 @@ public class ConnectService {
     }
 
     // 2. 구독 확인 (Subscription Service 호출)
+    // Caffeine Cache 적용: 1분간 캐싱
+    @Cacheable(value = "subscriptionCheck", key = "#userId + ':' + #idolId")
     @CircuitBreaker(name = "subscription-check", fallbackMethod = "fallbackVerifySubscription")
     public boolean verifySubscription(int userId, Long idolId) {
         return subscriptionFeignClient.checkSubscription(userId, idolId);
     }
 
-    // --- Redis 세션 관리 (추가됨) ---
+    // --- Redis 세션 관리 ---
 
     public void saveUserSession(String sessionId, UserDto userDto) {
-        // 세션 유지 시간: 24시간 (WebSocket 연결 끊겨도 잠시 유지 가능하도록 넉넉하게)
         redisTemplate.opsForValue().set(SESSION_KEY_PREFIX + sessionId, userDto, 24, TimeUnit.HOURS);
         log.debug("세션 저장 완료: sessionId={}, userId={}", sessionId, userDto.getUserId());
     }
