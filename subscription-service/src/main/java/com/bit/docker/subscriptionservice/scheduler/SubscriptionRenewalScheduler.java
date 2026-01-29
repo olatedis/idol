@@ -1,9 +1,11 @@
 package com.bit.docker.subscriptionservice.scheduler;
 
+import com.bit.docker.subscriptionservice.client.TossBillingKeyClient;
 import com.bit.docker.subscriptionservice.dto.PaymentEvent;
 import com.bit.docker.subscriptionservice.entity.Subscription;
 import com.bit.docker.subscriptionservice.entity.SubscriptionStatus;
 import com.bit.docker.subscriptionservice.repository.SubscriptionRepository;
+import com.bit.docker.subscriptionservice.service.BillingKeyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -13,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -21,6 +24,8 @@ public class SubscriptionRenewalScheduler {
 
     private final SubscriptionRepository subscriptionRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
+    private final BillingKeyService billingKeyService;
+    private final TossBillingKeyClient tossBillingKeyClient;
 
     /**
      * 만료된 구독 중 자동갱신이 활성화된 구독을 자동으로 갱신합니다.
@@ -60,6 +65,7 @@ public class SubscriptionRenewalScheduler {
 
     /**
      * 개별 구독을 갱신합니다.
+     * 빌링키가 있으면 자동결제 처리, 없으면 결제 요청 이벤트 발행
      */
     @Transactional
     public void renewSubscription(Subscription subscription) {
@@ -69,7 +75,66 @@ public class SubscriptionRenewalScheduler {
         subscription.renew();
         subscriptionRepository.save(subscription);
 
-        // 결제 요청 이벤트 발행
+        // 빌링키가 있으면 자동결제 처리
+        if (billingKeyService.hasBillingKey(subscription.getUserId(), subscription.getIdolId())) {
+            try {
+                processBillingKeyPayment(subscription);
+            } catch (Exception e) {
+                log.error("빌링키 결제 실패, 대체 결제 요청 이벤트 발행: subscriptionId={}, error={}", 
+                        subscription.getId(), e.getMessage(), e);
+                publishPaymentEvent(subscription);
+            }
+        } else {
+            // 빌링키가 없으면 기존 결제 요청 이벤트 발행
+            publishPaymentEvent(subscription);
+        }
+    }
+
+    /**
+     * 빌링키를 사용한 자동결제 처리
+     */
+    private void processBillingKeyPayment(Subscription subscription) {
+        log.info("빌링키 자동결제 처리: subscriptionId={}, plan={}", 
+                subscription.getId(), subscription.getPlan());
+
+        String orderId = "SUB-" + subscription.getId() + "-" + System.currentTimeMillis();
+        String orderName = subscription.getPlan().name() + " 정기구독 자동결제";
+        int amount = subscription.getPlan().getAmount();
+
+        try {
+            // Toss 빌링키 결제 API 호출
+            String paymentResult = tossBillingKeyClient.processBillingPayment(
+                    subscription.getUserId(),
+                    subscription.getIdolId(),
+                    amount,
+                    orderId,
+                    orderName
+            );
+
+            log.info("빌링키 자동결제 성공: subscriptionId={}, orderId={}, amount={}", 
+                    subscription.getId(), orderId, amount);
+
+            // 결제 성공 이벤트 발행 (선택사항)
+            PaymentEvent event = new PaymentEvent(
+                    subscription.getUserId(),
+                    null,
+                    "SUBSCRIPTION_RENEWAL_BILLING_KEY",
+                    subscription.getId(),
+                    amount
+            );
+            kafkaTemplate.send("payment.completed", event.toJson());
+
+        } catch (Exception e) {
+            log.error("빌링키 자동결제 실패: subscriptionId={}, orderId={}, amount={}, error={}", 
+                    subscription.getId(), orderId, amount, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * 결제 요청 이벤트 발행
+     */
+    private void publishPaymentEvent(Subscription subscription) {
         PaymentEvent event = new PaymentEvent(
                 subscription.getUserId(),
                 null,
