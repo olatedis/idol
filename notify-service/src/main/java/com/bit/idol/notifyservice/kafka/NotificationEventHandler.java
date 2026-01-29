@@ -1,6 +1,8 @@
 package com.bit.idol.notifyservice.kafka;
 
+import com.bit.idol.notifyservice.entity.IdolMessageStack;
 import com.bit.idol.notifyservice.entity.Notification;
+import com.bit.idol.notifyservice.repository.IdolMessageStackRepository;
 import com.bit.idol.notifyservice.repository.NotificationRepository;
 import com.bit.idol.notifyservice.sse.NotificationSsePublisher;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,13 +19,16 @@ public class NotificationEventHandler {
 
     private final ObjectMapper om;
     private final NotificationRepository notificationRepo;
+    private final IdolMessageStackRepository idolMessageStackRepo;
     private final NotificationSsePublisher ssePublisher;
 
     public NotificationEventHandler(ObjectMapper om,
                                     NotificationRepository notificationRepo,
+                                    IdolMessageStackRepository idolMessageStackRepo,
                                     NotificationSsePublisher ssePublisher) {
         this.om = om;
         this.notificationRepo = notificationRepo;
+        this.idolMessageStackRepo = idolMessageStackRepo;
         this.ssePublisher = ssePublisher;
     }
 
@@ -94,11 +99,63 @@ public class NotificationEventHandler {
                 // 저장 성공 시 SSE 푸시
                 ssePublisher.pushToUser(saved.getReceiverId(), saved);
 
+                // IDOL_MESSAGE 스택형 카운트 upsert
+                // - fanout-service가 args.idolId를 넣어주는 전제
+                if ("IDOL_MESSAGE".equals(saved.getType())) {
+                    upsertIdolMessageStack(saved.getReceiverId(), argsNode, occurredAt);
+                }
+
             } catch (DataIntegrityViolationException dup) {
                 // 유니크(event_id) 충돌이면 그냥 무시(중복 처리)
             }
 
         } catch (Exception ignore) {
+        }
+    }
+
+    // 있으면 update, 없으면 insert
+    private void upsertIdolMessageStack(int receiverId, JsonNode argsNode, LocalDateTime occurredAt) {
+        if (argsNode == null || argsNode.isNull()) return;
+
+        String idolIdStr = null;
+        try {
+            JsonNode v = argsNode.get("idolId");
+            idolIdStr = (v == null || v.isNull()) ? null : v.asText();
+        } catch (Exception ignore) {
+        }
+
+        if (blank(idolIdStr)) return;
+
+        long idolId;
+        try {
+            idolId = Long.parseLong(idolIdStr);
+        } catch (Exception e) {
+            return;
+        }
+
+        // (receiverId, idolId) 1행만 유지하면서 unreadCount만 누적
+        try {
+            IdolMessageStack stack = idolMessageStackRepo
+                    .findByReceiverIdAndIdolId(receiverId, idolId)
+                    .orElse(null);
+
+            if (stack == null) {
+                idolMessageStackRepo.save(IdolMessageStack.create(receiverId, idolId, occurredAt));
+                return;
+            }
+
+            stack.increment(occurredAt);
+            idolMessageStackRepo.save(stack);
+
+        } catch (DataIntegrityViolationException dup) {
+            // 동시성으로 인해 최초 생성이 경합되면(유니크 충돌) 1회 더 조회 후 증가
+            IdolMessageStack stack = idolMessageStackRepo
+                    .findByReceiverIdAndIdolId(receiverId, idolId)
+                    .orElse(null);
+            if (stack == null) return;
+
+            stack.increment(occurredAt);
+            idolMessageStackRepo.save(stack);
         }
     }
 
