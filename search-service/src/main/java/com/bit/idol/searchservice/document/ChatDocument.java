@@ -5,13 +5,13 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.*;
 
 import java.time.LocalDateTime;
 
-@Document(indexName = "chat_index") // Elasticsearch 인덱스 이름
+@Document(indexName = "chat")
+@Setting(settingPath = "elastic/chat-setting.json")
+@Mapping(mappingPath = "elastic/chat-mapping.json")
 @Getter
 @Builder
 @NoArgsConstructor
@@ -19,10 +19,10 @@ import java.time.LocalDateTime;
 public class ChatDocument {
 
     @Id
-    private String id; // MongoDB ID와 동일하게 사용
+    private String id;
 
     @Field(type = FieldType.Long)
-    private Long idolId; // 채팅방 ID (필터링용)
+    private Long idolId;
 
     @Field(type = FieldType.Integer)
     private int senderId;
@@ -30,15 +30,15 @@ public class ChatDocument {
     @Field(type = FieldType.Keyword)
     private String senderNickname;
 
-    @Field(type = FieldType.Keyword)
-    private String senderRole; // USER or IDOL
-
-    @Field(type = FieldType.Text, analyzer = "nori") // 한글 형태소 분석기 사용
+    // Nori 분석기 적용 (자동 완성 필드는 일단 제거 - 설정 복잡도 낮춤)
+    @MultiField(
+        mainField = @Field(type = FieldType.Text, analyzer = "nori_analyzer"),
+        otherFields = {
+            @InnerField(suffix = "keyword", type = FieldType.Keyword)
+        }
+    )
     private String content;
 
-    @Field(type = FieldType.Keyword)
-    private String type; // TALK, IMAGE 등
-
-    @Field(type = FieldType.Date, format = {}, pattern = "uuuu-MM-dd'T'HH:mm:ss.SSS")
+    @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
     private LocalDateTime createdAt;
 }

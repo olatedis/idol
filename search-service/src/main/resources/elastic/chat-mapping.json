@@ -1,0 +1,17 @@
+{
+  "properties": {
+    "id": { "type": "keyword" },
+    "idolId": { "type": "long" },
+    "senderId": { "type": "integer" },
+    "senderNickname": { "type": "keyword" },
+    "content": {
+      "type": "text",
+      "analyzer": "nori_analyzer",
+      "fields": {
+        "keyword": { "type": "keyword" },
+        "suggest": { "type": "completion" }
+      }
+    },
+    "createdAt": { "type": "date", "format": "date_hour_minute_second_millis" }
+  }
+}
