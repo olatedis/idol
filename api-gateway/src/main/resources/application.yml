@@ -34,7 +34,7 @@ spring:
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
-            - Path=/users/**, /reports/**, /internal/**
+            - Path=/users/**, /reports/**, /internal/**, /agencies/**, /admin/users/**
 
         # --- Community Services ---
         - id: chat-service
@@ -56,7 +56,7 @@ spring:
         - id: voting-service
           uri: lb://VOTING-SERVICE
           predicates:
-            - Path=/api/votes/**
+            - Path=/api/votes/**, /api/admin/votes/**
 
         - id: ranking-service
           uri: lb://RANKING-SERVICE
