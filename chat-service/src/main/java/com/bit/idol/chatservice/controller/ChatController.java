@@ -120,6 +120,18 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getPinnedMessage(idolId));
     }
 
+    // --- 미디어 모아보기 API (추가됨) ---
+
+    @GetMapping("/chat/media/{idolId}")
+    @ResponseBody
+    public ResponseEntity<List<ChatMessageDto>> getChatMedia(
+            @PathVariable("idolId") Long idolId,
+            @RequestParam(value = "lastId", required = false) String lastId,
+            @RequestParam(value = "size", defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(chatService.getChatMedia(idolId, lastId, size));
+    }
+
     // --------------------
 
     @PostMapping("/chat/upload")

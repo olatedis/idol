@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -169,6 +170,23 @@ public class ChatService {
             return (ChatMessageDto) data;
         }
         return null;
+    }
+
+    // --- 미디어 모아보기 (추가됨) ---
+
+    public List<ChatMessageDto> getChatMedia(Long idolId, String lastId, int size) {
+        Pageable pageable = PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "id"));
+        List<ChatMessage> messages;
+
+        if (lastId == null) {
+            messages = chatRepository.findMediaByIdolId(idolId, pageable);
+        } else {
+            messages = chatRepository.findMediaByIdolIdAndIdLessThan(idolId, lastId, pageable);
+        }
+
+        return messages.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 
     // --------------------------------

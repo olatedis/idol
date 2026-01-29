@@ -20,4 +20,14 @@ public interface ChatRepository extends MongoRepository<ChatMessage, String> {
     
     // 특정 유저가 보낸 메시지 조회 (1:1 내역 보기용) - 페이징 적용
     List<ChatMessage> findByIdolIdAndSenderIdOrderByCreatedAtDesc(Long idolId, int senderId);
+
+    // --- 미디어 모아보기 (추가됨) ---
+
+    // 3. 미디어 조회 (커서 기반)
+    @Query("{ 'idolId': ?0, 'type': { $in: ['IMAGE', 'VIDEO'] }, '_id': { '$lt': ?1 } }")
+    List<ChatMessage> findMediaByIdolIdAndIdLessThan(Long idolId, String lastId, Pageable pageable);
+
+    // 4. 미디어 최초 조회
+    @Query("{ 'idolId': ?0, 'type': { $in: ['IMAGE', 'VIDEO'] } }")
+    List<ChatMessage> findMediaByIdolId(Long idolId, Pageable pageable);
 }
