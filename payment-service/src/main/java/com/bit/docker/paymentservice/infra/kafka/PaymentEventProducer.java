@@ -7,17 +7,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class PaymentEventProducer {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public PaymentEventProducer(KafkaTemplate<String, Object> kafkaTemplate) {
+    public PaymentEventProducer(KafkaTemplate<String, String> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
     public void publishPaymentCompleted(Payment payment) {
-        kafkaTemplate.send("payment-completed", payment.getTargetId());
+        kafkaTemplate.send("payment-completed", String.valueOf(payment.getTargetId()));
     }
 
     public void publishPaymentFailed(int targetId) {
-        kafkaTemplate.send("payment-failed", targetId);
+        kafkaTemplate.send("payment-failed", String.valueOf(targetId));
     }
 }

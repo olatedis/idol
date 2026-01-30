@@ -26,12 +26,12 @@ public class ConcertQueryService {
         return concertRepository.findAll();
     }
 
-    public Concert getConcert(Long concertId) {
+    public Concert getConcert(int concertId) {
         return concertRepository.findById(concertId)
                 .orElseThrow(() -> new IllegalArgumentException("콘서트가 존재하지 않습니다."));
     }
 
-    public List<Seat> getSeats(Long concertId) {
+    public List<Seat> getSeats(int concertId) {
         return seatRepository.findByConcertId(concertId);
     }
 }
