@@ -40,9 +40,14 @@ public class CommentService {
         comment.setAuthorId(userId);
         comment.setContent(req.getContent());
 
-        Comment saved = commentRepository.save(comment);
-        return toResponse(saved);
+        commentRepository.save(comment);
+
+        // 댓글 수 증가 (삭제 제외 정책)
+        post.setCommentCount(post.getCommentCount() + 1);
+
+        return toResponse(comment);
     }
+
 
     // 댓글 목록 조회
     @Transactional(readOnly = true)
@@ -79,8 +84,16 @@ public class CommentService {
             throw new RuntimeException("접근 권한이 없습니다.");
         }
 
+        if (Boolean.TRUE.equals(comment.getIsDeleted())) {
+            return;
+        }
+
         comment.setIsDeleted(true);
         comment.setDeletedAt(LocalDateTime.now());
+
+        // 댓글 수 감소
+        Post post = comment.getPost();
+        post.setCommentCount(post.getCommentCount() - 1);
     }
 
     // ================== 내부 로직 ==================
