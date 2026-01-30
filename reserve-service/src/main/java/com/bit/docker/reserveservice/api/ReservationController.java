@@ -17,9 +17,10 @@ public class ReservationController {
     public int reserve(
             @RequestParam int userId,
             @RequestParam int concertId,
-            @RequestParam int seatId
+            @RequestParam int seatId,
+            @RequestParam int price
     ) {
         return reservationCommandService
-                .reserve(userId, concertId, seatId);
+                .reserve(userId, concertId, seatId, price);
     }
 }
