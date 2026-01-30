@@ -54,6 +54,9 @@ dependencies {
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
+    // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
+    implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

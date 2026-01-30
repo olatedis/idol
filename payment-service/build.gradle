@@ -51,6 +51,9 @@ dependencies {
     // MSA (Eureka - 필요 시 주석 해제)
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
+    // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
+    implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

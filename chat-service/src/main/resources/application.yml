@@ -27,6 +27,13 @@ spring:
           default:
             connectTimeout: 5000
             readTimeout: 5000
+      # Feign 설정 (HttpClient 5 적용 + 튜닝)
+      httpclient:
+        hc5:
+          enabled: true
+          pool:
+            max-connections: 1000
+            max-connections-per-route: 200
 
   # MongoDB 설정
   data:
@@ -52,6 +59,8 @@ spring:
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      concurrency: 3 # 병렬 처리 (파티션 개수만큼 설정)
 
   # 파일 업로드 크기 제한 (20MB)
   servlet:

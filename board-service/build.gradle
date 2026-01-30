@@ -62,6 +62,9 @@ dependencies {
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
+    // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
+    implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
+
     // Lombok / Devtools / DB
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

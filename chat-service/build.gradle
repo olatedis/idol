@@ -51,6 +51,8 @@ dependencies {
     // MSA
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    // Feign HttpClient 5 (성능 튜닝)
+    implementation 'io.github.openfeign:feign-hc5'
 
     // gRPC Client & Protobuf
     implementation "net.devh:grpc-client-spring-boot-starter:${grpcSpringBootVersion}"
@@ -74,6 +76,9 @@ dependencies {
     // Caffeine Cache (Local Cache)
     implementation 'com.github.ben-manes.caffeine:caffeine'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
+
+    // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
+    implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
