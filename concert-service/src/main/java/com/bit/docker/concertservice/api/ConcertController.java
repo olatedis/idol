@@ -23,12 +23,12 @@ public class ConcertController {
     }
 
     @GetMapping("/{concertId}")
-    public Concert concert(@PathVariable Long concertId) {
+    public Concert concert(@PathVariable int concertId) {
         return concertQueryService.getConcert(concertId);
     }
 
     @GetMapping("/{concertId}/seats")
-    public List<Seat> seats(@PathVariable Long concertId) {
+    public List<Seat> seats(@PathVariable int concertId) {
         return concertQueryService.getSeats(concertId);
     }
 }

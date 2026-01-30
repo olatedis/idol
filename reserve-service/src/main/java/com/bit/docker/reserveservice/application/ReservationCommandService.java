@@ -6,43 +6,52 @@ import com.bit.docker.reserveservice.infra.kafka.ReservationEventProducer;
 import com.bit.docker.reserveservice.infra.repository.ReservationRepository;
 import com.bit.docker.reserveservice.infra.redis.SeatLockRepository;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class ReservationCommandService {
 
     private final ReservationRepository reservationRepository;
     private final SeatLockRepository seatLockRepository;
     private final ReservationEventProducer eventProducer;
 
-    @Value("${concert.reservation.amount}")
-    private int amount;
 
     @Transactional
-    public int reserve(int userId, int concertId, int seatId) {
+    public int reserve(int userId, int concertId, int seatId, int price) {
 
         boolean locked = seatLockRepository.lock(concertId, seatId, userId);
         if (!locked) {
             throw new IllegalStateException("이미 선점된 좌석입니다.");
         }
 
-        Reservation reservation =
-                Reservation.create(userId, concertId, seatId);
+        Reservation reservation = null;
+        try {
+            reservation = Reservation.create(userId, concertId, seatId, price);
 
-        reservationRepository.save(reservation);
+            reservationRepository.save(reservation);
 
-        PaymentEvent event = new PaymentEvent(
-                userId,
-                null,
-                "Reservation-service",
-                seatId,
-                amount
-        );
-        eventProducer.publishReservationCreated(event);
+            PaymentEvent event = new PaymentEvent(
+                    userId,
+                    null,
+                    "Reservation-service",
+                    seatId,
+                    price
+            );
+            eventProducer.publishReservationCreated(event);
 
-        return reservation.getId();
+            return reservation.getId();
+        } catch (Exception e) {
+            try {
+                seatLockRepository.unlock(concertId, seatId);
+            } catch (Exception ex) {
+                log.error(ex.getMessage(), ex);
+            }
+            throw e;
+        }
     }
 }

@@ -26,6 +26,8 @@ public class Reservation {
 
     private int seatId;
 
+    private int price;
+
     @Enumerated(EnumType.STRING)
     private ReservationStatus status;
 
@@ -34,16 +36,17 @@ public class Reservation {
     protected Reservation() {
     }
 
-    private Reservation(int userId, int concertId, int seatId) {
+    private Reservation(int userId, int concertId, int seatId, int price) {
         this.userId = userId;
         this.concertId = concertId;
         this.seatId = seatId;
+        this.price = price;
         this.status = ReservationStatus.PENDING;
         this.createdAt = LocalDateTime.now();
     }
 
-    public static Reservation create(int userId, int concertId, int seatId) {
-        return new Reservation(userId, concertId, seatId);
+    public static Reservation create(int userId, int concertId, int seatId, int price) {
+        return new Reservation(userId, concertId, seatId, price);
     }
 
     public void confirm() {
