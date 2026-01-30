@@ -7,6 +7,7 @@ import com.bit.idol.notifyservice.repository.IdolMessageStackRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,32 +23,46 @@ public class IdolMessageStackService {
         this.repo = repo;
     }
 
+    /**
+     * IDOL_MESSAGE 도착 시:
+     * - (receiverId, idolId) 스택 +1
+     * - lastOccurredAt 최신값 유지
+     */
+    @Transactional
+    public IdolMessageStack increase(int receiverId, long idolId, LocalDateTime occurredAt) {
+        repo.upsertIncrease(receiverId, idolId, occurredAt);
+        // upsert 후 최신 row 조회(알림 SSE payload에 필요)
+        return repo.findByReceiverIdAndIdolId(receiverId, idolId).orElse(null);
+    }
+
+    /**
+     * 채팅방 들어가면:
+     * - 해당 idolId 스택 unreadCount=0
+     * - lastOccurredAt은 유지
+     */
+    @Transactional
+    public void reset(int receiverId, long idolId) {
+        repo.resetUnread(receiverId, idolId);
+    }
+
+    /**
+     * 아이돌별 unread 목록(최근 메시지 온 아이돌이 위로)
+     */
     @Transactional(readOnly = true)
-    public IdolMessageStackListResponse list(int userId) {
-        List<IdolMessageStack> stacks = repo.findAllByReceiverIdOrderByLastOccurredAtDesc(userId);
+    public IdolMessageStackListResponse list(int receiverId) {
+        List<IdolMessageStack> list = repo.findAllByReceiverIdOrderByLastOccurredAtDesc(receiverId);
 
         IdolMessageStackListResponse res = new IdolMessageStackListResponse();
         res.items = new ArrayList<>();
 
-        for (IdolMessageStack s : stacks) {
+        for (IdolMessageStack s : list) {
             IdolMessageStackItemResponse item = new IdolMessageStackItemResponse();
             item.setIdolId(s.getIdolId());
             item.setUnreadCount(s.getUnreadCount());
-            item.setLastOccurredAt(s.getLastOccurredAt() == null ? null : s.getLastOccurredAt().format(ISO));
+            item.setLastOccurredAt(s.getLastOccurredAt() != null ? s.getLastOccurredAt().format(ISO) : null);
             res.items.add(item);
         }
 
         return res;
-    }
-
-    // 특정 idolId의 unreadCount만 0으로 초기화
-    // lastOccurredAt은 "최근 메시지 온 아이돌 위로" 정렬을 위해 유지
-    @Transactional
-    public void markRead(int userId, long idolId) {
-        IdolMessageStack s = repo.findByReceiverIdAndIdolId(userId, idolId).orElse(null);
-        if (s == null) return;
-
-        s.setUnreadCount(0);
-        repo.save(s);
     }
 }
