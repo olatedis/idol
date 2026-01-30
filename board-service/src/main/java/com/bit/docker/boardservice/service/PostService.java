@@ -6,11 +6,15 @@ import com.bit.docker.boardservice.dto.PostListResponse;
 import com.bit.docker.boardservice.dto.PostResponse;
 import com.bit.docker.boardservice.dto.PostUpdateRequest;
 import com.bit.docker.boardservice.dto.PostWriteRequest;
+import com.bit.docker.boardservice.dto.comment.CommentResponse;
 import com.bit.docker.boardservice.entity.BoardType;
+import com.bit.docker.boardservice.entity.Comment;
 import com.bit.docker.boardservice.entity.Post;
 import com.bit.docker.boardservice.kafka.NotifyProducer;
 import com.bit.docker.boardservice.kafka.NotifyRequestEvent;
 import com.bit.docker.boardservice.kafka.NotifyTargetType;
+import com.bit.docker.boardservice.repository.CommentRepository;
+import com.bit.docker.boardservice.repository.PostReactionRepository;
 import com.bit.docker.boardservice.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -21,14 +25,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PostService {
 
     private final PostRepository postRepository;
+
+    private final CommentRepository commentRepository;
+    private final PostReactionRepository postReactionRepository;
 
     private final UserInternalClient userInternalClient;
     private final SubscriptionInternalClient subscriptionInternalClient;
@@ -62,6 +71,12 @@ public class PostService {
 
         // OFFICIAL/FAN 모두 상세보기(content)는 구독자만
         requireReadSubscription(post, userId, role);
+
+        // 조회수 증가
+        postRepository.increaseViewCount(postId);
+
+        // 증가된 값 다시 반영
+        post.setViewCount(post.getViewCount() + 1);
 
         return toResponse(post);
     }
@@ -109,8 +124,15 @@ public class PostService {
 
         requireDeletePermission(post, userId, role);
 
+        // Post 하드삭제 - 반응도 함께 하드삭제
+        postReactionRepository.deleteByPost_PostId(postId);
+
+        // Post 하드삭제 - 댓글도 함께 하드삭제
+        commentRepository.deleteByPost_PostId(postId);
+
         postRepository.delete(post);
     }
+
 
     // Validation & Permission
 
@@ -239,7 +261,6 @@ public class PostService {
         throw new RuntimeException("접근 권한이 없습니다.");
     }
 
-
     private void requireDeletePermission(Post post, Integer userId, Role role) {
         // 삭제 권한은 수정과 동일
         requireUpdatePermission(post, userId, role);
@@ -262,7 +283,6 @@ public class PostService {
             return;
         }
     }
-
 
     // Notify
 
@@ -317,7 +337,33 @@ public class PostService {
     // 상세 조회용
     private PostResponse toResponse(Post post) {
         PostResponse res = new PostResponse();
+        // copyProperties:
+        // post 안에 있는 필드 중 res에도 같은이름 + 같은 타입의 필드가 있으면 getter, setter이용해서 자동복사
         BeanUtils.copyProperties(post, res);
+
+        // comments 포함(최신이 위)
+        // isDeleted=true면 content는 "삭제된 댓글입니다"로 내려줌
+        List<Comment> comments = commentRepository.findByPost_PostIdOrderByCreatedAtDesc(post.getPostId());
+        List<CommentResponse> commentResponses = comments.stream()
+                .map(this::toCommentResponse)
+                .collect(Collectors.toList());
+        res.setComments(commentResponses);
+
+        return res;
+    }
+
+    // Comment 엔티티를 댓글dto로 변환, 소프트 댓글은 삭제된댓글로 치환
+    private CommentResponse toCommentResponse(Comment c) {
+        CommentResponse res = new CommentResponse();
+        res.setCommentId(c.getCommentId());
+        res.setAuthorId(c.getAuthorId());
+
+        boolean deleted = Boolean.TRUE.equals(c.getIsDeleted());
+        res.setIsDeleted(deleted);
+        res.setContent(deleted ? "삭제된 댓글입니다" : c.getContent());
+
+        res.setCreatedAt(c.getCreatedAt());
+        res.setUpdatedAt(c.getUpdatedAt());
         return res;
     }
 

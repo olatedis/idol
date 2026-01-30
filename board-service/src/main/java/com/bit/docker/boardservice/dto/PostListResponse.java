@@ -17,6 +17,7 @@ public class PostListResponse {
 
     private Integer viewCount;
     private Integer likeCount;
+    private Integer dislikeCount;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
