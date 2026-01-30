@@ -26,12 +26,15 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-  # Feign 설정 (HttpClient 5 적용) - 추가됨
+  # Feign 설정 (HttpClient 5 적용 + 튜닝)
   cloud:
     openfeign:
       httpclient:
         hc5:
           enabled: true
+          pool:
+            max-connections: 1000
+            max-connections-per-route: 200
 
 # gRPC Server 설정
 grpc:

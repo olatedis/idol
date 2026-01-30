@@ -34,12 +34,15 @@ spring:
     listener:
       type: batch # 배치 리스너 활성화
 
-  # Feign 설정 (HttpClient 5 적용) - 추가됨
+  # Feign 설정 (HttpClient 5 적용 + 튜닝)
   cloud:
     openfeign:
       httpclient:
         hc5:
           enabled: true
+          pool:
+            max-connections: 1000
+            max-connections-per-route: 200
 
 # Swagger 설정 (Gateway 주소 명시)
 springdoc:
