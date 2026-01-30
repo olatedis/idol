@@ -59,6 +59,8 @@ spring:
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      concurrency: 3 # 병렬 처리 (파티션 개수만큼 설정)
 
   # 파일 업로드 크기 제한 (20MB)
   servlet:
