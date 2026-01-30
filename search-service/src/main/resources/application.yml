@@ -29,6 +29,13 @@ spring:
       host: localhost
       port: 6379
 
+  # Feign 설정 (HttpClient 5 적용) - 추가됨
+  cloud:
+    openfeign:
+      httpclient:
+        hc5:
+          enabled: true
+
 eureka:
   client:
     service-url:

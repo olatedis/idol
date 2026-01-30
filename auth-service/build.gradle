@@ -28,15 +28,18 @@ ext {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    
+
     // Actuator & Prometheus (모니터링)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    // Feign HttpClient 5 (성능 튜닝) - 추가됨
+    implementation 'io.github.openfeign:feign-hc5'
+
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    
+
     // gRPC & Protobuf
     implementation "net.devh:grpc-server-spring-boot-starter:${grpcSpringBootVersion}"
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"

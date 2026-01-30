@@ -27,6 +27,10 @@ spring:
           default:
             connectTimeout: 5000
             readTimeout: 5000
+      # Feign 설정 (HttpClient 5 적용) - 추가됨
+      httpclient:
+        hc5:
+          enabled: true
 
   # MongoDB 설정
   data:
