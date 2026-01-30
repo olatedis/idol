@@ -43,6 +43,12 @@ public class Post {
     private Integer likeCount = 0;
 
     @Column(nullable = false)
+    private Integer dislikeCount = 0;
+
+    @Column(nullable = false)
+    private Integer commentCount = 0;
+
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
@@ -54,6 +60,8 @@ public class Post {
         this.updatedAt = this.createdAt;
         if (this.viewCount == null) this.viewCount = 0;
         if (this.likeCount == null) this.likeCount = 0;
+        if (this.dislikeCount == null) this.dislikeCount = 0;
+        if (this.commentCount == null) this.commentCount = 0;
     }
 
     @PreUpdate

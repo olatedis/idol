@@ -1,9 +1,10 @@
+// src/main/java/com/bit/idol/notifyservice/kafka/NotificationEventHandler.java
 package com.bit.idol.notifyservice.kafka;
 
-import com.bit.idol.notifyservice.entity.IdolMessageStack;
 import com.bit.idol.notifyservice.entity.Notification;
-import com.bit.idol.notifyservice.repository.IdolMessageStackRepository;
 import com.bit.idol.notifyservice.repository.NotificationRepository;
+import com.bit.idol.notifyservice.service.IdolMessageStackService;
+import com.bit.idol.notifyservice.sse.IdolMessageStackSsePublisher;
 import com.bit.idol.notifyservice.sse.NotificationSsePublisher;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,23 +14,28 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
-// kafka로 수신한 알림이벤트(json문자열)을 새 Notification 모델로 DB에 저장하는 핸들러
+// kafka로 수신한 알림이벤트(json문자열)을 Notification 모델로 DB에 저장하는 핸들러
 @Component
 public class NotificationEventHandler {
 
     private final ObjectMapper om;
     private final NotificationRepository notificationRepo;
-    private final IdolMessageStackRepository idolMessageStackRepo;
     private final NotificationSsePublisher ssePublisher;
+
+    // IDOL_MESSAGE 스택용
+    private final IdolMessageStackService stackService;
+    private final IdolMessageStackSsePublisher stackSsePublisher;
 
     public NotificationEventHandler(ObjectMapper om,
                                     NotificationRepository notificationRepo,
-                                    IdolMessageStackRepository idolMessageStackRepo,
-                                    NotificationSsePublisher ssePublisher) {
+                                    NotificationSsePublisher ssePublisher,
+                                    IdolMessageStackService stackService,
+                                    IdolMessageStackSsePublisher stackSsePublisher) {
         this.om = om;
         this.notificationRepo = notificationRepo;
-        this.idolMessageStackRepo = idolMessageStackRepo;
         this.ssePublisher = ssePublisher;
+        this.stackService = stackService;
+        this.stackSsePublisher = stackSsePublisher;
     }
 
     @Transactional
@@ -69,7 +75,7 @@ public class NotificationEventHandler {
 
             LocalDateTime occurredAt;
             try {
-                occurredAt = LocalDateTime.parse(occurredAtStr); // 기본 ISO_LOCAL_DATE_TIME 형태 기대
+                occurredAt = LocalDateTime.parse(occurredAtStr); // ISO_LOCAL_DATE_TIME 기대
             } catch (Exception e) {
                 return;
             }
@@ -96,13 +102,16 @@ public class NotificationEventHandler {
             try {
                 Notification saved = notificationRepo.save(n);
 
-                // 저장 성공 시 SSE 푸시
+                // 1) 저장 성공 시 Notification SSE 푸시
                 ssePublisher.pushToUser(saved.getReceiverId(), saved);
 
-                // IDOL_MESSAGE 스택형 카운트 upsert
-                // - fanout-service가 args.idolId를 넣어주는 전제
+                // 2) IDOL_MESSAGE면 스택 +1 처리 + 스택 SSE 푸시
                 if ("IDOL_MESSAGE".equals(saved.getType())) {
-                    upsertIdolMessageStack(saved.getReceiverId(), argsNode, occurredAt);
+                    Long idolId = parseIdolIdFromRedirectUrl(saved.getRedirectUrl());
+                    if (idolId != null) {
+                        var stack = stackService.increase(saved.getReceiverId(), idolId, saved.getOccurredAt());
+                        stackSsePublisher.pushToUser(saved.getReceiverId(), stack);
+                    }
                 }
 
             } catch (DataIntegrityViolationException dup) {
@@ -113,49 +122,26 @@ public class NotificationEventHandler {
         }
     }
 
-    // 있으면 update, 없으면 insert
-    private void upsertIdolMessageStack(int receiverId, JsonNode argsNode, LocalDateTime occurredAt) {
-        if (argsNode == null || argsNode.isNull()) return;
-
-        String idolIdStr = null;
+    // redirectUrl: /chat/room/{idolId} 형태에서 idolId 파싱
+    private static Long parseIdolIdFromRedirectUrl(String redirectUrl) {
         try {
-            JsonNode v = argsNode.get("idolId");
-            idolIdStr = (v == null || v.isNull()) ? null : v.asText();
-        } catch (Exception ignore) {
-        }
+            if (redirectUrl == null) return null;
 
-        if (blank(idolIdStr)) return;
+            // 기대 패턴: /chat/room/123
+            String prefix = "/chat/room/";
+            int idx = redirectUrl.indexOf(prefix);
+            if (idx < 0) return null;
 
-        long idolId;
-        try {
-            idolId = Long.parseLong(idolIdStr);
+            String tail = redirectUrl.substring(idx + prefix.length());
+            if (tail.isBlank()) return null;
+
+            // 혹시 뒤에 쿼리스트링 붙는 경우 대비
+            int q = tail.indexOf("?");
+            if (q >= 0) tail = tail.substring(0, q);
+
+            return Long.parseLong(tail.trim());
         } catch (Exception e) {
-            return;
-        }
-
-        // (receiverId, idolId) 1행만 유지하면서 unreadCount만 누적
-        try {
-            IdolMessageStack stack = idolMessageStackRepo
-                    .findByReceiverIdAndIdolId(receiverId, idolId)
-                    .orElse(null);
-
-            if (stack == null) {
-                idolMessageStackRepo.save(IdolMessageStack.create(receiverId, idolId, occurredAt));
-                return;
-            }
-
-            stack.increment(occurredAt);
-            idolMessageStackRepo.save(stack);
-
-        } catch (DataIntegrityViolationException dup) {
-            // 동시성으로 인해 최초 생성이 경합되면(유니크 충돌) 1회 더 조회 후 증가
-            IdolMessageStack stack = idolMessageStackRepo
-                    .findByReceiverIdAndIdolId(receiverId, idolId)
-                    .orElse(null);
-            if (stack == null) return;
-
-            stack.increment(occurredAt);
-            idolMessageStackRepo.save(stack);
+            return null;
         }
     }
 

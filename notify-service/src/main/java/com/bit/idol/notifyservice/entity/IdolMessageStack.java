@@ -8,10 +8,10 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 아이돌 메시지 알림 "스택형" 카운트
- * - (receiverId, idolId) 단위로 unreadCount 누적
- * - lastOccurredAt 기준으로 "최근 온 아이돌" 정렬에 사용
- * - type은 넣지 않음(이번 기능 범위: IDOL_MESSAGE 전용)
+ * 아이돌 메시지 스택(카톡 뱃지형)
+ * - (receiverId, idolId) 조합으로 1행만 유지
+ * - unreadCount 증가 + lastOccurredAt 최신값 유지
+ * - reset 시 unreadCount=0만 변경, lastOccurredAt은 유지
  */
 @Data
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -19,12 +19,14 @@ import java.time.LocalDateTime;
 @Table(
         name = "idol_message_stack",
         uniqueConstraints = {
-                // 유저-아이돌 조합은 1행만 유지(메시지가 하나 더 왔다고 새 row를 추가하지 않는다는 뜻)
-                @UniqueConstraint(name = "uk_stack_receiver_idol", columnNames = {"receiver_id", "idol_id"})
+                @UniqueConstraint(
+                        name = "uk_stack_receiver_idol",
+                        columnNames = {"receiver_id", "idol_id"}
+                )
         },
         indexes = {
-                // 유저별 목록 조회 + 최신 정렬
-                @Index(name = "idx_stack_receiver_last", columnList = "receiver_id, last_occurred_at")
+                @Index(name = "idx_stack_receiver_last", columnList = "receiver_id, last_occurred_at"),
+                @Index(name = "idx_stack_receiver", columnList = "receiver_id")
         }
 )
 public class IdolMessageStack {
@@ -46,22 +48,7 @@ public class IdolMessageStack {
     @Column(name = "last_occurred_at", nullable = false)
     private LocalDateTime lastOccurredAt;
 
-    public static IdolMessageStack create(int receiverId, long idolId, LocalDateTime occurredAt) {
-        IdolMessageStack s = new IdolMessageStack();
-        s.receiverId = receiverId;
-        s.idolId = idolId;
-        s.unreadCount = 1;
-        s.lastOccurredAt = occurredAt;
-        return s;
-    }
-
-    public void increment(LocalDateTime occurredAt) {
-        this.unreadCount += 1;
-        this.lastOccurredAt = occurredAt;
-    }
-
-    public void reset(LocalDateTime occurredAt) {
-        this.unreadCount = 0;
-        this.lastOccurredAt = occurredAt;
+    public static IdolMessageStack create() {
+        return new IdolMessageStack();
     }
 }
