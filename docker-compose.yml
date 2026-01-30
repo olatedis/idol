@@ -50,7 +50,8 @@ services:
     container_name: idol-redis
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
+    # 메모리 제한 및 Eviction Policy 설정 추가
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
     volumes:
       - ./data/redis/data:/data
 
