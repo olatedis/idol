@@ -1,5 +1,7 @@
 server:
   port: 8000
+  http2:
+    enabled: true # HTTP/2 활성화
 
 spring:
   application:
