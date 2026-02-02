@@ -14,7 +14,7 @@ public interface SubscriptionFeignClient {
     // 구독 여부 확인 (내부 API)
     @GetMapping("/internal/subscriptions/idols/{idolId}/users/{userId}/active")
     boolean checkSubscription(
-            @PathVariable("idolId") Long idolId,
+            @PathVariable("idolId") Long idolId, // Long 유지 (Controller가 int여도 자동 변환됨, 하지만 안전하게 맞추는 게 좋음)
             @PathVariable("userId") int userId
     );
 
