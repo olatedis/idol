@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @Service
@@ -115,6 +116,10 @@ public class SubscriptionService {
                         .build()
         );
 
+        String uuid = UUID.randomUUID().toString();
+        String m = uuid +":"+subscription.getIdolId()+":"+subscription.getUserId()+":"+subscription.getStartedAt()+":"+subscription.getExpiredAt();
+        kafkaTemplate.send("IDOL_SUB_STARTED", m);
+
         log.info("개인(아이돌) 구독 완료: userId={}, idolId={}", subscription.getUserId(), subscription.getIdolId());
 
 
@@ -148,6 +153,10 @@ public class SubscriptionService {
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
+
+        String uuid = UUID.randomUUID().toString();
+        String m = uuid +":"+subscription.getIdolId()+":"+subscription.getUserId();
+        kafkaTemplate.send("IDOL_SUB_END", m);
 
         log.info("개인(아이돌) 구독 해지 완료: userId={}, idolId={}", userId, request.getIdolId());
     }
@@ -228,6 +237,10 @@ public class SubscriptionService {
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
+
+        String uuid = UUID.randomUUID().toString();
+        String message = uuid +":"+userId+":"+request.getGroupId()+":"+ LocalDateTime.now();
+        kafkaTemplate.send("GROUP_SUB_CREATED", message);
 
         log.info("그룹 구독 생성 완료: userId={}, groupId={}", userId, request.getGroupId());
         return GroupSubscriptionDto.fromEntity(gs);

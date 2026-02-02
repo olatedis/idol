@@ -47,13 +47,6 @@ public class ReservationExpirationScheduler {
                     log.warn("좌석 잠금 해제 실패(만료): concert={}, seat={}, error={}", r.getConcertId(), r.getSeatId(), e.getMessage());
                 }
 
-                // publish cancellation notification
-                try {
-                    eventProducer.publishReservationCanceled(r);
-                } catch (Exception e) {
-                    log.warn("예약 취소 이벤트 발행 실패: reservationId={}, error={}", r.getId(), e.getMessage());
-                }
-
                 log.info("만료로 예약 취소 처리: reservationId={}, userId={}, concert={}, seat={}", r.getId(), r.getUserId(), r.getConcertId(), r.getSeatId());
             } catch (Exception e) {
                 log.error("예약 만료 처리 중 오류: reservationId={}, error={}", r.getId(), e.getMessage(), e);
