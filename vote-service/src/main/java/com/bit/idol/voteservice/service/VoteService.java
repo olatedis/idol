@@ -18,6 +18,7 @@ import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -48,8 +49,8 @@ public class VoteService {
     // 투표 목록 조회 (프론트엔드용)
     @Transactional(readOnly = true)
     public List<VoteListDto> getVoteList(int userId) {
-        // 1. 모든 투표 조회 (페이징 필요 시 추가)
-        List<Vote> votes = voteRepository.findAll();
+        // 1. 모든 투표 조회 (VoteReader를 통해 캐싱 적용)
+        List<Vote> votes = voteReader.getAllVotesCached();
 
         // 2. 내가 참여한 투표 ID 목록 조회
         List<VoteRecord> myRecords = voteRecordRepository.findByUserId(userId);
@@ -83,6 +84,7 @@ public class VoteService {
 
     @Transactional
     @CachePut(value = "voteInfo", key = "#result.id")
+    @CacheEvict(value = "votes", key = "'all'") // 투표 생성 시 전체 목록 캐시 삭제
     public VoteInfo createVote(Vote vote) {
         Vote savedVote = voteRepository.save(vote);
         
