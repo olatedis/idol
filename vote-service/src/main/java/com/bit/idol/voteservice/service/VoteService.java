@@ -4,6 +4,7 @@ import com.bit.idol.voteservice.client.UserFeignClient;
 import com.bit.idol.voteservice.dto.MyVoteRecordDto;
 import com.bit.idol.voteservice.dto.UserDto;
 import com.bit.idol.voteservice.dto.VoteInfo;
+import com.bit.idol.voteservice.dto.VoteListDto;
 import com.bit.idol.voteservice.dto.notification.NotificationEventDto;
 import com.bit.idol.voteservice.dto.notification.TargetType;
 import com.bit.idol.voteservice.entity.Vote;
@@ -25,10 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +44,42 @@ public class VoteService {
     private final UserFeignClient userFeignClient;
 
     private static final String BLACKLIST_KEY = "vote:blacklist:ip";
+
+    // 투표 목록 조회 (프론트엔드용)
+    @Transactional(readOnly = true)
+    public List<VoteListDto> getVoteList(int userId) {
+        // 1. 모든 투표 조회 (페이징 필요 시 추가)
+        List<Vote> votes = voteRepository.findAll();
+
+        // 2. 내가 참여한 투표 ID 목록 조회
+        List<VoteRecord> myRecords = voteRecordRepository.findByUserId(userId);
+        Set<Integer> myVotedVoteIds = myRecords.stream()
+                .map(VoteRecord::getVoteId)
+                .collect(Collectors.toSet());
+
+        // 3. DTO 변환
+        return votes.stream().map(vote -> {
+            String status = "PROGRESS";
+            LocalDateTime now = LocalDateTime.now();
+            if (now.isBefore(vote.getStartDate())) {
+                status = "UPCOMING";
+            } else if (now.isAfter(vote.getEndDate())) {
+                status = "ENDED";
+            }
+
+            return VoteListDto.builder()
+                    .id((long) vote.getId())
+                    .title(vote.getTitle())
+                    .description(vote.getDescription())
+                    .startDate(vote.getStartDate())
+                    .endDate(vote.getEndDate())
+                    .status(status)
+                    .participantCount(0) // 참여자 수는 별도 집계 필요 (일단 0)
+                    .isVoted(myVotedVoteIds.contains(vote.getId()))
+                    .thumbnailUrl(null) // 썸네일 URL 필드 추가 필요
+                    .build();
+        }).collect(Collectors.toList());
+    }
 
     @Transactional
     @CachePut(value = "voteInfo", key = "#result.id")
