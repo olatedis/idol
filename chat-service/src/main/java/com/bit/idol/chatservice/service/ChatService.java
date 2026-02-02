@@ -46,12 +46,27 @@ public class ChatService {
 
     private static final long RATE_LIMIT_SECONDS = 3;
     private static final int CACHE_SIZE = 50;
+    private static final String IDOL_CACHE_KEY = "idols:cache";
 
-    // 채팅방 목록 조회 (Aggregation) - 장애 격리 적용
+    // 채팅방 목록 조회 (Aggregation) - Redis 조회로 변경 (CQRS)
     @CircuitBreaker(name = "chat-room-list", fallbackMethod = "getChatRoomListFallback")
     public List<ChatRoomListDto> getChatRoomList(int userId) {
-        // 1. 전체 아이돌 목록 조회 (User Service)
-        List<IdolDto> idols = userFeignClient.getAllIdols();
+        // 1. 전체 아이돌 목록 조회 (Redis에서 조회)
+        List<Object> cachedIdols = redisTemplate.opsForHash().values(IDOL_CACHE_KEY);
+        List<IdolDto> idols;
+
+        if (cachedIdols.isEmpty()) {
+            // Redis에 없으면 Feign으로 조회하고 캐싱 (Cold Start 대비)
+            log.warn("Redis에 아이돌 정보 없음. User Service 호출");
+            idols = userFeignClient.getAllIdols();
+            for (IdolDto idol : idols) {
+                redisTemplate.opsForHash().put(IDOL_CACHE_KEY, String.valueOf(idol.getIdolId()), idol);
+            }
+        } else {
+            idols = cachedIdols.stream()
+                    .map(obj -> objectMapper.convertValue(obj, IdolDto.class))
+                    .collect(Collectors.toList());
+        }
 
         // 2. 내 구독 목록 조회 (Subscription Service)
         Set<Integer> subscribedIdolIds = new HashSet<>();
@@ -116,7 +131,7 @@ public class ChatService {
         return Collections.emptyList();
     }
 
-    // 읽음 처리 (API 호출 시) - 추가됨
+    // 읽음 처리 (API 호출 시)
     public void markAsRead(int userId, Long idolId) {
         String totalCountKey = "chat:room:" + idolId + ":total_count";
         String readCountKey = "chat:room:" + idolId + ":user:" + userId + ":last_read_count";
