@@ -196,12 +196,23 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        if (user.getImgUrl() != null && !user.getImgUrl().isEmpty()) {
-            s3Service.deleteFile(user.getImgUrl());
-        }
+        String oldImgUrl = user.getImgUrl(); // 기존 이미지 URL 저장
 
+        // 1. 새 파일 업로드 (실패 시 여기서 예외 발생 -> 트랜잭션 롤백 -> 기존 URL 유지)
         String fileUrl = s3Service.uploadFile(file);
+        
+        // 2. DB 업데이트
         user.setImgUrl(fileUrl);
+        
+        // 3. 기존 파일 삭제 (비동기로 처리하거나, 로그만 남기고 나중에 배치로 삭제하는 게 안전함)
+        if (oldImgUrl != null && !oldImgUrl.isEmpty()) {
+            try {
+                s3Service.deleteFile(oldImgUrl);
+            } catch (Exception e) {
+                log.warn("기존 프로필 이미지 삭제 실패 (S3): {}", oldImgUrl);
+                // 예외를 던지지 않음 (새 이미지 업로드는 성공했으므로)
+            }
+        }
         
         userSyncProducer.send(user.getId(), "UPDATE");
         updateUsernameCache(user);
