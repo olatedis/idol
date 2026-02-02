@@ -52,11 +52,9 @@ public class VoteService {
         // 1. 모든 투표 조회 (VoteReader를 통해 캐싱 적용)
         List<Vote> votes = voteReader.getAllVotesCached();
 
-        // 2. 내가 참여한 투표 ID 목록 조회
-        List<VoteRecord> myRecords = voteRecordRepository.findByUserId(userId);
-        Set<Integer> myVotedVoteIds = myRecords.stream()
-                .map(VoteRecord::getVoteId)
-                .collect(Collectors.toSet());
+        // 2. 내가 참여한 투표 ID 목록 조회 (최적화됨: ID만 조회)
+        List<Integer> myVotedVoteIds = voteRecordRepository.findVoteIdsByUserId(userId);
+        Set<Integer> myVotedSet = new HashSet<>(myVotedVoteIds);
 
         // 3. DTO 변환
         return votes.stream().map(vote -> {
@@ -76,7 +74,7 @@ public class VoteService {
                     .endDate(vote.getEndDate())
                     .status(status)
                     .participantCount(vote.getTotalVotes()) // totalVotes 필드 사용 (성능 최적화)
-                    .isVoted(myVotedVoteIds.contains(vote.getId()))
+                    .isVoted(myVotedSet.contains(vote.getId()))
                     .thumbnailUrl(null) // 썸네일 URL 필드 추가 필요
                     .build();
         }).collect(Collectors.toList());

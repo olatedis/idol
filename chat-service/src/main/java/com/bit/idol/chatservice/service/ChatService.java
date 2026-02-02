@@ -14,6 +14,7 @@ import com.bit.idol.chatservice.filter.SuspiciousWordFilter;
 import com.bit.idol.chatservice.producer.ChatProducer;
 import com.bit.idol.chatservice.producer.NotificationProducer;
 import com.bit.idol.chatservice.repository.ChatRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -44,18 +45,26 @@ public class ChatService {
     private static final long RATE_LIMIT_SECONDS = 3;
     private static final int CACHE_SIZE = 50;
 
-    // 채팅방 목록 조회 (Aggregation)
+    // 채팅방 목록 조회 (Aggregation) - 장애 격리 적용
+    @CircuitBreaker(name = "chat-room-list", fallbackMethod = "getChatRoomListFallback")
     public List<ChatRoomListDto> getChatRoomList(int userId) {
         // 1. 전체 아이돌 목록 조회 (User Service)
         List<IdolDto> idols = userFeignClient.getAllIdols();
 
         // 2. 내 구독 목록 조회 (Subscription Service)
-        List<SubscriptionDto> mySubscriptions = subscriptionFeignClient.getMySubscriptions(userId);
-        Set<Integer> subscribedIdolIds = mySubscriptions.stream()
-                .map(SubscriptionDto::getIdolId)
-                .collect(Collectors.toSet());
+        // 구독 서비스 장애 시 빈 목록으로 처리 (채팅방 목록은 보여줘야 함)
+        Set<Integer> subscribedIdolIds = new HashSet<>();
+        try {
+            List<SubscriptionDto> mySubscriptions = subscriptionFeignClient.getMySubscriptions(userId);
+            subscribedIdolIds = mySubscriptions.stream()
+                    .map(SubscriptionDto::getIdolId)
+                    .collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.error("구독 정보 조회 실패 (Fallback: 구독 정보 없이 목록 표시): {}", e.getMessage());
+        }
 
         // 3. 데이터 조합
+        Set<Integer> finalSubscribedIdolIds = subscribedIdolIds;
         return idols.stream().map(idol -> {
             Long idolId = (long) idol.getIdolId();
             
@@ -74,14 +83,20 @@ public class ChatService {
 
             return ChatRoomListDto.builder()
                     .idolId(idolId)
-                    .idolName(idol.getStageName()) // 활동명 사용
+                    .idolName(idol.getStageName())
                     .thumbnailUrl(idol.getProfileImage())
                     .lastMessage(lastMessage)
                     .lastMessageTime(lastMessageTime)
-                    .unreadCount(0) // 안 읽은 개수는 추후 구현 (복잡함)
-                    .isSubscribed(subscribedIdolIds.contains(idol.getIdolId()))
+                    .unreadCount(0)
+                    .isSubscribed(finalSubscribedIdolIds.contains(idol.getIdolId()))
                     .build();
         }).collect(Collectors.toList());
+    }
+
+    // Fallback: User Service 장애 시 빈 목록 반환 (또는 캐시된 목록)
+    public List<ChatRoomListDto> getChatRoomListFallback(int userId, Throwable t) {
+        log.error("채팅방 목록 조회 실패 (User Service 장애): {}", t.getMessage());
+        return Collections.emptyList(); // 일단 빈 목록 반환 (프론트에서 재시도 유도)
     }
 
     public void processMessage(ChatMessageDto messageDto) {
