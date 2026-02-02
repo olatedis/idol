@@ -17,6 +17,7 @@ public class IdolDto {
     private int userId;
     private String username;
     private String stageName;
+    private String profileImage; // 프로필 이미지 추가
     private int agencyId;
     private String agencyName;
     private IdolStatus status;
@@ -27,6 +28,7 @@ public class IdolDto {
                 .userId(idol.getUser().getId())
                 .username(idol.getUser().getUsername())
                 .stageName(idol.getStageName())
+                .profileImage(idol.getUser().getImgUrl()) // User 엔티티에서 가져옴
                 .agencyId(
                         idol.getAgency() != null ? idol.getAgency().getId() : null
                 )

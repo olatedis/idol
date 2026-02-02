@@ -1,6 +1,7 @@
 package com.bit.idol.chatservice.controller;
 
 import com.bit.idol.chatservice.dto.ChatMessageDto;
+import com.bit.idol.chatservice.dto.ChatRoomListDto;
 import com.bit.idol.chatservice.service.ChatService;
 import com.bit.idol.chatservice.service.S3Service;
 import com.bit.idol.chatservice.service.TranslationService;
@@ -59,6 +60,13 @@ public class ChatController {
         redisTemplate.convertAndSend("/sub/idol/" + messageDto.getIdolId(), messageDto);
         
         log.debug("작성 중 신호 전송: room={}", messageDto.getIdolId());
+    }
+
+    // 채팅방 목록 조회 (Aggregation) - 추가됨
+    @GetMapping("/chat/rooms")
+    @ResponseBody
+    public ResponseEntity<List<ChatRoomListDto>> getChatRoomList(@RequestHeader("X-User-Id") int userId) {
+        return ResponseEntity.ok(chatService.getChatRoomList(userId));
     }
 
     @GetMapping("/chat/history/{idolId}")

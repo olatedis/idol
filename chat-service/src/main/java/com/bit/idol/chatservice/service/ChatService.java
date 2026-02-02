@@ -1,6 +1,11 @@
 package com.bit.idol.chatservice.service;
 
+import com.bit.idol.chatservice.client.SubscriptionFeignClient;
+import com.bit.idol.chatservice.client.UserFeignClient;
 import com.bit.idol.chatservice.dto.ChatMessageDto;
+import com.bit.idol.chatservice.dto.ChatRoomListDto;
+import com.bit.idol.chatservice.dto.IdolDto;
+import com.bit.idol.chatservice.dto.SubscriptionDto;
 import com.bit.idol.chatservice.dto.notification.NotificationEventDto;
 import com.bit.idol.chatservice.dto.notification.TargetType;
 import com.bit.idol.chatservice.entity.ChatMessage;
@@ -19,10 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,9 +38,51 @@ public class ChatService {
     private final ChatProducer chatProducer;
     private final RedisTemplate<String, Object> redisTemplate;
     private final NotificationProducer notificationProducer;
+    private final UserFeignClient userFeignClient;
+    private final SubscriptionFeignClient subscriptionFeignClient;
 
     private static final long RATE_LIMIT_SECONDS = 3;
     private static final int CACHE_SIZE = 50;
+
+    // 채팅방 목록 조회 (Aggregation)
+    public List<ChatRoomListDto> getChatRoomList(int userId) {
+        // 1. 전체 아이돌 목록 조회 (User Service)
+        List<IdolDto> idols = userFeignClient.getAllIdols();
+
+        // 2. 내 구독 목록 조회 (Subscription Service)
+        List<SubscriptionDto> mySubscriptions = subscriptionFeignClient.getMySubscriptions(userId);
+        Set<Integer> subscribedIdolIds = mySubscriptions.stream()
+                .map(SubscriptionDto::getIdolId)
+                .collect(Collectors.toSet());
+
+        // 3. 데이터 조합
+        return idols.stream().map(idol -> {
+            Long idolId = (long) idol.getIdolId();
+            
+            // 마지막 메시지 조회 (Redis 캐시 활용)
+            Map<String, Object> preview = getChatPreview(idolId);
+            String lastMessage = "";
+            LocalDateTime lastMessageTime = null;
+
+            if (preview != null) {
+                lastMessage = (String) preview.get("content");
+                String timeStr = (String) preview.get("time");
+                if (timeStr != null) {
+                    lastMessageTime = LocalDateTime.parse(timeStr);
+                }
+            }
+
+            return ChatRoomListDto.builder()
+                    .idolId(idolId)
+                    .idolName(idol.getStageName()) // 활동명 사용
+                    .thumbnailUrl(idol.getProfileImage())
+                    .lastMessage(lastMessage)
+                    .lastMessageTime(lastMessageTime)
+                    .unreadCount(0) // 안 읽은 개수는 추후 구현 (복잡함)
+                    .isSubscribed(subscribedIdolIds.contains(idol.getIdolId()))
+                    .build();
+        }).collect(Collectors.toList());
+    }
 
     public void processMessage(ChatMessageDto messageDto) {
         // 0. 도배 방지
