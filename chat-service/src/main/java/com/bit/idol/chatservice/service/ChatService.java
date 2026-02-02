@@ -14,6 +14,7 @@ import com.bit.idol.chatservice.filter.SuspiciousWordFilter;
 import com.bit.idol.chatservice.producer.ChatProducer;
 import com.bit.idol.chatservice.producer.NotificationProducer;
 import com.bit.idol.chatservice.repository.ChatRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ public class ChatService {
     private final NotificationProducer notificationProducer;
     private final UserFeignClient userFeignClient;
     private final SubscriptionFeignClient subscriptionFeignClient;
+    private final ObjectMapper objectMapper; // 추가됨
 
     private static final long RATE_LIMIT_SECONDS = 3;
     private static final int CACHE_SIZE = 50;
@@ -232,8 +234,8 @@ public class ChatService {
         String pinKey = "chat:pin:" + idolId;
         Object data = redisTemplate.opsForValue().get(pinKey);
         
-        if (data instanceof ChatMessageDto) {
-            return (ChatMessageDto) data;
+        if (data != null) {
+            return objectMapper.convertValue(data, ChatMessageDto.class);
         }
         return null;
     }
@@ -394,7 +396,7 @@ public class ChatService {
             
             if (cachedMessages != null && !cachedMessages.isEmpty()) {
                 return cachedMessages.stream()
-                        .map(obj -> (ChatMessageDto) obj)
+                        .map(obj -> objectMapper.convertValue(obj, ChatMessageDto.class)) // 안전한 변환 적용
                         .collect(Collectors.toList());
             }
         }
