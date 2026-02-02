@@ -6,6 +6,7 @@ import com.bit.idol.voteservice.entity.Vote;
 import com.bit.idol.voteservice.entity.VoteStatus;
 import com.bit.idol.voteservice.producer.NotificationProducer;
 import com.bit.idol.voteservice.repository.VoteRepository;
+import com.bit.idol.voteservice.service.VoteService;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,10 +29,11 @@ public class VoteScheduler {
     private final VoteRepository voteRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final NotificationProducer notificationProducer;
+    private final VoteService voteService; // 추가됨
 
     @Scheduled(cron = "0 * * * * *")
     @SchedulerLock(name = "closeExpiredVotes", lockAtLeastFor = "PT30S", lockAtMostFor = "PT50S")
-    @Transactional
+    // @Transactional 제거 (개별 트랜잭션으로 분리)
     public void closeExpiredVotes() {
         LocalDateTime now = LocalDateTime.now();
         List<Vote> expiredVotes = voteRepository.findAllByEndDateBeforeAndStatus(now, VoteStatus.OPEN);
@@ -40,22 +42,12 @@ public class VoteScheduler {
             log.info("마감된 투표 {}건을 종료 처리합니다.", expiredVotes.size());
             
             for (Vote vote : expiredVotes) {
-                vote.setStatus(VoteStatus.CLOSED);
-                
-                String rankingKey = "vote:ranking:" + vote.getId();
-                redisTemplate.delete(rankingKey);
-                
-                TargetType targetType = TargetType.ALL;
-                String targetId = null;
-                if (vote.getTargetGroupId() != null) {
-                    targetType = TargetType.GROUP_SUB;
-                    targetId = String.valueOf(vote.getTargetGroupId());
+                try {
+                    // 개별 트랜잭션으로 처리 (하나 실패해도 나머지는 진행)
+                    voteService.closeVote(vote.getId());
+                } catch (Exception e) {
+                    log.error("투표 종료 처리 실패: ID={}, Error={}", vote.getId(), e.getMessage());
                 }
-
-                // 메시지 내용 제거
-                sendVoteNotification(vote, "VOTE_CLOSED", targetType, targetId);
-
-                log.info("투표 종료 및 Redis 정리 완료: ID={}, 제목={}", vote.getId(), vote.getTitle());
             }
         }
     }

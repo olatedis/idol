@@ -9,6 +9,7 @@ import com.bit.idol.voteservice.dto.notification.NotificationEventDto;
 import com.bit.idol.voteservice.dto.notification.TargetType;
 import com.bit.idol.voteservice.entity.Vote;
 import com.bit.idol.voteservice.entity.VoteRecord;
+import com.bit.idol.voteservice.entity.VoteStatus;
 import com.bit.idol.voteservice.producer.NotificationProducer;
 import com.bit.idol.voteservice.repository.CandidateRepository;
 import com.bit.idol.voteservice.repository.VoteRecordRepository;
@@ -23,6 +24,7 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -97,6 +99,31 @@ public class VoteService {
         sendVoteNotification(savedVote, "VOTE_OPENED", targetType, targetId);
         
         return VoteInfo.from(savedVote);
+    }
+
+    // 투표 종료 처리 (개별 트랜잭션 분리) - 추가됨
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @CacheEvict(value = "votes", key = "'all'") // 상태 변경 시 목록 캐시 갱신
+    public void closeVote(int voteId) {
+        Vote vote = voteRepository.findById(voteId)
+                .orElseThrow(() -> new RuntimeException("투표를 찾을 수 없습니다."));
+        
+        vote.setStatus(VoteStatus.CLOSED);
+        
+        // Redis 랭킹 키 삭제 등 정리 작업
+        String rankingKey = "vote:ranking:" + vote.getId();
+        redisTemplate.delete(rankingKey);
+        
+        TargetType targetType = TargetType.ALL;
+        String targetId = null;
+        if (vote.getTargetGroupId() != null) {
+            targetType = TargetType.GROUP_SUB;
+            targetId = String.valueOf(vote.getTargetGroupId());
+        }
+
+        sendVoteNotification(vote, "VOTE_CLOSED", targetType, targetId);
+        
+        log.info("투표 종료 처리 완료: ID={}, 제목={}", vote.getId(), vote.getTitle());
     }
 
     @Transactional
@@ -190,8 +217,12 @@ public class VoteService {
         String uuid = UUID.randomUUID().toString();
         String message = uuid + ":" + voteId + ":" + userId + ":" + candidateNumber;
 
-        // 여기서 예외 발생 시 상위 메서드(castVote)에서 catch하여 Redis 키 삭제함
-        kafkaTemplate.send("vote-topic", message);
+        try {
+            kafkaTemplate.send("vote-topic", message);
+        } catch (Exception e) {
+            redisTemplate.delete(redisKey);
+            throw new RuntimeException("투표 전송 중 오류가 발생했습니다. 다시 시도해주세요.", e);
+        }
     }
 
     private void validateIp(String ipAddress) {
