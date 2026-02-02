@@ -82,6 +82,17 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getChatRoomList(userId));
     }
 
+    // 읽음 처리 API - 추가됨
+    @PostMapping("/chat/read/{idolId}")
+    @ResponseBody
+    public ResponseEntity<Void> markAsRead(
+            @RequestHeader("X-User-Id") int userId,
+            @PathVariable("idolId") Long idolId
+    ) {
+        chatService.markAsRead(userId, idolId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/chat/history/{idolId}")
     @ResponseBody
     public ResponseEntity<List<ChatMessageDto>> getChatHistory(
