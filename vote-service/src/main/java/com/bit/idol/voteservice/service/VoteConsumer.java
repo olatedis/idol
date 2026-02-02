@@ -51,7 +51,7 @@ public class VoteConsumer {
         Map<String, Candidate> candidateCache = new HashMap<>();
         // 2. 득표수 집계 (후보자 ID -> 증가할 표 수)
         Map<Integer, Integer> voteCountMap = new HashMap<>();
-        // 3. 총 투표수 집계 (투표 ID -> 증가할 표 수) - 추가됨
+        // 3. 총 투표수 집계 (투표 ID -> 증가할 표 수)
         Map<Integer, Integer> voteTotalMap = new HashMap<>();
 
         for (String message : messages) {
@@ -64,10 +64,16 @@ public class VoteConsumer {
                 int userId = Integer.parseInt(parts[2]);
                 int candidateNumber = Integer.parseInt(parts[3]);
 
-                String processedKey = "processed:vote-msg:" + uuid;
-                Boolean isNew = redisTemplate.opsForValue().setIfAbsent(processedKey, "1", Duration.ofMinutes(10));
+                // ★ 핵심 수정: 중복 체크 키를 'voteId:userId'로 변경하여 멱등성 보장
+                String idempotencyKey = "processed:vote:" + voteId + ":user:" + userId;
+                
+                // 이미 처리된 투표인지 확인 (TTL 10분 - Kafka 재처리 방지용)
+                Boolean isNew = redisTemplate.opsForValue().setIfAbsent(idempotencyKey, "1", Duration.ofMinutes(10));
 
-                if (Boolean.FALSE.equals(isNew)) continue;
+                if (Boolean.FALSE.equals(isNew)) {
+                    log.warn("중복 투표 메시지 무시: voteId={}, userId={}", voteId, userId);
+                    continue;
+                }
 
                 // 3. 후보자 조회 (Redis 캐싱 + 로컬 캐싱)
                 String cacheKey = voteId + ":" + candidateNumber;
@@ -77,7 +83,7 @@ public class VoteConsumer {
 
                 // 4. 득표수 집계 (메모리 합산)
                 voteCountMap.merge(candidate.getId(), 1, Integer::sum);
-                voteTotalMap.merge(voteId, 1, Integer::sum); // 총 투표수 집계
+                voteTotalMap.merge(voteId, 1, Integer::sum);
 
                 VoteRecord record = new VoteRecord();
                 record.setVoteId(voteId);
@@ -122,7 +128,7 @@ public class VoteConsumer {
             log.info("DB Batch Update (Candidate) 완료: {}건", updates.size());
         }
 
-        // 7. JDBC Batch Update (총 투표수 증가) - 추가됨
+        // 7. JDBC Batch Update (총 투표수 증가)
         if (!voteTotalMap.isEmpty()) {
             String updateSql = "UPDATE vote SET total_votes = total_votes + ? WHERE id = ?";
             List<Map.Entry<Integer, Integer>> updates = new ArrayList<>(voteTotalMap.entrySet());
