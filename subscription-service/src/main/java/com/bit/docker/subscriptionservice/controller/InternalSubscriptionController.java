@@ -50,4 +50,10 @@ public class InternalSubscriptionController {
     public ResponseEntity<List<SubscriptionDto>> getMySubscriptions(@PathVariable("userId") int userId) {
         return ResponseEntity.ok(subscriptionService.getMySubscriptions(userId));
     }
+
+    // 내 구독 개수 조회 (UserService 마이페이지용) - 추가됨
+    @GetMapping("/users/{userId}/count")
+    public ResponseEntity<Integer> getMySubscriptionCount(@PathVariable("userId") int userId) {
+        return ResponseEntity.ok(subscriptionService.getMySubscriptions(userId).size());
+    }
 }

@@ -1,6 +1,8 @@
 package com.bit.idol.userservice.service;
 
+import com.bit.idol.userservice.client.SubscriptionFeignClient;
 import com.bit.idol.userservice.document.UserView;
+import com.bit.idol.userservice.dto.UserMyPageDto;
 import com.bit.idol.userservice.dto.notification.NotificationEventDto;
 import com.bit.idol.userservice.dto.notification.TargetType;
 import com.bit.idol.userservice.dto.user.PasswordChangeDto;
@@ -45,6 +47,30 @@ public class UserService {
     private final StringRedisTemplate redisTemplate;
     private final NotificationProducer notificationProducer;
     private final UserSyncProducer userSyncProducer;
+    private final SubscriptionFeignClient subscriptionFeignClient;
+
+    // 마이페이지 정보 조회 (Aggregation)
+    public UserMyPageDto getMyPageInfo(int userId) {
+        UserDto user = getUserById(userId);
+        
+        int subscriptionCount = 0;
+
+        try {
+            subscriptionCount = subscriptionFeignClient.getMySubscriptionCount(userId);
+        } catch (Exception e) {
+            log.error("구독 정보 조회 실패: {}", e.getMessage());
+        }
+
+        return UserMyPageDto.builder()
+                .id(user.getUserId())
+                .username(user.getUsername())
+                .nickname(user.getNickname())
+                .email(user.getEmail())
+                .profileImage(user.getImgUrl())
+                .role(user.getRole())
+                .subscriptionCount(subscriptionCount)
+                .build();
+    }
 
     // 일반 조회 (MongoDB 사용 - 비밀번호 없음)
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
