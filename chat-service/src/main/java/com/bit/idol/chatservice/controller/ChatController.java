@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequiredArgsConstructor
@@ -40,6 +41,18 @@ public class ChatController {
             log.error("인증된 유저 정보가 없습니다.");
             return;
         }
+
+        // --- 권한 검사 추가 (보안 강화) ---
+        if ("USER".equals(role)) {
+            @SuppressWarnings("unchecked")
+            Set<Long> subscribedIdolIds = (Set<Long>) accessor.getSessionAttributes().get("subscribedIdolIds");
+            
+            if (subscribedIdolIds == null || !subscribedIdolIds.contains(messageDto.getIdolId())) {
+                log.warn("권한 없는 채팅 시도 차단: userId={}, idolId={}", userId, messageDto.getIdolId());
+                throw new RuntimeException("구독하지 않은 채팅방입니다.");
+            }
+        }
+        // --------------------------------
 
         messageDto.setSenderId(userId);
         messageDto.setSenderRole(role);
