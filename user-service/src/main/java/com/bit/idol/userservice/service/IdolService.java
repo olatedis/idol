@@ -1,13 +1,16 @@
 package com.bit.idol.userservice.service;
 
+import com.bit.idol.userservice.dto.event.IdolEvent;
 import com.bit.idol.userservice.dto.idol.IdolDto;
 import com.bit.idol.userservice.dto.idol.IdolRegisterRequest;
 import com.bit.idol.userservice.entity.*;
 import com.bit.idol.userservice.repository.AgencyRepository;
 import com.bit.idol.userservice.repository.IdolRepository;
 import com.bit.idol.userservice.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +25,8 @@ public class IdolService {
     private final IdolRepository idolRepository;
     private final UserRepository userRepository;
     private final AgencyRepository agencyRepository;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public IdolDto registerIdol(IdolRegisterRequest request) {
@@ -53,6 +58,9 @@ public class IdolService {
         idolRepository.save(idol);
         log.info("아이돌 등록 완료: idolId={}, userId={}", idol.getId(), user.getId());
 
+        // Kafka 이벤트 발행
+        sendIdolEvent("CREATE", idol);
+
         return IdolDto.fromEntity(idol);
     }
 
@@ -74,6 +82,25 @@ public class IdolService {
                 .orElseThrow(() -> new RuntimeException("Idol not found"));
         idol.setStatus(status);
         log.info("아이돌 상태 변경: idolId={}, status={}", idolId, status);
+
+        // Kafka 이벤트 발행
+        sendIdolEvent("UPDATE", idol);
+    }
+
+    private void sendIdolEvent(String type, Idol idol) {
+        try {
+            IdolEvent event = IdolEvent.builder()
+                    .type(type)
+                    .idolId(idol.getId())
+                    .stageName(idol.getStageName())
+                    .profileImage(idol.getUser().getImgUrl())
+                    .status(idol.getStatus().name())
+                    .build();
+            
+            String message = objectMapper.writeValueAsString(event);
+            kafkaTemplate.send("idol-events", message);
+        } catch (Exception e) {
+            log.error("아이돌 이벤트 발행 실패: {}", e.getMessage());
+        }
     }
 }
-

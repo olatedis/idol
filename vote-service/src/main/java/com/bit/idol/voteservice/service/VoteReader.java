@@ -14,6 +14,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Component
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -21,7 +23,7 @@ public class VoteReader {
 
     private final VoteRepository voteRepository;
     private final VoteRecordRepository voteRecordRepository;
-    private final CandidateRepository candidateRepository; // 추가됨
+    private final CandidateRepository candidateRepository;
 
     // 투표 정보 조회 (캐싱 적용, sync=true로 Cache Stampede 방지)
     @Cacheable(value = "voteInfo", key = "#voteId", sync = true)
@@ -36,6 +38,12 @@ public class VoteReader {
     public Candidate getCandidate(int voteId, int candidateNumber) {
         return candidateRepository.findByVoteIdAndCandidateNumber(voteId, candidateNumber)
                 .orElseThrow(() -> new RuntimeException("후보자 없음"));
+    }
+
+    // 전체 투표 목록 조회 (캐싱 적용) - 추가됨
+    @Cacheable(value = "votes", key = "'all'")
+    public List<Vote> getAllVotesCached() {
+        return voteRepository.findAll();
     }
 
     // 투표 목록 조회 (페이징 + 검색)

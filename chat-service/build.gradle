@@ -77,8 +77,11 @@ dependencies {
     implementation 'com.github.ben-manes.caffeine:caffeine'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
 
-    // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
+    // Jackson Afterburner (JSON 성능 튜닝)
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
+
+    // Thumbnailator (이미지 썸네일 생성) - 추가됨
+    implementation 'net.coobird:thumbnailator:0.4.20'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'

@@ -1,6 +1,8 @@
 package com.bit.idol.chatservice.controller;
 
 import com.bit.idol.chatservice.dto.ChatMessageDto;
+import com.bit.idol.chatservice.dto.ChatRoomListDto;
+import com.bit.idol.chatservice.dto.FileUploadResponseDto;
 import com.bit.idol.chatservice.service.ChatService;
 import com.bit.idol.chatservice.service.S3Service;
 import com.bit.idol.chatservice.service.TranslationService;
@@ -18,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequiredArgsConstructor
@@ -40,6 +43,18 @@ public class ChatController {
             return;
         }
 
+        // --- 권한 검사 추가 (보안 강화) ---
+        if ("USER".equals(role)) {
+            @SuppressWarnings("unchecked")
+            Set<Long> subscribedIdolIds = (Set<Long>) accessor.getSessionAttributes().get("subscribedIdolIds");
+            
+            if (subscribedIdolIds == null || !subscribedIdolIds.contains(messageDto.getIdolId())) {
+                log.warn("권한 없는 채팅 시도 차단: userId={}, idolId={}", userId, messageDto.getIdolId());
+                throw new RuntimeException("구독하지 않은 채팅방입니다.");
+            }
+        }
+        // --------------------------------
+
         messageDto.setSenderId(userId);
         messageDto.setSenderRole(role);
         messageDto.setSenderNickname(nickname);
@@ -59,6 +74,24 @@ public class ChatController {
         redisTemplate.convertAndSend("/sub/idol/" + messageDto.getIdolId(), messageDto);
         
         log.debug("작성 중 신호 전송: room={}", messageDto.getIdolId());
+    }
+
+    // 채팅방 목록 조회 (Aggregation) - 추가됨
+    @GetMapping("/chat/rooms")
+    @ResponseBody
+    public ResponseEntity<List<ChatRoomListDto>> getChatRoomList(@RequestHeader("X-User-Id") int userId) {
+        return ResponseEntity.ok(chatService.getChatRoomList(userId));
+    }
+
+    // 읽음 처리 API - 추가됨
+    @PostMapping("/chat/read/{idolId}")
+    @ResponseBody
+    public ResponseEntity<Void> markAsRead(
+            @RequestHeader("X-User-Id") int userId,
+            @PathVariable("idolId") Long idolId
+    ) {
+        chatService.markAsRead(userId, idolId);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/chat/history/{idolId}")
@@ -134,27 +167,11 @@ public class ChatController {
 
     // --------------------
 
+    // 파일 업로드 API 개선 (썸네일 포함)
     @PostMapping("/chat/upload")
     @ResponseBody
-    public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
-        String fileUrl = s3Service.uploadFile(file);
-        String contentType = file.getContentType();
-        String type = "FILE";
-
-        if (contentType != null) {
-            if (contentType.startsWith("image")) {
-                type = "IMAGE";
-            } else if (contentType.startsWith("video")) {
-                type = "VIDEO";
-            } else if (contentType.startsWith("audio")) {
-                type = "VOICE";
-            }
-        }
-
-        Map<String, String> response = new HashMap<>();
-        response.put("url", fileUrl);
-        response.put("type", type);
-        
+    public ResponseEntity<FileUploadResponseDto> uploadFile(@RequestParam("file") MultipartFile file) {
+        FileUploadResponseDto response = s3Service.uploadFile(file);
         return ResponseEntity.ok(response);
     }
 

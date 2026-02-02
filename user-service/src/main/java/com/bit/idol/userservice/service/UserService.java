@@ -1,6 +1,8 @@
 package com.bit.idol.userservice.service;
 
+import com.bit.idol.userservice.client.SubscriptionFeignClient;
 import com.bit.idol.userservice.document.UserView;
+import com.bit.idol.userservice.dto.UserMyPageDto;
 import com.bit.idol.userservice.dto.notification.NotificationEventDto;
 import com.bit.idol.userservice.dto.notification.TargetType;
 import com.bit.idol.userservice.dto.user.PasswordChangeDto;
@@ -45,6 +47,30 @@ public class UserService {
     private final StringRedisTemplate redisTemplate;
     private final NotificationProducer notificationProducer;
     private final UserSyncProducer userSyncProducer;
+    private final SubscriptionFeignClient subscriptionFeignClient;
+
+    // 마이페이지 정보 조회 (Aggregation)
+    public UserMyPageDto getMyPageInfo(int userId) {
+        UserDto user = getUserById(userId);
+        
+        int subscriptionCount = 0;
+
+        try {
+            subscriptionCount = subscriptionFeignClient.getMySubscriptionCount(userId);
+        } catch (Exception e) {
+            log.error("구독 정보 조회 실패: {}", e.getMessage());
+        }
+
+        return UserMyPageDto.builder()
+                .id(user.getUserId())
+                .username(user.getUsername())
+                .nickname(user.getNickname())
+                .email(user.getEmail())
+                .profileImage(user.getImgUrl())
+                .role(user.getRole())
+                .subscriptionCount(subscriptionCount)
+                .build();
+    }
 
     // 일반 조회 (MongoDB 사용 - 비밀번호 없음)
     @Cacheable(value = "user:info:username", key = "#username", unless = "#result == null")
@@ -170,12 +196,23 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        if (user.getImgUrl() != null && !user.getImgUrl().isEmpty()) {
-            s3Service.deleteFile(user.getImgUrl());
-        }
+        String oldImgUrl = user.getImgUrl(); // 기존 이미지 URL 저장
 
+        // 1. 새 파일 업로드 (실패 시 여기서 예외 발생 -> 트랜잭션 롤백 -> 기존 URL 유지)
         String fileUrl = s3Service.uploadFile(file);
+        
+        // 2. DB 업데이트
         user.setImgUrl(fileUrl);
+        
+        // 3. 기존 파일 삭제 (비동기로 처리하거나, 로그만 남기고 나중에 배치로 삭제하는 게 안전함)
+        if (oldImgUrl != null && !oldImgUrl.isEmpty()) {
+            try {
+                s3Service.deleteFile(oldImgUrl);
+            } catch (Exception e) {
+                log.warn("기존 프로필 이미지 삭제 실패 (S3): {}", oldImgUrl);
+                // 예외를 던지지 않음 (새 이미지 업로드는 성공했으므로)
+            }
+        }
         
         userSyncProducer.send(user.getId(), "UPDATE");
         updateUsernameCache(user);

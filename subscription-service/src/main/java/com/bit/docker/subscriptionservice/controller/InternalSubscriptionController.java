@@ -1,5 +1,6 @@
 package com.bit.docker.subscriptionservice.controller;
 
+import com.bit.docker.subscriptionservice.dto.SubscriptionDto;
 import com.bit.docker.subscriptionservice.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -42,5 +43,17 @@ public class InternalSubscriptionController {
             @PathVariable("userId") int userId
     ) {
         return ResponseEntity.ok(subscriptionService.isActiveGroupSubscriber(userId, groupId));
+    }
+
+    // 내 구독 목록 조회 (ChatService 등에서 사용)
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<List<SubscriptionDto>> getMySubscriptions(@PathVariable("userId") int userId) {
+        return ResponseEntity.ok(subscriptionService.getMySubscriptions(userId));
+    }
+
+    // 내 구독 개수 조회 (UserService 마이페이지용) - 추가됨
+    @GetMapping("/users/{userId}/count")
+    public ResponseEntity<Integer> getMySubscriptionCount(@PathVariable("userId") int userId) {
+        return ResponseEntity.ok(subscriptionService.getMySubscriptions(userId).size());
     }
 }

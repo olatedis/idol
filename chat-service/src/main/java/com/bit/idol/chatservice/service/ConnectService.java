@@ -1,6 +1,7 @@
 package com.bit.idol.chatservice.service;
 
 import com.bit.idol.chatservice.client.SubscriptionFeignClient;
+import com.bit.idol.chatservice.dto.SubscriptionDto;
 import com.bit.idol.chatservice.dto.UserDto;
 import com.bit.idol.grpc.AuthGrpcServiceGrpc;
 import com.bit.idol.grpc.AuthResponse;
@@ -14,7 +15,11 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -60,7 +65,17 @@ public class ConnectService {
     @Cacheable(value = "subscriptionCheck", key = "#userId + ':' + #idolId")
     @CircuitBreaker(name = "subscription-check", fallbackMethod = "fallbackVerifySubscription")
     public boolean verifySubscription(int userId, Long idolId) {
-        return subscriptionFeignClient.checkSubscription(userId, idolId);
+        // 파라미터 순서 수정: (idolId, userId)
+        return subscriptionFeignClient.checkSubscription(idolId, userId);
+    }
+
+    // 3. 구독 목록 조회 (보안 강화용)
+    @CircuitBreaker(name = "subscription-check", fallbackMethod = "fallbackGetSubscriptions")
+    public Set<Long> getSubscribedIdolIds(int userId) {
+        List<SubscriptionDto> subscriptions = subscriptionFeignClient.getMySubscriptions(userId);
+        return subscriptions.stream()
+                .map(sub -> (long) sub.getIdolId())
+                .collect(Collectors.toSet());
     }
 
     // --- Redis 세션 관리 ---
@@ -93,5 +108,10 @@ public class ConnectService {
     public boolean fallbackVerifySubscription(int userId, Long idolId, Throwable t) {
         log.error("Subscription Service 장애 발생: userId={}, idolId={}, error={}", userId, idolId, t.getMessage());
         throw new RuntimeException("구독 정보를 확인할 수 없어 입장이 제한됩니다.");
+    }
+
+    public Set<Long> fallbackGetSubscriptions(int userId, Throwable t) {
+        log.error("Subscription Service 장애 발생 (목록 조회): userId={}, error={}", userId, t.getMessage());
+        return Collections.emptySet(); // 장애 시 빈 목록 반환 (채팅 전송 불가)
     }
 }

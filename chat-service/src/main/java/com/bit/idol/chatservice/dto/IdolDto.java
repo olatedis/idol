@@ -1,0 +1,21 @@
+package com.bit.idol.chatservice.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class IdolDto {
+    private int idolId;
+    private int userId;
+    private String username;
+    private String stageName;
+    private String profileImage;
+    private int agencyId;
+    private String agencyName;
+    private String status;
+}

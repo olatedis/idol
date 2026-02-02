@@ -1,5 +1,6 @@
 package com.bit.idol.userservice.controller;
 
+import com.bit.idol.userservice.dto.UserMyPageDto;
 import com.bit.idol.userservice.dto.user.PasswordChangeDto;
 import com.bit.idol.userservice.dto.user.UserDto;
 import com.bit.idol.userservice.dto.user.UserInfoResponse;
@@ -37,12 +38,13 @@ public class UserController {
         return ResponseEntity.ok(result);
     }
 
+    // 마이페이지 정보 조회 (Aggregation) - 수정됨
     @GetMapping("/me")
-    public ResponseEntity<UserDto> getUserInfo(@RequestHeader("X-User-Id") int userId,
+    public ResponseEntity<UserMyPageDto> getUserInfo(@RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role) {
         // 모든 권한 허용 (USER, IDOL, AGENCY, ADMIN)
         log.info("내 정보 조회 요청: userId={}, role={}", userId, role);
-        return ResponseEntity.ok(userService.getUserById(userId));
+        return ResponseEntity.ok(userService.getMyPageInfo(userId));
     }
 
     @PostMapping("/me/update")

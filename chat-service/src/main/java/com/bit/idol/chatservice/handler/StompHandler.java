@@ -13,6 +13,8 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -41,7 +43,7 @@ public class StompHandler implements ChannelInterceptor {
                         break;
                 }
             } catch (Exception e) {
-                log.error("STOMP 처리 중 오류 발생: command={}, error={}", accessor.getCommand(), e.getMessage(), e);
+                log.error("STOMP 처리 중 오류 발생: command={}, error={}", accessor.getCommand(), e.getMessage());
                 throw e; // 예외를 다시 던져서 클라이언트에게 알림
             }
         }
@@ -54,7 +56,6 @@ public class StompHandler implements ChannelInterceptor {
 
         // 1. 토큰 검증
         String token = accessor.getFirstNativeHeader("Authorization");
-        log.debug("Authorization Header: {}", token);
         
         if (token == null || !token.startsWith("Bearer ")) {
             throw new RuntimeException("인증 토큰이 없습니다.");
@@ -63,22 +64,11 @@ public class StompHandler implements ChannelInterceptor {
         UserDto user = connectService.verifyUser(token);
         log.info("유저 검증 성공: userId={}, role={}", user.getUserId(), user.getRole());
 
-        // 2. 구독 여부 확인
+        // 2. 구독 목록 조회 및 세션 저장 (보안 강화)
         if ("USER".equals(user.getRole())) {
-            String idolIdStr = accessor.getFirstNativeHeader("idolId");
-            log.debug("idolId Header: {}", idolIdStr);
-            
-            if (idolIdStr == null) {
-                throw new RuntimeException("idolId 헤더가 필요합니다.");
-            }
-
-            Long idolId = Long.parseLong(idolIdStr);
-            boolean isSubscribed = connectService.verifySubscription(user.getUserId(), idolId);
-            
-            if (!isSubscribed) {
-                throw new RuntimeException("구독하지 않은 아이돌입니다.");
-            }
-            log.info("구독 확인 성공: userId={}, idolId={}", user.getUserId(), idolId);
+            Set<Long> subscribedIdolIds = connectService.getSubscribedIdolIds(user.getUserId());
+            accessor.getSessionAttributes().put("subscribedIdolIds", subscribedIdolIds);
+            log.info("구독 목록 로드 완료: {}개", subscribedIdolIds.size());
         }
         else if ("IDOL".equals(user.getRole())) {
             chatService.setIdolOnline((long) user.getUserId(), true);
@@ -97,13 +87,36 @@ public class StompHandler implements ChannelInterceptor {
     }
 
     private void handleSend(StompHeaderAccessor accessor) {
-        UserDto user = connectService.getUserSession(accessor.getSessionId());
+        // 1. 세션 확인
+        Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
+        String role = (String) accessor.getSessionAttributes().get("role");
         
-        if (user == null) {
-            Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
-            if (userId == null) {
-                throw new RuntimeException("세션이 만료되었습니다.");
+        if (userId == null) {
+            throw new RuntimeException("세션이 만료되었습니다.");
+        }
+
+        // 2. 목적지(Destination) 파싱 -> idolId 추출
+        String destination = accessor.getDestination(); // 예: /pub/chat/send (메시지 본문에 idolId 있음)
+        
+        // 메시지 본문(Payload)을 여기서 까보긴 어렵습니다. (MessageConverter 전이라 byte[] 상태임)
+        // 대신, 클라이언트가 헤더에 'idolId'를 보내도록 강제하거나,
+        // destination을 '/pub/chat/{idolId}/send' 형태로 바꾸는 것이 좋습니다.
+        
+        // 현재 구조상 Payload 검증이 어려우므로, 
+        // 1차적으로 세션에 구독 목록이 있는지만 확인합니다.
+        // (더 강력한 보안을 위해선 Controller에서 @DestinationVariable로 받아서 검증해야 함)
+        
+        if ("USER".equals(role)) {
+            @SuppressWarnings("unchecked")
+            Set<Long> subscribedIdolIds = (Set<Long>) accessor.getSessionAttributes().get("subscribedIdolIds");
+            
+            if (subscribedIdolIds == null || subscribedIdolIds.isEmpty()) {
+                // 구독 정보가 없으면 전송 차단 (혹은 재조회 시도)
+                throw new RuntimeException("구독 정보가 없습니다.");
             }
+            
+            // 상세 검증은 Controller의 @MessageMapping에서 수행하는 것이 더 자연스러움.
+            // 여기서는 "구독자만 채팅 가능"이라는 대전제만 체크.
         }
     }
 

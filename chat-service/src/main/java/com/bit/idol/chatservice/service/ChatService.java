@@ -1,6 +1,11 @@
 package com.bit.idol.chatservice.service;
 
+import com.bit.idol.chatservice.client.SubscriptionFeignClient;
+import com.bit.idol.chatservice.client.UserFeignClient;
 import com.bit.idol.chatservice.dto.ChatMessageDto;
+import com.bit.idol.chatservice.dto.ChatRoomListDto;
+import com.bit.idol.chatservice.dto.IdolDto;
+import com.bit.idol.chatservice.dto.SubscriptionDto;
 import com.bit.idol.chatservice.dto.notification.NotificationEventDto;
 import com.bit.idol.chatservice.dto.notification.TargetType;
 import com.bit.idol.chatservice.entity.ChatMessage;
@@ -9,6 +14,8 @@ import com.bit.idol.chatservice.filter.SuspiciousWordFilter;
 import com.bit.idol.chatservice.producer.ChatProducer;
 import com.bit.idol.chatservice.producer.NotificationProducer;
 import com.bit.idol.chatservice.repository.ChatRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -19,10 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,9 +40,107 @@ public class ChatService {
     private final ChatProducer chatProducer;
     private final RedisTemplate<String, Object> redisTemplate;
     private final NotificationProducer notificationProducer;
+    private final UserFeignClient userFeignClient;
+    private final SubscriptionFeignClient subscriptionFeignClient;
+    private final ObjectMapper objectMapper;
 
     private static final long RATE_LIMIT_SECONDS = 3;
     private static final int CACHE_SIZE = 50;
+    private static final String IDOL_CACHE_KEY = "idols:cache";
+
+    // 채팅방 목록 조회 (Aggregation) - Redis 조회로 변경 (CQRS)
+    @CircuitBreaker(name = "chat-room-list", fallbackMethod = "getChatRoomListFallback")
+    public List<ChatRoomListDto> getChatRoomList(int userId) {
+        // 1. 전체 아이돌 목록 조회 (Redis에서 조회)
+        List<Object> cachedIdols = redisTemplate.opsForHash().values(IDOL_CACHE_KEY);
+        List<IdolDto> idols;
+
+        if (cachedIdols.isEmpty()) {
+            // Redis에 없으면 Feign으로 조회하고 캐싱 (Cold Start 대비)
+            log.warn("Redis에 아이돌 정보 없음. User Service 호출");
+            idols = userFeignClient.getAllIdols();
+            for (IdolDto idol : idols) {
+                redisTemplate.opsForHash().put(IDOL_CACHE_KEY, String.valueOf(idol.getIdolId()), idol);
+            }
+        } else {
+            idols = cachedIdols.stream()
+                    .map(obj -> objectMapper.convertValue(obj, IdolDto.class))
+                    .collect(Collectors.toList());
+        }
+
+        // 2. 내 구독 목록 조회 (Subscription Service)
+        Set<Integer> subscribedIdolIds = new HashSet<>();
+        try {
+            List<SubscriptionDto> mySubscriptions = subscriptionFeignClient.getMySubscriptions(userId);
+            subscribedIdolIds = mySubscriptions.stream()
+                    .map(SubscriptionDto::getIdolId)
+                    .collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.error("구독 정보 조회 실패 (Fallback: 구독 정보 없이 목록 표시): {}", e.getMessage());
+        }
+
+        // 3. 데이터 조합
+        Set<Integer> finalSubscribedIdolIds = subscribedIdolIds;
+        return idols.stream().map(idol -> {
+            Long idolId = (long) idol.getIdolId();
+            
+            // 마지막 메시지 조회 (Redis 캐시 활용)
+            Map<String, Object> preview = getChatPreview(idolId);
+            String lastMessage = "";
+            LocalDateTime lastMessageTime = null;
+
+            if (preview != null) {
+                lastMessage = (String) preview.get("content");
+                String timeStr = (String) preview.get("time");
+                if (timeStr != null) {
+                    lastMessageTime = LocalDateTime.parse(timeStr);
+                }
+            }
+
+            // --- 안 읽은 메시지 수 계산 (Redis 활용) ---
+            int unreadCount = 0;
+            if (finalSubscribedIdolIds.contains(idol.getIdolId())) {
+                String totalCountKey = "chat:room:" + idolId + ":total_count";
+                String readCountKey = "chat:room:" + idolId + ":user:" + userId + ":last_read_count";
+                
+                Object totalObj = redisTemplate.opsForValue().get(totalCountKey);
+                Object readObj = redisTemplate.opsForValue().get(readCountKey);
+                
+                int total = totalObj != null ? Integer.parseInt(totalObj.toString()) : 0;
+                int read = readObj != null ? Integer.parseInt(readObj.toString()) : 0;
+                
+                unreadCount = Math.max(0, total - read);
+            }
+            // ----------------------------------------
+
+            return ChatRoomListDto.builder()
+                    .idolId(idolId)
+                    .idolName(idol.getStageName())
+                    .thumbnailUrl(idol.getProfileImage())
+                    .lastMessage(lastMessage)
+                    .lastMessageTime(lastMessageTime)
+                    .unreadCount(unreadCount)
+                    .isSubscribed(finalSubscribedIdolIds.contains(idol.getIdolId()))
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    // Fallback: User Service 장애 시 빈 목록 반환
+    public List<ChatRoomListDto> getChatRoomListFallback(int userId, Throwable t) {
+        log.error("채팅방 목록 조회 실패 (User Service 장애): {}", t.getMessage());
+        return Collections.emptyList();
+    }
+
+    // 읽음 처리 (API 호출 시)
+    public void markAsRead(int userId, Long idolId) {
+        String totalCountKey = "chat:room:" + idolId + ":total_count";
+        String readCountKey = "chat:room:" + idolId + ":user:" + userId + ":last_read_count";
+        
+        Object totalObj = redisTemplate.opsForValue().get(totalCountKey);
+        if (totalObj != null) {
+            redisTemplate.opsForValue().set(readCountKey, totalObj);
+        }
+    }
 
     public void processMessage(ChatMessageDto messageDto) {
         // 0. 도배 방지
@@ -89,6 +191,11 @@ public class ChatService {
         previewData.put("sender", messageDto.getSenderNickname());
         previewData.put("time", LocalDateTime.now().toString());
         redisTemplate.opsForValue().set(previewKey, previewData);
+
+        // --- 3-2. 총 메시지 수 증가 (읽음 처리용) ---
+        String totalCountKey = "chat:room:" + messageDto.getIdolId() + ":total_count";
+        redisTemplate.opsForValue().increment(totalCountKey);
+        // ----------------------------------------
 
         // 4. Kafka로 전송 (성공 시 SENT 업데이트)
         try {
@@ -173,8 +280,8 @@ public class ChatService {
         String pinKey = "chat:pin:" + idolId;
         Object data = redisTemplate.opsForValue().get(pinKey);
         
-        if (data instanceof ChatMessageDto) {
-            return (ChatMessageDto) data;
+        if (data != null) {
+            return objectMapper.convertValue(data, ChatMessageDto.class);
         }
         return null;
     }
@@ -335,7 +442,7 @@ public class ChatService {
             
             if (cachedMessages != null && !cachedMessages.isEmpty()) {
                 return cachedMessages.stream()
-                        .map(obj -> (ChatMessageDto) obj)
+                        .map(obj -> objectMapper.convertValue(obj, ChatMessageDto.class)) // 안전한 변환 적용
                         .collect(Collectors.toList());
             }
         }

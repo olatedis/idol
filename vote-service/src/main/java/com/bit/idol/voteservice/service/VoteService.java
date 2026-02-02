@@ -4,10 +4,12 @@ import com.bit.idol.voteservice.client.UserFeignClient;
 import com.bit.idol.voteservice.dto.MyVoteRecordDto;
 import com.bit.idol.voteservice.dto.UserDto;
 import com.bit.idol.voteservice.dto.VoteInfo;
+import com.bit.idol.voteservice.dto.VoteListDto;
 import com.bit.idol.voteservice.dto.notification.NotificationEventDto;
 import com.bit.idol.voteservice.dto.notification.TargetType;
 import com.bit.idol.voteservice.entity.Vote;
 import com.bit.idol.voteservice.entity.VoteRecord;
+import com.bit.idol.voteservice.entity.VoteStatus;
 import com.bit.idol.voteservice.producer.NotificationProducer;
 import com.bit.idol.voteservice.repository.CandidateRepository;
 import com.bit.idol.voteservice.repository.VoteRecordRepository;
@@ -17,18 +19,18 @@ import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,8 +48,43 @@ public class VoteService {
 
     private static final String BLACKLIST_KEY = "vote:blacklist:ip";
 
+    // 투표 목록 조회 (프론트엔드용)
+    @Transactional(readOnly = true)
+    public List<VoteListDto> getVoteList(int userId) {
+        // 1. 모든 투표 조회 (VoteReader를 통해 캐싱 적용)
+        List<Vote> votes = voteReader.getAllVotesCached();
+
+        // 2. 내가 참여한 투표 ID 목록 조회
+        List<Integer> myVotedVoteIds = voteRecordRepository.findVoteIdsByUserId(userId);
+        Set<Integer> myVotedSet = new HashSet<>(myVotedVoteIds);
+
+        // 3. DTO 변환
+        return votes.stream().map(vote -> {
+            String status = "PROGRESS";
+            LocalDateTime now = LocalDateTime.now();
+            if (now.isBefore(vote.getStartDate())) {
+                status = "UPCOMING";
+            } else if (now.isAfter(vote.getEndDate())) {
+                status = "ENDED";
+            }
+
+            return VoteListDto.builder()
+                    .id((long) vote.getId())
+                    .title(vote.getTitle())
+                    .description(vote.getDescription())
+                    .startDate(vote.getStartDate())
+                    .endDate(vote.getEndDate())
+                    .status(status)
+                    .participantCount(vote.getTotalVotes()) // totalVotes 필드 사용 (성능 최적화)
+                    .isVoted(myVotedSet.contains(vote.getId()))
+                    .thumbnailUrl(null) // 썸네일 URL 필드 추가 필요
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
     @Transactional
     @CachePut(value = "voteInfo", key = "#result.id")
+    @CacheEvict(value = "votes", key = "'all'") // 투표 생성 시 전체 목록 캐시 삭제
     public VoteInfo createVote(Vote vote) {
         Vote savedVote = voteRepository.save(vote);
         
@@ -62,6 +99,31 @@ public class VoteService {
         sendVoteNotification(savedVote, "VOTE_OPENED", targetType, targetId);
         
         return VoteInfo.from(savedVote);
+    }
+
+    // 투표 종료 처리 (개별 트랜잭션 분리) - 추가됨
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @CacheEvict(value = "votes", key = "'all'") // 상태 변경 시 목록 캐시 갱신
+    public void closeVote(int voteId) {
+        Vote vote = voteRepository.findById(voteId)
+                .orElseThrow(() -> new RuntimeException("투표를 찾을 수 없습니다."));
+        
+        vote.setStatus(VoteStatus.CLOSED);
+        
+        // Redis 랭킹 키 삭제 등 정리 작업
+        String rankingKey = "vote:ranking:" + vote.getId();
+        redisTemplate.delete(rankingKey);
+        
+        TargetType targetType = TargetType.ALL;
+        String targetId = null;
+        if (vote.getTargetGroupId() != null) {
+            targetType = TargetType.GROUP_SUB;
+            targetId = String.valueOf(vote.getTargetGroupId());
+        }
+
+        sendVoteNotification(vote, "VOTE_CLOSED", targetType, targetId);
+        
+        log.info("투표 종료 처리 완료: ID={}, 제목={}", vote.getId(), vote.getTitle());
     }
 
     @Transactional
@@ -101,9 +163,14 @@ public class VoteService {
             throw new RuntimeException("이미 투표에 참여하였습니다.");
         }
 
-        sendToKafka(voteId, userId, candidateNumber, redisKey);
-
-        sendVoteNotification(null, "VOTE_COMPLETED", TargetType.USER, String.valueOf(userId));
+        try {
+            sendToKafka(voteId, userId, candidateNumber, redisKey);
+            sendVoteNotification(null, "VOTE_COMPLETED", TargetType.USER, String.valueOf(userId));
+        } catch (Exception e) {
+            // Kafka 전송 실패 시 Redis 키 삭제 (보상 트랜잭션)
+            redisTemplate.delete(redisKey);
+            throw e;
+        }
 
         return "투표가 완료되었습니다.";
     }

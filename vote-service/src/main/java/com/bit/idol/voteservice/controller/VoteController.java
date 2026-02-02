@@ -40,7 +40,7 @@ public class VoteController {
         return ResponseEntity.ok(voteInfo);
     }
 
-    // 투표 목록 조회 (페이징 + 검색)
+    // 투표 목록 조회 (기존: 검색/페이징용 - 비로그인 가능)
     @GetMapping
     public ResponseEntity<Page<VoteInfo>> getVoteList(
             @RequestParam(required = false) String keyword,
@@ -50,7 +50,14 @@ public class VoteController {
         return ResponseEntity.ok(voteList);
     }
 
-    // 내 투표 기록 조회 (신규 추가)
+    // 투표 목록 조회 (로그인 유저용 - 내 참여 여부 포함) - 추가됨
+    @GetMapping("/list")
+    public ResponseEntity<List<VoteListDto>> getVoteListWithStatus(
+            @RequestHeader("X-User-Id") int userId) {
+        return ResponseEntity.ok(voteService.getVoteList(userId));
+    }
+
+    // 내 투표 기록 조회
     @GetMapping("/me")
     public ResponseEntity<List<MyVoteRecordDto>> getMyVoteRecords(
             @RequestHeader("X-User-Id") int userId) {
