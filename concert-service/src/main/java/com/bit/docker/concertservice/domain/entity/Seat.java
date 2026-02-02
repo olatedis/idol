@@ -2,6 +2,7 @@ package com.bit.docker.concertservice.domain.entity;
 
 import com.bit.docker.concertservice.domain.enumtype.SeatGrade;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import lombok.Getter;
 
 @Entity
@@ -29,6 +30,12 @@ public class Seat {
     @JoinColumn(name = "concert_id")
     private Concert concert;
 
+    private boolean locked = false;
+
+    private Integer lockedBy;
+
+    private LocalDateTime lockedAt;
+
     protected Seat() {}
 
     public Seat(String seatNumber, SeatGrade grade, int price, Concert concert) {
@@ -37,6 +44,20 @@ public class Seat {
         this.price = price;
         this.concert = concert;
     }
+
+    public void lock(int userId) {
+        this.locked = true;
+        this.lockedBy = userId;
+        this.lockedAt = LocalDateTime.now();
+    }
+
+    public void unlock() {
+        this.locked = false;
+        this.lockedBy = null;
+        this.lockedAt = null;
+    }
+
+    public boolean isLocked() { return this.locked; }
 
 }
 

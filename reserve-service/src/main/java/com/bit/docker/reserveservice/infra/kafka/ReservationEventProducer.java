@@ -13,35 +13,22 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Component
 @AllArgsConstructor
 @Slf4j
 public class ReservationEventProducer {
 
-        private final KafkaTemplate<String, String> kafkaTemplate;
-        private final ReservationRepository reservationRepository;
-        private final SeatLockRepository seatLockRepository;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ReservationRepository reservationRepository;
+    private final SeatLockRepository seatLockRepository;
 
 
     public void publishReservationCreated(PaymentEvent event) {
         kafkaTemplate.send("reservation-created", event.toJson());
     }
 
-        public void publishReservationCanceled(Reservation reservation) {
-                kafkaTemplate.send(
-                                "notify-request-topic",
-                                ReservationEvent.builder()
-                                                .eventType("CANCELED")
-                                                .targetType(ReservationEvent.TargetType.USER)
-                                                .userId(reservation.getUserId())
-                                                .concertId(reservation.getConcertId())
-                                                .occurredAt(LocalDateTime.now())
-                                                .build()
-                                                .toJson()
-                );
-                log.info("좌석 예약 취소 발행: userId={}, concert={}, seat={}", reservation.getUserId(), reservation.getConcertId(), reservation.getSeatId());
-        }
 
     @KafkaListener(
             topics = "payment-completed",
@@ -65,26 +52,29 @@ public class ReservationEventProducer {
                         )
                         .orElseThrow();
 
-                reservation.confirm();
+        reservation.confirm();
 
-                // 예약 성공 후 잠금 해제
-                try {
-                        seatLockRepository.unlock(reservation.getConcertId(), reservation.getSeatId());
-                } catch (Exception e) {
-                        log.warn("좌석 잠금 해제 실패: concert={}, seat={}, error={}", reservation.getConcertId(), reservation.getSeatId(), e.getMessage());
-                }
+        // 예약 성공 후 잠금 해제
+        try {
+            seatLockRepository.unlock(reservation.getConcertId(), reservation.getSeatId());
+        } catch (Exception e) {
+            log.warn("좌석 잠금 해제 실패: concert={}, seat={}, error={}", reservation.getConcertId(), reservation.getSeatId(), e.getMessage());
+        }
 
-                kafkaTemplate.send(
-                "notify-request-topic",
+        String uuid = UUID.randomUUID().toString();
+        String m = uuid +":"+event.getUserId()+":"+reservation.getConcertId()+":"+reservation.getSeatId()+":"+LocalDateTime.now();
+            kafkaTemplate.send(
+                "RESERVATION_CREATED",
                 ReservationEvent.builder()
-                        .eventType("CREATED")
-                        .targetType(ReservationEvent.TargetType.USER)
-                        .userId(reservation.getUserId())
-                        .concertId(reservation.getConcertId())
-                        .occurredAt(LocalDateTime.now())
-                        .build()
-                        .toJson()
-        );
+                    .eventType("CREATED")
+                    .targetType(ReservationEvent.TargetType.USER)
+                    .userId(reservation.getUserId())
+                    .concertId(reservation.getConcertId())
+                    .seatId(reservation.getSeatId())
+                    .occurredAt(LocalDateTime.now())
+                    .build()
+                    .toJson()
+            );
 
         log.info("좌석 결제 완료: userId={}, concert={}, seat={}", reservation.getUserId(), reservation.getConcertId(), reservation.getSeatId());
 
