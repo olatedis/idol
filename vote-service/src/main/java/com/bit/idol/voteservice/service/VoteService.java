@@ -52,7 +52,7 @@ public class VoteService {
         // 1. 모든 투표 조회 (VoteReader를 통해 캐싱 적용)
         List<Vote> votes = voteReader.getAllVotesCached();
 
-        // 2. 내가 참여한 투표 ID 목록 조회 (최적화됨: ID만 조회)
+        // 2. 내가 참여한 투표 ID 목록 조회
         List<Integer> myVotedVoteIds = voteRecordRepository.findVoteIdsByUserId(userId);
         Set<Integer> myVotedSet = new HashSet<>(myVotedVoteIds);
 
@@ -136,9 +136,14 @@ public class VoteService {
             throw new RuntimeException("이미 투표에 참여하였습니다.");
         }
 
-        sendToKafka(voteId, userId, candidateNumber, redisKey);
-
-        sendVoteNotification(null, "VOTE_COMPLETED", TargetType.USER, String.valueOf(userId));
+        try {
+            sendToKafka(voteId, userId, candidateNumber, redisKey);
+            sendVoteNotification(null, "VOTE_COMPLETED", TargetType.USER, String.valueOf(userId));
+        } catch (Exception e) {
+            // Kafka 전송 실패 시 Redis 키 삭제 (보상 트랜잭션)
+            redisTemplate.delete(redisKey);
+            throw e;
+        }
 
         return "투표가 완료되었습니다.";
     }
@@ -185,12 +190,8 @@ public class VoteService {
         String uuid = UUID.randomUUID().toString();
         String message = uuid + ":" + voteId + ":" + userId + ":" + candidateNumber;
 
-        try {
-            kafkaTemplate.send("vote-topic", message);
-        } catch (Exception e) {
-            redisTemplate.delete(redisKey);
-            throw new RuntimeException("투표 전송 중 오류가 발생했습니다. 다시 시도해주세요.", e);
-        }
+        // 여기서 예외 발생 시 상위 메서드(castVote)에서 catch하여 Redis 키 삭제함
+        kafkaTemplate.send("vote-topic", message);
     }
 
     private void validateIp(String ipAddress) {
