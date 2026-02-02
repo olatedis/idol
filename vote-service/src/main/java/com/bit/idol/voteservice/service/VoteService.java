@@ -75,7 +75,7 @@ public class VoteService {
                     .startDate(vote.getStartDate())
                     .endDate(vote.getEndDate())
                     .status(status)
-                    .participantCount(0) // 참여자 수는 별도 집계 필요 (일단 0)
+                    .participantCount(vote.getTotalVotes()) // totalVotes 필드 사용 (성능 최적화)
                     .isVoted(myVotedVoteIds.contains(vote.getId()))
                     .thumbnailUrl(null) // 썸네일 URL 필드 추가 필요
                     .build();

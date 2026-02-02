@@ -29,6 +29,10 @@ public class Vote {
     @Enumerated(EnumType.STRING)
     private VoteStatus status = VoteStatus.OPEN;
 
+    // 총 투표 수 (성능 최적화용) - 추가됨
+    @Column(nullable = false)
+    private int totalVotes = 0;
+
     @OneToMany (mappedBy = "vote", cascade = CascadeType.ALL)
     private List<Candidate> candidate = new ArrayList<>();
 

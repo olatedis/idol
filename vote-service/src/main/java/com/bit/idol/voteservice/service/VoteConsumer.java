@@ -36,7 +36,7 @@ public class VoteConsumer {
     private final ObjectMapper objectMapper;
     private final RedisTemplate<String, String> redisTemplate;
     private final JdbcTemplate jdbcTemplate;
-    private final VoteReader voteReader; // 추가됨
+    private final VoteReader voteReader;
 
     @Transactional
     @KafkaListener(topics = "vote-topic", groupId = "vote-group", containerFactory = "kafkaListenerContainerFactory")
@@ -51,6 +51,8 @@ public class VoteConsumer {
         Map<String, Candidate> candidateCache = new HashMap<>();
         // 2. 득표수 집계 (후보자 ID -> 증가할 표 수)
         Map<Integer, Integer> voteCountMap = new HashMap<>();
+        // 3. 총 투표수 집계 (투표 ID -> 증가할 표 수) - 추가됨
+        Map<Integer, Integer> voteTotalMap = new HashMap<>();
 
         for (String message : messages) {
             try {
@@ -70,11 +72,12 @@ public class VoteConsumer {
                 // 3. 후보자 조회 (Redis 캐싱 + 로컬 캐싱)
                 String cacheKey = voteId + ":" + candidateNumber;
                 Candidate candidate = candidateCache.computeIfAbsent(cacheKey, k -> 
-                        voteReader.getCandidate(voteId, candidateNumber) // VoteReader 사용
+                        voteReader.getCandidate(voteId, candidateNumber)
                 );
 
                 // 4. 득표수 집계 (메모리 합산)
                 voteCountMap.merge(candidate.getId(), 1, Integer::sum);
+                voteTotalMap.merge(voteId, 1, Integer::sum); // 총 투표수 집계
 
                 VoteRecord record = new VoteRecord();
                 record.setVoteId(voteId);
@@ -105,7 +108,7 @@ public class VoteConsumer {
             log.info("DB Batch Insert 완료: {}건", recordsToSave.size());
         }
 
-        // 6. JDBC Batch Update (득표수 증가)
+        // 6. JDBC Batch Update (후보자 득표수 증가)
         if (!voteCountMap.isEmpty()) {
             String updateSql = "UPDATE candidate SET vote_count = vote_count + ? WHERE id = ?";
             List<Map.Entry<Integer, Integer>> updates = new ArrayList<>(voteCountMap.entrySet());
@@ -116,10 +119,24 @@ public class VoteConsumer {
                         ps.setInt(2, entry.getKey());   // 후보자 ID
                     });
             
-            log.info("DB Batch Update 완료: 후보자 {}명 득표수 갱신", updates.size());
+            log.info("DB Batch Update (Candidate) 완료: {}건", updates.size());
         }
 
-        // 7. 후속 이벤트 발행
+        // 7. JDBC Batch Update (총 투표수 증가) - 추가됨
+        if (!voteTotalMap.isEmpty()) {
+            String updateSql = "UPDATE vote SET total_votes = total_votes + ? WHERE id = ?";
+            List<Map.Entry<Integer, Integer>> updates = new ArrayList<>(voteTotalMap.entrySet());
+            
+            jdbcTemplate.batchUpdate(updateSql, updates, updates.size(),
+                    (PreparedStatement ps, Map.Entry<Integer, Integer> entry) -> {
+                        ps.setInt(1, entry.getValue()); // 증가할 표 수
+                        ps.setInt(2, entry.getKey());   // 투표 ID
+                    });
+            
+            log.info("DB Batch Update (Vote Total) 완료: {}건", updates.size());
+        }
+
+        // 8. 후속 이벤트 발행
         for (String msg : validMessages) {
             kafkaTemplate.send("vote-complete-topic", msg);
         }
