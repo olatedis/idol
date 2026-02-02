@@ -2,6 +2,7 @@ package com.bit.idol.chatservice.controller;
 
 import com.bit.idol.chatservice.dto.ChatMessageDto;
 import com.bit.idol.chatservice.dto.ChatRoomListDto;
+import com.bit.idol.chatservice.dto.FileUploadResponseDto;
 import com.bit.idol.chatservice.service.ChatService;
 import com.bit.idol.chatservice.service.S3Service;
 import com.bit.idol.chatservice.service.TranslationService;
@@ -166,27 +167,11 @@ public class ChatController {
 
     // --------------------
 
+    // 파일 업로드 API 개선 (썸네일 포함)
     @PostMapping("/chat/upload")
     @ResponseBody
-    public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
-        String fileUrl = s3Service.uploadFile(file);
-        String contentType = file.getContentType();
-        String type = "FILE";
-
-        if (contentType != null) {
-            if (contentType.startsWith("image")) {
-                type = "IMAGE";
-            } else if (contentType.startsWith("video")) {
-                type = "VIDEO";
-            } else if (contentType.startsWith("audio")) {
-                type = "VOICE";
-            }
-        }
-
-        Map<String, String> response = new HashMap<>();
-        response.put("url", fileUrl);
-        response.put("type", type);
-        
+    public ResponseEntity<FileUploadResponseDto> uploadFile(@RequestParam("file") MultipartFile file) {
+        FileUploadResponseDto response = s3Service.uploadFile(file);
         return ResponseEntity.ok(response);
     }
 
