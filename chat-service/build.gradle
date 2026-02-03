@@ -80,8 +80,11 @@ dependencies {
     // Jackson Afterburner (JSON 성능 튜닝)
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
-    // Thumbnailator (이미지 썸네일 생성) - 추가됨
+    // Thumbnailator (이미지 썸네일 생성)
     implementation 'net.coobird:thumbnailator:0.4.20'
+
+    // Commons Text (XSS 방어용) - 추가됨
+    implementation 'org.apache.commons:commons-text:1.10.0'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
