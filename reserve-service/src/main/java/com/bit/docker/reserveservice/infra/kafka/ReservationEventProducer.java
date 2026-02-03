@@ -13,6 +13,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -62,19 +64,21 @@ public class ReservationEventProducer {
         }
 
         String uuid = UUID.randomUUID().toString();
-        String m = uuid +":"+event.getUserId()+":"+reservation.getConcertId()+":"+reservation.getSeatId()+":"+LocalDateTime.now();
-            kafkaTemplate.send(
+        Map<String,String> map = new HashMap<>();
+        map.put("userId", String.valueOf(event.getUserId()));
+        map.put("concertId", String.valueOf(reservation.getConcertId()));
+        map.put("seatId", String.valueOf(reservation.getSeatId()));
+        kafkaTemplate.send(
                 "RESERVATION_CREATED",
                 ReservationEvent.builder()
-                    .eventType("CREATED")
-                    .targetType(ReservationEvent.TargetType.USER)
-                    .userId(reservation.getUserId())
-                    .concertId(reservation.getConcertId())
-                    .seatId(reservation.getSeatId())
-                    .occurredAt(LocalDateTime.now())
-                    .build()
-                    .toJson()
-            );
+                        .eventId(uuid)
+                        .targetType(ReservationEvent.TargetType.USER)
+                        .targetId(String.valueOf(reservation.getUserId()))
+                        .args(map)
+                        .occurredAt(LocalDateTime.now())
+                        .build()
+                        .toJson()
+        );
 
         log.info("좌석 결제 완료: userId={}, concert={}, seat={}", reservation.getUserId(), reservation.getConcertId(), reservation.getSeatId());
 

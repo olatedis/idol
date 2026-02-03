@@ -1,6 +1,7 @@
 package com.bit.docker.concertservice.application;
 
 import com.bit.docker.concertservice.domain.dto.ConcertCreateRequest;
+import com.bit.docker.concertservice.domain.dto.NotificationEventDto;
 import com.bit.docker.concertservice.domain.entity.Concert;
 import com.bit.docker.concertservice.infra.ConcertRepository;
 import lombok.AllArgsConstructor;
@@ -9,6 +10,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -55,8 +59,17 @@ public class ConcertCommandService {
         log.info("콘서트 등록 완료: concertId={}, title={}, agencyId={}", saved.getId(), saved.getTitle(), saved.getAgencyId());
 
         String uuid = UUID.randomUUID().toString();
-        String message = uuid+":"+concert.getId()+":"+request.getTitle()+":"+request.getStartTime();
-        kafkaTemplate.send("CONCERT_OPENED", message);
+        Map<String, String> map = new HashMap<>();
+        map.put("concertName", concert.getTitle());
+        map.put("concertId", String.valueOf(concert.getId()));
+        map.put("openAt", concert.getConcertDate().toString());
+        NotificationEventDto notify =  new NotificationEventDto();
+        notify.setEventId(uuid);
+        notify.setType("CONCERT_OPENED");
+        notify.setTargetType(NotificationEventDto.TargetType.GROUP_SUB);
+        notify.setArgs(map);
+        notify.setOccurredAt(LocalDateTime.now());
+        kafkaTemplate.send("notify-request-topic", notify.toString());
 
         return saved.getId();
     }
@@ -78,8 +91,17 @@ public class ConcertCommandService {
         concertRepository.save(concert);
 
         String uuid = UUID.randomUUID().toString();
-        String message = uuid+":"+concert.getId()+":"+request.getTitle()+":"+request.getStartTime();
-        kafkaTemplate.send("CONCERT_UPDATED", message);
+        Map<String, String> map = new HashMap<>();
+        map.put("concertName", concert.getTitle());
+        map.put("concertId", String.valueOf(concert.getId()));
+        map.put("openAt", concert.getConcertDate().toString());
+        NotificationEventDto notify =  new NotificationEventDto();
+        notify.setEventId(uuid);
+        notify.setType("CONCERT_UPDATED");
+        notify.setTargetType(NotificationEventDto.TargetType.GROUP_SUB);
+        notify.setArgs(map);
+        notify.setOccurredAt(LocalDateTime.now());
+        kafkaTemplate.send("notify-request-topic", notify.toString());
 
         log.info("콘서트 수정 완료: concertId={}", concertId);
     }

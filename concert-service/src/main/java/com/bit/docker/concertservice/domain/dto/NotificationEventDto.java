@@ -1,19 +1,18 @@
-package com.bit.docker.reserveservice.domain.dto;
+package com.bit.docker.concertservice.domain.dto;
 
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 import java.util.Map;
 
-@Getter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class ReservationEvent {
+public class NotificationEventDto {
     private String eventId;      // UUID
     private String type;         // 알림 종류
     private TargetType targetType; // 대상 타입
@@ -27,14 +26,6 @@ public class ReservationEvent {
         ALL,        // 전체 공지
         IDOL_SUB,   // 특정 아이돌 구독자들
         GROUP_SUB   // 특정 그룹 구독자들
-    }
-
-    public String toJson() {
-        try {
-            return new ObjectMapper().writeValueAsString(this);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
 }
