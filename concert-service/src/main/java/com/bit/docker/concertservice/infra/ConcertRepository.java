@@ -8,5 +8,5 @@ import java.util.List;
 
 public interface ConcertRepository extends JpaRepository<Concert, Integer> {
 	List<Concert> findByAgencyId(int agencyId);
-	List<Concert> findByAgencyIdAndActiveTrue(int agencyId);
+	List<Concert> findByGroupIdAndActiveTrue(int groupId);
 }

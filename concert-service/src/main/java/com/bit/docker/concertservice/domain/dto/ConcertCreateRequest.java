@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 public class ConcertCreateRequest {
     private int agencyId;          // 소속사 ID
+    private int groupId;            // 그룹 ID
     private String title;          // 콘서트 이름
     private String description;    // 설명
     private String venue;          // 장소
