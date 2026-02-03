@@ -27,4 +27,8 @@ public interface UserFeignClient {
     // 아이돌 전체 목록 조회
     @GetMapping("/idols")
     List<IdolDto> getAllIdols();
+
+    // 그룹 소속 아이돌 목록 조회 (추가됨)
+    @GetMapping("/groups/{groupId}/idols")
+    List<IdolDto> getIdolsByGroup(@PathVariable("groupId") int groupId);
 }

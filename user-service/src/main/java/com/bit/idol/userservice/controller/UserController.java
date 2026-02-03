@@ -38,7 +38,14 @@ public class UserController {
         return ResponseEntity.ok(result);
     }
 
-    // 마이페이지 정보 조회 (Aggregation) - 수정됨
+    // 닉네임 중복 검사 API (추가됨)
+    @GetMapping("/check/nickname")
+    public ResponseEntity<Boolean> checkNickname(@RequestParam("nickname") String nickname) {
+        boolean isAvailable = userService.checkNicknameAvailability(nickname);
+        return ResponseEntity.ok(isAvailable);
+    }
+
+    // 마이페이지 정보 조회 (Aggregation)
     @GetMapping("/me")
     public ResponseEntity<UserMyPageDto> getUserInfo(@RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role) {

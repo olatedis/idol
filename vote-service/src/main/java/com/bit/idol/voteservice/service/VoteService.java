@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -47,6 +48,17 @@ public class VoteService {
     private final UserFeignClient userFeignClient;
 
     private static final String BLACKLIST_KEY = "vote:blacklist:ip";
+
+    // Lua Script: 중복 투표 방지 (원자적 실행)
+    // KEYS[1]: vote:{voteId}:user:{userId}
+    // ARGV[1]: TTL (seconds)
+    private static final String VOTE_SCRIPT = 
+            "if redis.call('EXISTS', KEYS[1]) == 1 then " +
+            "   return 0 " + // 이미 존재함 (실패)
+            "end " +
+            "redis.call('SET', KEYS[1], 'voted') " +
+            "redis.call('EXPIRE', KEYS[1], ARGV[1]) " +
+            "return 1"; // 성공
 
     // 투표 목록 조회 (프론트엔드용)
     @Transactional(readOnly = true)
@@ -101,7 +113,7 @@ public class VoteService {
         return VoteInfo.from(savedVote);
     }
 
-    // 투표 종료 처리 (개별 트랜잭션 분리) - 추가됨
+    // 투표 종료 처리 (개별 트랜잭션 분리)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @CacheEvict(value = "votes", key = "'all'") // 상태 변경 시 목록 캐시 갱신
     public void closeVote(int voteId) {
@@ -157,9 +169,14 @@ public class VoteService {
         String redisKey = "vote:" + voteId + ":user:" + userId;
         Duration ttl = Duration.between(now, vote.getEndDate());
 
-        Boolean isVoted = redisTemplate.opsForValue().setIfAbsent(redisKey, "voted", ttl);
+        // Lua Script 실행 (원자적 중복 체크 및 설정)
+        Long result = redisTemplate.execute(
+                new DefaultRedisScript<>(VOTE_SCRIPT, Long.class),
+                Collections.singletonList(redisKey),
+                String.valueOf(ttl.getSeconds())
+        );
 
-        if (Boolean.FALSE.equals(isVoted)) {
+        if (result == null || result == 0) {
             throw new RuntimeException("이미 투표에 참여하였습니다.");
         }
 

@@ -4,6 +4,7 @@ import com.bit.idol.voteservice.dto.VoteDetailDto;
 import com.bit.idol.voteservice.dto.VoteInfo;
 import com.bit.idol.voteservice.entity.Candidate;
 import com.bit.idol.voteservice.entity.Vote;
+import com.bit.idol.voteservice.entity.VoteRecord;
 import com.bit.idol.voteservice.repository.CandidateRepository;
 import com.bit.idol.voteservice.repository.VoteRecordRepository;
 import com.bit.idol.voteservice.repository.VoteRepository;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -40,7 +42,7 @@ public class VoteReader {
                 .orElseThrow(() -> new RuntimeException("후보자 없음"));
     }
 
-    // 전체 투표 목록 조회 (캐싱 적용) - 추가됨
+    // 전체 투표 목록 조회 (캐싱 적용)
     @Cacheable(value = "votes", key = "'all'")
     public List<Vote> getAllVotesCached() {
         return voteRepository.findAll();
@@ -56,11 +58,20 @@ public class VoteReader {
                 .map(VoteInfo::from);
     }
 
-    // 투표 상세 조회 (후보자 목록 포함)
-    public VoteDetailDto getVoteDetail(int voteId) {
+    // 투표 상세 조회 (후보자 목록 포함) - userId 추가됨
+    public VoteDetailDto getVoteDetail(int voteId, Integer userId) {
         Vote vote = voteRepository.findById(voteId)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 투표입니다."));
-        return VoteDetailDto.from(vote);
+        
+        VoteDetailDto detailDto = VoteDetailDto.from(vote);
+
+        // 로그인한 유저라면 내가 투표한 후보 ID 조회
+        if (userId != null) {
+            Optional<VoteRecord> record = voteRecordRepository.findByVoteIdAndUserId(voteId, userId);
+            record.ifPresent(r -> detailDto.setMyVotedCandidateId(r.getCandidateId()));
+        }
+
+        return detailDto;
     }
 
     // 투표 참여 여부 확인

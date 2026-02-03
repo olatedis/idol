@@ -20,7 +20,12 @@ public class VoteDetailDto {
     private String description;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private String status;
+    private int totalVotes; // 총 투표수
     private List<CandidateDto> candidates;
+    
+    // 내가 투표한 후보 ID (로그인 유저용) - 추가됨
+    private Integer myVotedCandidateId;
 
     public static VoteDetailDto from(Vote vote) {
         return VoteDetailDto.builder()
@@ -29,6 +34,8 @@ public class VoteDetailDto {
                 .description(vote.getDescription())
                 .startDate(vote.getStartDate())
                 .endDate(vote.getEndDate())
+                .status(vote.getStatus().name())
+                .totalVotes(vote.getTotalVotes())
                 .candidates(vote.getCandidate().stream()
                         .map(CandidateDto::from)
                         .collect(Collectors.toList()))

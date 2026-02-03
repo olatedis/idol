@@ -14,6 +14,7 @@ import com.bit.idol.chatservice.filter.SuspiciousWordFilter;
 import com.bit.idol.chatservice.producer.ChatProducer;
 import com.bit.idol.chatservice.producer.NotificationProducer;
 import com.bit.idol.chatservice.repository.ChatRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +69,33 @@ public class ChatService {
                     .collect(Collectors.toList());
         }
 
-        // 2. 내 구독 목록 조회 (Subscription Service)
+        return buildChatRoomList(userId, idols);
+    }
+
+    // 그룹별 채팅방 목록 조회 (캐싱 적용)
+    @CircuitBreaker(name = "chat-room-list", fallbackMethod = "getChatRoomListFallback")
+    public List<ChatRoomListDto> getChatRoomListByGroup(int userId, int groupId) {
+        String cacheKey = "groups:members:" + groupId;
+        List<IdolDto> groupMembers;
+
+        // 1. Redis 캐시 조회
+        Object cachedData = redisTemplate.opsForValue().get(cacheKey);
+        
+        if (cachedData != null) {
+            groupMembers = objectMapper.convertValue(cachedData, new TypeReference<List<IdolDto>>() {});
+        } else {
+            // 2. 없으면 Feign 호출 및 캐싱 (TTL 1시간)
+            groupMembers = userFeignClient.getIdolsByGroup(groupId);
+            redisTemplate.opsForValue().set(cacheKey, groupMembers, Duration.ofHours(1));
+        }
+        
+        // 3. 실시간 데이터 조합
+        return buildChatRoomList(userId, groupMembers);
+    }
+
+    // 공통 로직 분리
+    private List<ChatRoomListDto> buildChatRoomList(int userId, List<IdolDto> idols) {
+        // 내 구독 목록 조회 (Subscription Service)
         Set<Integer> subscribedIdolIds = new HashSet<>();
         try {
             List<SubscriptionDto> mySubscriptions = subscriptionFeignClient.getMySubscriptions(userId);
@@ -79,7 +106,6 @@ public class ChatService {
             log.error("구독 정보 조회 실패 (Fallback: 구독 정보 없이 목록 표시): {}", e.getMessage());
         }
 
-        // 3. 데이터 조합
         Set<Integer> finalSubscribedIdolIds = subscribedIdolIds;
         return idols.stream().map(idol -> {
             Long idolId = (long) idol.getIdolId();
@@ -97,7 +123,7 @@ public class ChatService {
                 }
             }
 
-            // --- 안 읽은 메시지 수 계산 (Redis 활용) ---
+            // 안 읽은 메시지 수 계산
             int unreadCount = 0;
             if (finalSubscribedIdolIds.contains(idol.getIdolId())) {
                 String totalCountKey = "chat:room:" + idolId + ":total_count";
@@ -111,7 +137,6 @@ public class ChatService {
                 
                 unreadCount = Math.max(0, total - read);
             }
-            // ----------------------------------------
 
             return ChatRoomListDto.builder()
                     .idolId(idolId)
@@ -130,15 +155,22 @@ public class ChatService {
         log.error("채팅방 목록 조회 실패 (User Service 장애): {}", t.getMessage());
         return Collections.emptyList();
     }
+    
+    // 오버로딩된 Fallback (파라미터 다름)
+    public List<ChatRoomListDto> getChatRoomListFallback(int userId, int groupId, Throwable t) {
+        log.error("그룹 채팅방 목록 조회 실패 (User Service 장애): {}", t.getMessage());
+        return Collections.emptyList();
+    }
 
-    // 읽음 처리 (API 호출 시)
+    // 읽음 처리 (API 호출 시) - TTL 적용
     public void markAsRead(int userId, Long idolId) {
         String totalCountKey = "chat:room:" + idolId + ":total_count";
         String readCountKey = "chat:room:" + idolId + ":user:" + userId + ":last_read_count";
         
         Object totalObj = redisTemplate.opsForValue().get(totalCountKey);
         if (totalObj != null) {
-            redisTemplate.opsForValue().set(readCountKey, totalObj);
+            // 30일 TTL 적용
+            redisTemplate.opsForValue().set(readCountKey, totalObj, Duration.ofDays(30));
         }
     }
 
@@ -179,22 +211,24 @@ public class ChatService {
         
         messageDto.setId(savedMessage.getId());
 
-        // 3. Redis 캐싱
+        // 3. Redis 캐싱 (TTL 적용)
         String cacheKey = "chat:room:" + messageDto.getIdolId();
         redisTemplate.opsForList().leftPush(cacheKey, messageDto);
         redisTemplate.opsForList().trim(cacheKey, 0, CACHE_SIZE - 1);
+        redisTemplate.expire(cacheKey, Duration.ofDays(3)); // 3일 TTL
 
-        // 3-1. Redis 미리보기 캐싱
+        // 3-1. Redis 미리보기 캐싱 (TTL 적용)
         String previewKey = "chat:preview:" + messageDto.getIdolId();
         Map<String, Object> previewData = new HashMap<>();
         previewData.put("content", messageDto.getContent());
         previewData.put("sender", messageDto.getSenderNickname());
         previewData.put("time", LocalDateTime.now().toString());
-        redisTemplate.opsForValue().set(previewKey, previewData);
+        redisTemplate.opsForValue().set(previewKey, previewData, Duration.ofDays(7)); // 7일 TTL
 
         // --- 3-2. 총 메시지 수 증가 (읽음 처리용) ---
         String totalCountKey = "chat:room:" + messageDto.getIdolId() + ":total_count";
         redisTemplate.opsForValue().increment(totalCountKey);
+        redisTemplate.expire(totalCountKey, Duration.ofDays(30)); // 30일 TTL
         // ----------------------------------------
 
         // 4. Kafka로 전송 (성공 시 SENT 업데이트)
@@ -240,7 +274,7 @@ public class ChatService {
             preview.put("sender", lastMsg.getSenderNickname());
             preview.put("time", lastMsg.getCreatedAt().toString());
             
-            redisTemplate.opsForValue().set(previewKey, preview);
+            redisTemplate.opsForValue().set(previewKey, preview, Duration.ofDays(7)); // 조회 시에도 TTL 갱신
             return preview;
         }
         
@@ -255,7 +289,7 @@ public class ChatService {
 
         String pinKey = "chat:pin:" + idolId;
         ChatMessageDto pinDto = convertToDto(message);
-        redisTemplate.opsForValue().set(pinKey, pinDto);
+        redisTemplate.opsForValue().set(pinKey, pinDto); // 공지는 영구 저장 (TTL 없음)
         
         pinDto.setType("PIN");
         chatProducer.sendChatMessage(pinDto);
@@ -288,7 +322,7 @@ public class ChatService {
 
     // --- 미디어 모아보기 ---
 
-    public List<ChatMessageDto> getChatMedia(Long idolId, String lastId, int size) {
+    public List<ChatMessageDto> getChatMedia(int userId, Long idolId, String lastId, int size) {
         Pageable pageable = PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "id"));
         List<ChatMessage> messages;
 
@@ -300,6 +334,7 @@ public class ChatService {
 
         return messages.stream()
                 .map(this::convertToDto)
+                .peek(dto -> dto.setMe(dto.getSenderId() == userId)) // isMe 설정
                 .collect(Collectors.toList());
     }
 
@@ -435,30 +470,47 @@ public class ChatService {
         }
     }
 
-    public List<ChatMessageDto> getChatHistory(Long idolId, String lastId, int size) {
+    public List<ChatMessageDto> getChatHistory(int userId, Long idolId, String lastId, int size) {
+        List<ChatMessageDto> result = new ArrayList<>();
+
+        // 1. Redis 캐시 조회 (최신 메시지인 경우만)
         if (lastId == null) {
             String cacheKey = "chat:room:" + idolId;
             List<Object> cachedMessages = redisTemplate.opsForList().range(cacheKey, 0, size - 1);
             
             if (cachedMessages != null && !cachedMessages.isEmpty()) {
-                return cachedMessages.stream()
-                        .map(obj -> objectMapper.convertValue(obj, ChatMessageDto.class)) // 안전한 변환 적용
+                List<ChatMessageDto> redisDtos = cachedMessages.stream()
+                        .map(obj -> objectMapper.convertValue(obj, ChatMessageDto.class))
                         .collect(Collectors.toList());
+                result.addAll(redisDtos);
             }
         }
 
-        Pageable pageable = PageRequest.of(0, size);
-        List<ChatMessage> messages;
+        // 2. 부족한 만큼 DB에서 추가 조회
+        if (result.size() < size) {
+            int needMore = size - result.size();
+            Pageable pageable = PageRequest.of(0, needMore);
+            List<ChatMessage> dbMessages;
 
-        if (lastId == null) {
-            messages = chatRepository.findByIdolIdOrderByIdDesc(idolId, pageable);
-        } else {
-            messages = chatRepository.findByIdolIdAndIdLessThanOrderByIdDesc(idolId, lastId, pageable);
+            if (lastId == null) {
+                // Redis에 데이터가 아예 없거나 부족한 경우 (최신순)
+                dbMessages = chatRepository.findByIdolIdOrderByIdDesc(idolId, pageable);
+            } else {
+                // 페이징 조회 (lastId 이전)
+                dbMessages = chatRepository.findByIdolIdAndIdLessThanOrderByIdDesc(idolId, lastId, pageable);
+            }
+            
+            List<ChatMessageDto> dbDtos = dbMessages.stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+            
+            result.addAll(dbDtos);
         }
         
-        return messages.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+        // 3. isMe 필드 설정
+        result.forEach(dto -> dto.setMe(dto.getSenderId() == userId));
+        
+        return result;
     }
 
     private ChatMessageDto convertToDto(ChatMessage entity) {

@@ -32,7 +32,7 @@ public class User {
     @Column(nullable = false)
     private String password; // 소셜 로그인은 임의의 값 저장
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true) // 닉네임 중복 방지 추가
     private String nickname;
 
     @Column(nullable = false)

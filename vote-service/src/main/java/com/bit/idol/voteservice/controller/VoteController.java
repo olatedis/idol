@@ -50,7 +50,7 @@ public class VoteController {
         return ResponseEntity.ok(voteList);
     }
 
-    // 투표 목록 조회 (로그인 유저용 - 내 참여 여부 포함) - 추가됨
+    // 투표 목록 조회 (로그인 유저용 - 내 참여 여부 포함)
     @GetMapping("/list")
     public ResponseEntity<List<VoteListDto>> getVoteListWithStatus(
             @RequestHeader("X-User-Id") int userId) {
@@ -65,10 +65,13 @@ public class VoteController {
         return ResponseEntity.ok(records);
     }
 
-    // 투표 상세 조회
+    // 투표 상세 조회 - userId 추가 (비로그인 허용)
     @GetMapping("/{voteId}")
-    public ResponseEntity<VoteDetailDto> getVoteDetail(@PathVariable int voteId) {
-        VoteDetailDto voteDetail = voteReader.getVoteDetail(voteId);
+    public ResponseEntity<VoteDetailDto> getVoteDetail(
+            @PathVariable int voteId,
+            @RequestHeader(value = "X-User-Id", required = false) Integer userId) {
+        
+        VoteDetailDto voteDetail = voteReader.getVoteDetail(voteId, userId);
         return ResponseEntity.ok(voteDetail);
     }
 

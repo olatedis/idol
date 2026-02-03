@@ -21,6 +21,7 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         jdbc:
           batch_size: 500 # JPA Batch Size 설정
+    open-in-view: false # OSIV 끄기 (성능 최적화)
 
   data:
     redis:
@@ -85,7 +86,7 @@ resilience4j:
         waitDurationInOpenState: 10s # 차단 후 10초 대기
         failureRateThreshold: 50 # 실패율 50% 이상이면 차단
         eventConsumerBufferSize: 10
-  
+
   # RateLimiter 설정 (DB 보호용)
   ratelimiter:
     instances:
