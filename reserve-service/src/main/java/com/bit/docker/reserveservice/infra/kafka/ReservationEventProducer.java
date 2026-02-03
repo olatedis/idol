@@ -32,7 +32,7 @@ public class ReservationEventProducer {
 
 
     @KafkaListener(
-            topics = "payment-completed",
+            topics = "payment.completed",
             groupId = "reservation-service"
     )
 
@@ -92,7 +92,6 @@ public class ReservationEventProducer {
             String uuid = UUID.randomUUID().toString();
 
             Map<String, String> args = new HashMap<>();
-            args.put("userId", String.valueOf(reservation.getUserId()));
             args.put("concertId", String.valueOf(reservation.getConcertId()));
             args.put("seatId", String.valueOf(reservation.getSeatId()));
 
@@ -102,7 +101,7 @@ public class ReservationEventProducer {
                     .targetType(ReservationEvent.TargetType.USER)
                     .targetId(String.valueOf(reservation.getUserId()))
                     .args(args)
-                    .redirectUrl("/reservation") //TODO: 라우팅 조정
+                    .redirectUrl("/reservation") // TODO: 라우팅 조정
                     .occurredAt(LocalDateTime.now())
                     .build();
 
@@ -116,4 +115,12 @@ public class ReservationEventProducer {
                     reservation.getUserId(), reservation.getConcertId(), e.getMessage());
         }
     }
+
+    public void publishPaymentRequested(PaymentEvent event) {
+        kafkaTemplate.send("payment.requested", event.toJson());
+        log.info("결제 요청 발행: domain={}, userId={}, targetId={}",
+                event.getDomain(), event.getUserId(), event.getTargetId());
+    }
+
+
 }

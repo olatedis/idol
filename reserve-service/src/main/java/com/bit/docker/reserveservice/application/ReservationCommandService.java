@@ -32,26 +32,29 @@ public class ReservationCommandService {
         Reservation reservation = null;
         try {
             reservation = Reservation.create(userId, concertId, seatId, price);
-
             reservationRepository.save(reservation);
 
             PaymentEvent event = new PaymentEvent(
                     userId,
                     null,
-                    "Reservation-service",
-                    seatId,
+                    "RESERVATION",          // ✅ 결제완료 consumer의 비교값과 일치
+                    reservation.getId(),    // ✅ targetId = reservationId로 추천
                     price
             );
-            eventProducer.publishReservationCreated(event);
+
+            // ✅ 결제 요청만 보냄
+            eventProducer.publishPaymentRequested(event);
 
             return reservation.getId();
+
         } catch (Exception e) {
             try {
-                seatLockRepository.unlock(concertId, seatId);
+                seatLockRepository.unlock(concertId, seatId, userId);
             } catch (Exception ex) {
                 log.error(ex.getMessage(), ex);
             }
             throw e;
         }
     }
+
 }

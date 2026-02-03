@@ -86,20 +86,22 @@ public class SubscriptionService {
             topics = "payment.completed",
             groupId = "subscription-service"
     )
+    @Transactional
     public void consume(String message) {
 
-        PaymentEvent event =
-                PaymentEvent.fromJson(message);
+        PaymentEvent event = PaymentEvent.fromJson(message);
 
         if (!"SUBSCRIPTION".equals(event.getDomain())) {
             return;
         }
 
+        int subscriptionId = event.getTargetId();
+
         Subscription subscription =
                 subscriptionRepository
                         .findByUserIdAndIdolIdAndStatus(
+                                subscriptionId,
                                 event.getUserId(),
-                                event.getTargetId(),
                                 SubscriptionStatus.PENDING
                         )
                         .orElseThrow();
@@ -111,14 +113,15 @@ public class SubscriptionService {
         args.put("userId", String.valueOf(subscription.getUserId()));
         args.put("idolId", String.valueOf(subscription.getIdolId()));
         args.put("startAt", subscription.getStartedAt().toString());
-        args.put("expireAt", subscription.getExpiredAt().toString());
+        args.put("expiredAt", subscription.getExpiredAt().toString());
         eventProducer.publish(
-                "IDOL_SUB_STARTED",
                 SubscriptionEvent.builder()
                         .eventId(uuid)
+                        .type("IDOL_SUB_STARTED")
                         .targetType(SubscriptionEvent.TargetType.USER)
                         .targetId(String.valueOf(subscription.getUserId()))
                         .args(args)
+                        .redirectUrl("/subscription") //TODO: 나중에 라우팅 제대로 맞추기.
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
@@ -150,12 +153,13 @@ public class SubscriptionService {
         args.put("userId", String.valueOf(subscription.getUserId()));
         args.put("idolId", String.valueOf(subscription.getIdolId()));
         eventProducer.publish(
-                "IDOL_SUB_END",
                 SubscriptionEvent.builder()
                         .eventId(uuid)
+                        .type("IDOL_SUB_END")
                         .targetType(SubscriptionEvent.TargetType.USER)
                         .targetId(String.valueOf(subscription.getUserId()))
                         .args(args)
+                        .redirectUrl("/subscription") //TODO: 나중에 라우팅 제대로 맞추기.
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
@@ -232,12 +236,13 @@ public class SubscriptionService {
         Map<String, String> args = new HashMap<>();
         args.put("groupId", String.valueOf(gs.getGroupId()));
         eventProducer.publish(
-                "GROUP_SUB_STARTED",
                 SubscriptionEvent.builder()
                         .eventId(uuid)
+                        .type("GROUP_SUB_STARTED")
                         .targetType(SubscriptionEvent.TargetType.USER)
                         .targetId(String.valueOf(gs.getUserId()))
                         .args(args)
+                        .redirectUrl("/subscription") //TODO: 나중에 라우팅 제대로 맞추기.
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
@@ -268,12 +273,13 @@ public class SubscriptionService {
         args.put("userId", String.valueOf(gs.getUserId()));
         args.put("groupId", String.valueOf(gs.getGroupId()));
         eventProducer.publish(
-                "GROUP_SUB_END",
                 SubscriptionEvent.builder()
                         .eventId(uuid)
+                        .type("GROUP_SUB_END")
                         .targetType(SubscriptionEvent.TargetType.USER)
                         .targetId(String.valueOf(gs.getUserId()))
                         .args(args)
+                        .redirectUrl("/subscription") //TODO: 나중에 라우팅 제대로 맞추기.
                         .occurredAt(LocalDateTime.now())
                         .build()
         );

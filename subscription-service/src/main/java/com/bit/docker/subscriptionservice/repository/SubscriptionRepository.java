@@ -13,25 +13,41 @@ import java.util.Optional;
 public interface SubscriptionRepository extends JpaRepository<Subscription, Integer> {
 
     Optional<Subscription> findByUserIdAndIdolId(int userId, int idolId);
+
     List<Subscription> findAllByUserIdAndStatus(int userId, SubscriptionStatus status);
+
     boolean existsByUserIdAndIdolIdAndStatus(
             int userId,
             int idolId,
             SubscriptionStatus status
     );
+
     List<Subscription> findAllByStatusAndExpiredAtBefore(
             SubscriptionStatus status,
             LocalDateTime now
     );
 
-    // 0121 그룹id관련 수정(추가)
     @Query("""
         SELECT s.userId
         FROM Subscription s
         WHERE s.idolId = :idolId
           AND s.status = :status
     """)
-    List<Integer> selectUserIdsByIdolIdAndStatus(@Param("idolId") int idolId, @Param("status") SubscriptionStatus status);
+    List<Integer> selectUserIdsByIdolIdAndStatus(
+            @Param("idolId") int idolId,
+            @Param("status") SubscriptionStatus status
+    );
 
-    Optional<Subscription> findByUserIdAndIdolIdAndStatus(int userId, int idolId, SubscriptionStatus subscriptionStatus);
+    Optional<Subscription> findByUserIdAndIdolIdAndStatus(
+            int userId,
+            int idolId,
+            SubscriptionStatus subscriptionStatus
+    );
+
+    // ✅ A안 핵심: 결제완료 이벤트에서 subscriptionId(targetId)로 조회할 때 사용
+    Optional<Subscription> findByIdAndUserIdAndStatus(
+            int id,
+            int userId,
+            SubscriptionStatus status
+    );
 }
