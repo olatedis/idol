@@ -3,6 +3,7 @@ package com.bit.idol.userservice.service;
 import com.bit.idol.userservice.client.SubscriptionFeignClient;
 import com.bit.idol.userservice.document.UserView;
 import com.bit.idol.userservice.dto.UserMyPageDto;
+import com.bit.idol.userservice.dto.event.UserEvent;
 import com.bit.idol.userservice.dto.notification.NotificationEventDto;
 import com.bit.idol.userservice.dto.notification.TargetType;
 import com.bit.idol.userservice.dto.user.PasswordChangeDto;
@@ -13,7 +14,6 @@ import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
 import com.bit.idol.userservice.entity.UserStatus;
 import com.bit.idol.userservice.producer.NotificationProducer;
-import com.bit.idol.userservice.producer.UserSyncProducer;
 import com.bit.idol.userservice.repository.BanHistoryRepository;
 import com.bit.idol.userservice.repository.UserRepository;
 import com.bit.idol.userservice.repository.UserViewRepository;
@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -46,10 +47,10 @@ public class UserService {
     private final S3Service s3Service;
     private final StringRedisTemplate redisTemplate;
     private final NotificationProducer notificationProducer;
-    private final UserSyncProducer userSyncProducer;
     private final SubscriptionFeignClient subscriptionFeignClient;
+    private final ApplicationEventPublisher eventPublisher; // 추가됨
 
-    // 닉네임 중복 검사 (추가됨)
+    // 닉네임 중복 검사
     public boolean checkNicknameAvailability(String nickname) {
         return !userRepository.existsByNickname(nickname);
     }
@@ -130,7 +131,6 @@ public class UserService {
             throw new RuntimeException("이미 존재하는 사용자 이름입니다.");
         }
         
-        // 닉네임 중복 체크 추가
         if (userRepository.existsByNickname(userDto.getNickname())) {
             throw new RuntimeException("이미 존재하는 닉네임입니다.");
         }
@@ -147,7 +147,9 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
-        userSyncProducer.send(user.getId(), "CREATE");
+        
+        // 이벤트 발행 (커밋 후 실행됨)
+        eventPublisher.publishEvent(new UserEvent(user.getId(), "CREATE"));
         
         log.info("회원가입 완료: username={}, userId={}", user.getUsername(), user.getId());
     }
@@ -174,7 +176,9 @@ public class UserService {
                             .build();
 
                     User savedUser = userRepository.save(newUser);
-                    userSyncProducer.send(savedUser.getId(), "CREATE");
+                    
+                    // 이벤트 발행
+                    eventPublisher.publishEvent(new UserEvent(savedUser.getId(), "CREATE"));
                     
                     log.info("소셜 회원가입 완료: provider={}, userId={}", userDto.getProvider(), savedUser.getId());
                     return UserDto.fromEntity(savedUser);
@@ -188,20 +192,20 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         if (userUpdateDto.getNickname() != null) {
-            // 닉네임 변경 시 중복 체크
             if (!user.getNickname().equals(userUpdateDto.getNickname()) && 
                 userRepository.existsByNickname(userUpdateDto.getNickname())) {
                 throw new RuntimeException("이미 존재하는 닉네임입니다.");
             }
             user.setNickname(userUpdateDto.getNickname());
         }
-
+        
         if (userUpdateDto.getEmail() != null) user.setEmail(userUpdateDto.getEmail());
         if (userUpdateDto.getPhone() != null) user.setPhone(userUpdateDto.getPhone());
         if (userUpdateDto.getAddress() != null) user.setAddress(userUpdateDto.getAddress());
         if (userUpdateDto.getImgUrl() != null) user.setImgUrl(userUpdateDto.getImgUrl());
 
-        userSyncProducer.send(user.getId(), "UPDATE");
+        // 이벤트 발행
+        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
         updateUsernameCache(user);
         
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
@@ -214,25 +218,21 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        String oldImgUrl = user.getImgUrl(); // 기존 이미지 URL 저장
+        String oldImgUrl = user.getImgUrl();
 
-        // 1. 새 파일 업로드 (실패 시 여기서 예외 발생 -> 트랜잭션 롤백 -> 기존 URL 유지)
         String fileUrl = s3Service.uploadFile(file);
-        
-        // 2. DB 업데이트
         user.setImgUrl(fileUrl);
         
-        // 3. 기존 파일 삭제 (비동기로 처리하거나, 로그만 남기고 나중에 배치로 삭제하는 게 안전함)
         if (oldImgUrl != null && !oldImgUrl.isEmpty()) {
             try {
                 s3Service.deleteFile(oldImgUrl);
             } catch (Exception e) {
                 log.warn("기존 프로필 이미지 삭제 실패 (S3): {}", oldImgUrl);
-                // 예외를 던지지 않음 (새 이미지 업로드는 성공했으므로)
             }
         }
         
-        userSyncProducer.send(user.getId(), "UPDATE");
+        // 이벤트 발행
+        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
         updateUsernameCache(user);
         
         return UserDto.fromEntity(user);
@@ -278,7 +278,9 @@ public class UserService {
         }
 
         userRepository.delete(user);
-        userSyncProducer.send(userId, "DELETE");
+        
+        // 이벤트 발행
+        eventPublisher.publishEvent(new UserEvent(userId, "DELETE"));
         
         evictUserCache(user);
     }
@@ -304,7 +306,8 @@ public class UserService {
             log.warn("유저 자동 일시정지 처리: userId={}", userId);
         }
         
-        userSyncProducer.send(user.getId(), "UPDATE");
+        // 이벤트 발행
+        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
         updateUsernameCache(user);
         
         return UserDto.fromEntity(user);
@@ -331,7 +334,8 @@ public class UserService {
                 .build();
         banHistoryRepository.save(history);
 
-        userSyncProducer.send(user.getId(), "UPDATE");
+        // 이벤트 발행
+        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
         updateUsernameCache(user);
         
         log.info("유저 상태 변경 완료: userId={}, status={}", userId, newStatus);
