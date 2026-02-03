@@ -7,10 +7,9 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByUsername(String username);
-    
-    // 이메일로 유저 찾기 (비밀번호 재설정용)
     Optional<User> findByEmail(String email);
-    
-    // 소셜 로그인용 조회 메서드
     Optional<User> findByProviderAndProviderId(String provider, String providerId);
+    
+    // 닉네임 중복 검사 (추가됨)
+    boolean existsByNickname(String nickname);
 }

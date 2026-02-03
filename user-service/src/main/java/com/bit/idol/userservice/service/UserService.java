@@ -49,6 +49,11 @@ public class UserService {
     private final UserSyncProducer userSyncProducer;
     private final SubscriptionFeignClient subscriptionFeignClient;
 
+    // 닉네임 중복 검사 (추가됨)
+    public boolean checkNicknameAvailability(String nickname) {
+        return !userRepository.existsByNickname(nickname);
+    }
+
     // 마이페이지 정보 조회 (Aggregation)
     public UserMyPageDto getMyPageInfo(int userId) {
         UserDto user = getUserById(userId);
@@ -124,6 +129,11 @@ public class UserService {
         if (userRepository.findByUsername(userDto.getUsername()).isPresent()) {
             throw new RuntimeException("이미 존재하는 사용자 이름입니다.");
         }
+        
+        // 닉네임 중복 체크 추가
+        if (userRepository.existsByNickname(userDto.getNickname())) {
+            throw new RuntimeException("이미 존재하는 닉네임입니다.");
+        }
 
         User user = User.builder()
                 .username(userDto.getUsername())
@@ -177,7 +187,15 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        if (userUpdateDto.getNickname() != null) user.setNickname(userUpdateDto.getNickname());
+        if (userUpdateDto.getNickname() != null) {
+            // 닉네임 변경 시 중복 체크
+            if (!user.getNickname().equals(userUpdateDto.getNickname()) && 
+                userRepository.existsByNickname(userUpdateDto.getNickname())) {
+                throw new RuntimeException("이미 존재하는 닉네임입니다.");
+            }
+            user.setNickname(userUpdateDto.getNickname());
+        }
+
         if (userUpdateDto.getEmail() != null) user.setEmail(userUpdateDto.getEmail());
         if (userUpdateDto.getPhone() != null) user.setPhone(userUpdateDto.getPhone());
         if (userUpdateDto.getAddress() != null) user.setAddress(userUpdateDto.getAddress());
