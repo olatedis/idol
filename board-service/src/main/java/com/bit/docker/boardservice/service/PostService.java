@@ -140,6 +140,14 @@ public class PostService {
     private void validateBoardScope(BoardType boardType, Long idolId, Long groupId) {
         if (boardType == null) throw new RuntimeException("게시판 타입은 필수입니다.");
 
+        // ADMIN_NOTICE: idolId/groupId 둘 다 없어야 함
+        if (boardType == BoardType.ADMIN_NOTICE) {
+            if (idolId != null || groupId != null) throw new RuntimeException(
+                    "공공지사항 게시판에는 idolId/groupId가 없어야 합니다."
+            );
+            return;
+        }
+
         // IDOL_* : idolId 필수, groupId 금지
         if (boardType == BoardType.IDOL_OFFICIAL || boardType == BoardType.IDOL_FAN) {
             if (idolId == null) throw new RuntimeException("아이돌 게시판에는 아이돌 ID가 필수입니다.");
@@ -160,6 +168,12 @@ public class PostService {
 
     private void requireCreatePermission(BoardType boardType, Long idolId, Long groupId, Integer userId, Role role) {
         if (role == null) throw new RuntimeException("권한 정보가 필요합니다.");
+
+        // ADMIN_NOTICE: ADMIN만 작성 가능
+        if(boardType == BoardType.ADMIN_NOTICE) {
+            if (role != Role.ADMIN) throw new RuntimeException("접근 권한이 없습니다.");
+            return;
+        }
 
         // ADMIN은 모든 것 가능
         if (role == Role.ADMIN) return;
@@ -218,6 +232,12 @@ public class PostService {
     private void requireUpdatePermission(Post post, Integer userId, Role role) {
         if (role == null) throw new RuntimeException("권한 정보가 필요합니다.");
 
+        // ADMIN_NOTICE: ADMIN만 수정 가능
+        if (post.getBoardType() == BoardType.ADMIN_NOTICE) {
+            if (role != Role.ADMIN) throw new RuntimeException("접근 권한이 없습니다.");
+            return;
+        }
+
         // ADMIN은 모든 것 가능
         if (role == Role.ADMIN) return;
 
@@ -267,6 +287,9 @@ public class PostService {
     }
 
     private void requireReadSubscription(Post post, Integer userId, Role role) {
+        // 공지사항은 구독 없이 전체공개
+        if (post.getBoardType() == BoardType.ADMIN_NOTICE) return;
+
         // ADMIN은 읽기제한 없음
         if (role == Role.ADMIN) return;
 
@@ -280,13 +303,34 @@ public class PostService {
         if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
             boolean ok = subscriptionInternalClient.isActiveGroupSubscriber(post.getGroupId(), userId);
             if (!ok) throw new RuntimeException("구독이 필요합니다.");
-            return;
         }
     }
 
     // Notify
 
     private void publishNewPostNotify(Post post) {
+        // ADMIN_NOTICE: 전체 공지 알림(ALL)
+        if (post.getBoardType() == BoardType.ADMIN_NOTICE) {
+            NotifyRequestEvent event = new NotifyRequestEvent();
+            event.setEventId(UUID.randomUUID().toString());
+            event.setType("BOARD_ADMIN_NOTICE");
+
+            event.setTargetType(NotifyTargetType.ALL.name());
+            event.setTargetId(null);
+
+            Map<String, String> args = new HashMap<>();
+            args.put("postId", String.valueOf(post.getPostId()));
+            args.put("title", post.getTitle());
+            args.put("boardType", post.getBoardType().name());
+            event.setArgs(args);
+
+            event.setRedirectUrl("/board/notice/" + post.getPostId());
+            event.setOccurredAt(OffsetDateTime.now().toString());
+
+            notifyProducer.send(event);
+            return;
+        }
+
         // FAN 게시판은 기본 알림 없음
         if (post.getBoardType() == BoardType.IDOL_FAN || post.getBoardType() == BoardType.GROUP_FAN) return;
 

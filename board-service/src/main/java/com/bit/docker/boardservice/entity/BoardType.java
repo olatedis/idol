@@ -11,5 +11,6 @@ public enum BoardType {
     IDOL_OFFICIAL,
     IDOL_FAN,
     GROUP_OFFICIAL,
-    GROUP_FAN
+    GROUP_FAN,
+    ADMIN_NOTICE
 }
