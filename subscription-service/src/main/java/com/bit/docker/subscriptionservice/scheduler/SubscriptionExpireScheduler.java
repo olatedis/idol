@@ -17,7 +17,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -50,46 +53,49 @@ public class SubscriptionExpireScheduler {
                     KEY_PREFIX_IDOL + sub.getUserId() + ":" + sub.getIdolId()
             );
 
+            String uuid = UUID.randomUUID().toString();
+            Map<String, String> args = new HashMap<>();
+            args.put("userId", String.valueOf(sub.getUserId()));
+            args.put("groupId", String.valueOf(sub.getIdolId()));
             eventProducer.publish(
-                    "subscription.expired",
+                    "IDOL_SUB_END",
                     SubscriptionEvent.builder()
-                            .eventType("EXPIRED")
-                            .targetType(SubscriptionEvent.TargetType.IDOL)
-                            .userId(sub.getUserId())
-                            .idolId(sub.getIdolId())
-                            .groupId(0)
+                            .eventId(uuid)
+                            .targetType(SubscriptionEvent.TargetType.USER)
+                            .targetId(String.valueOf(sub.getUserId()))
+                            .args(args)
                             .occurredAt(LocalDateTime.now())
                             .build()
             );
         }
 
-        // 그룹 구독 만료 처리
-        List<GroupSubscription> expiredGroupTargets =
-                groupSubscriptionRepository.findAllByStatusAndExpiredAtBefore(
-                        SubscriptionStatus.ACTIVE,
-                        LocalDateTime.now()
-                );
+//        // 그룹 구독 만료 처리
+//        List<GroupSubscription> expiredGroupTargets =
+//                groupSubscriptionRepository.findAllByStatusAndExpiredAtBefore(
+//                        SubscriptionStatus.ACTIVE,
+//                        LocalDateTime.now()
+//                );
+//
+//        for (GroupSubscription gs : expiredGroupTargets) {
+//            gs.expire();
+//
+//            redisTemplate.delete(
+//                    KEY_PREFIX_GROUP + gs.getUserId() + ":" + gs.getGroupId()
+//            );
+//
+//            eventProducer.publish(
+//                    "group-subscription.expired",
+//                    SubscriptionEvent.builder()
+//                            .eventType("EXPIRED")
+//                            .targetType(SubscriptionEvent.TargetType.GROUP)
+//                            .userId(gs.getUserId())
+//                            .idolId(0)
+//                            .groupId(gs.getGroupId())
+//                            .occurredAt(LocalDateTime.now())
+//                            .build()
+//            );
+//        }
 
-        for (GroupSubscription gs : expiredGroupTargets) {
-            gs.expire();
-
-            redisTemplate.delete(
-                    KEY_PREFIX_GROUP + gs.getUserId() + ":" + gs.getGroupId()
-            );
-
-            eventProducer.publish(
-                    "group-subscription.expired",
-                    SubscriptionEvent.builder()
-                            .eventType("EXPIRED")
-                            .targetType(SubscriptionEvent.TargetType.GROUP)
-                            .userId(gs.getUserId())
-                            .idolId(0)
-                            .groupId(gs.getGroupId())
-                            .occurredAt(LocalDateTime.now())
-                            .build()
-            );
-        }
-
-        log.info("구독 만료 처리 완료: idolCount={} groupCount={}", expiredIdolTargets.size(), expiredGroupTargets.size());
+        log.info("구독 만료 처리 완료: idolCount={}", expiredIdolTargets.size());
     }
 }

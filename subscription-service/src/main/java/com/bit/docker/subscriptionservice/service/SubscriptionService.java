@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -104,21 +106,22 @@ public class SubscriptionService {
 
         subscription.activate();
 
+        String uuid = UUID.randomUUID().toString();
+        Map<String, String> args = new HashMap<>();
+        args.put("userId", String.valueOf(subscription.getUserId()));
+        args.put("idolId", String.valueOf(subscription.getIdolId()));
+        args.put("startAt", subscription.getStartedAt().toString());
+        args.put("expireAt", subscription.getExpiredAt().toString());
         eventProducer.publish(
-                "subscription.created",
+                "IDOL_SUB_STARTED",
                 SubscriptionEvent.builder()
-                        .eventType("CREATED")
-                        .targetType(SubscriptionEvent.TargetType.IDOL)
-                        .userId(subscription.getUserId())
-                        .idolId(subscription.getIdolId())
-                        .groupId(0)
+                        .eventId(uuid)
+                        .targetType(SubscriptionEvent.TargetType.USER)
+                        .targetId(String.valueOf(subscription.getUserId()))
+                        .args(args)
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
-
-        String uuid = UUID.randomUUID().toString();
-        String m = uuid +":"+subscription.getIdolId()+":"+subscription.getUserId()+":"+subscription.getStartedAt()+":"+subscription.getExpiredAt();
-        kafkaTemplate.send("IDOL_SUB_STARTED", m);
 
         log.info("개인(아이돌) 구독 완료: userId={}, idolId={}", subscription.getUserId(), subscription.getIdolId());
 
@@ -142,21 +145,20 @@ public class SubscriptionService {
         redisTemplate.delete(buildIdolKey(userId, request.getIdolId()));
 
         // 개인 구독 해지 이벤트
+        String uuid = UUID.randomUUID().toString();
+        Map<String, String> args = new HashMap<>();
+        args.put("userId", String.valueOf(subscription.getUserId()));
+        args.put("idolId", String.valueOf(subscription.getIdolId()));
         eventProducer.publish(
-                "subscription.canceled",
+                "IDOL_SUB_END",
                 SubscriptionEvent.builder()
-                        .eventType("CANCELED")
-                        .targetType(SubscriptionEvent.TargetType.IDOL)
-                        .userId(userId)
-                        .idolId(request.getIdolId())
-                        .groupId(0)
+                        .eventId(uuid)
+                        .targetType(SubscriptionEvent.TargetType.USER)
+                        .targetId(String.valueOf(subscription.getUserId()))
+                        .args(args)
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
-
-        String uuid = UUID.randomUUID().toString();
-        String m = uuid +":"+subscription.getIdolId()+":"+subscription.getUserId();
-        kafkaTemplate.send("IDOL_SUB_END", m);
 
         log.info("개인(아이돌) 구독 해지 완료: userId={}, idolId={}", userId, request.getIdolId());
     }
@@ -226,21 +228,19 @@ public class SubscriptionService {
         redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
 
         // 그룹 구독 이벤트
+        String uuid = UUID.randomUUID().toString();
+        Map<String, String> args = new HashMap<>();
+        args.put("groupId", String.valueOf(gs.getGroupId()));
         eventProducer.publish(
-                "group-subscription.created",
+                "GROUP_SUB_STARTED",
                 SubscriptionEvent.builder()
-                        .eventType("CREATED")
-                        .targetType(SubscriptionEvent.TargetType.GROUP)
-                        .userId(userId)
-                        .idolId(0)
-                        .groupId(request.getGroupId())
+                        .eventId(uuid)
+                        .targetType(SubscriptionEvent.TargetType.USER)
+                        .targetId(String.valueOf(gs.getUserId()))
+                        .args(args)
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
-
-        String uuid = UUID.randomUUID().toString();
-        String message = uuid +":"+userId+":"+request.getGroupId()+":"+ LocalDateTime.now();
-        kafkaTemplate.send("GROUP_SUB_CREATED", message);
 
         log.info("그룹 구독 생성 완료: userId={}, groupId={}", userId, request.getGroupId());
         return GroupSubscriptionDto.fromEntity(gs);
@@ -263,14 +263,17 @@ public class SubscriptionService {
         redisTemplate.delete(buildGroupKey(userId, request.getGroupId()));
 
         // 그룹 구독 해지 이벤트
+        String uuid = UUID.randomUUID().toString();
+        Map<String, String> args = new HashMap<>();
+        args.put("userId", String.valueOf(gs.getUserId()));
+        args.put("groupId", String.valueOf(gs.getGroupId()));
         eventProducer.publish(
-                "group-subscription.canceled",
+                "GROUP_SUB_END",
                 SubscriptionEvent.builder()
-                        .eventType("CANCELED")
-                        .targetType(SubscriptionEvent.TargetType.GROUP)
-                        .userId(userId)
-                        .idolId(0)
-                        .groupId(request.getGroupId())
+                        .eventId(uuid)
+                        .targetType(SubscriptionEvent.TargetType.USER)
+                        .targetId(String.valueOf(gs.getUserId()))
+                        .args(args)
                         .occurredAt(LocalDateTime.now())
                         .build()
         );
