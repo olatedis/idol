@@ -162,14 +162,15 @@ public class ChatService {
         return Collections.emptyList();
     }
 
-    // 읽음 처리 (API 호출 시)
+    // 읽음 처리 (API 호출 시) - TTL 적용
     public void markAsRead(int userId, Long idolId) {
         String totalCountKey = "chat:room:" + idolId + ":total_count";
         String readCountKey = "chat:room:" + idolId + ":user:" + userId + ":last_read_count";
         
         Object totalObj = redisTemplate.opsForValue().get(totalCountKey);
         if (totalObj != null) {
-            redisTemplate.opsForValue().set(readCountKey, totalObj);
+            // 30일 TTL 적용
+            redisTemplate.opsForValue().set(readCountKey, totalObj, Duration.ofDays(30));
         }
     }
 
@@ -210,22 +211,24 @@ public class ChatService {
         
         messageDto.setId(savedMessage.getId());
 
-        // 3. Redis 캐싱
+        // 3. Redis 캐싱 (TTL 적용)
         String cacheKey = "chat:room:" + messageDto.getIdolId();
         redisTemplate.opsForList().leftPush(cacheKey, messageDto);
         redisTemplate.opsForList().trim(cacheKey, 0, CACHE_SIZE - 1);
+        redisTemplate.expire(cacheKey, Duration.ofDays(3)); // 3일 TTL
 
-        // 3-1. Redis 미리보기 캐싱
+        // 3-1. Redis 미리보기 캐싱 (TTL 적용)
         String previewKey = "chat:preview:" + messageDto.getIdolId();
         Map<String, Object> previewData = new HashMap<>();
         previewData.put("content", messageDto.getContent());
         previewData.put("sender", messageDto.getSenderNickname());
         previewData.put("time", LocalDateTime.now().toString());
-        redisTemplate.opsForValue().set(previewKey, previewData);
+        redisTemplate.opsForValue().set(previewKey, previewData, Duration.ofDays(7)); // 7일 TTL
 
         // --- 3-2. 총 메시지 수 증가 (읽음 처리용) ---
         String totalCountKey = "chat:room:" + messageDto.getIdolId() + ":total_count";
         redisTemplate.opsForValue().increment(totalCountKey);
+        redisTemplate.expire(totalCountKey, Duration.ofDays(30)); // 30일 TTL
         // ----------------------------------------
 
         // 4. Kafka로 전송 (성공 시 SENT 업데이트)
@@ -271,7 +274,7 @@ public class ChatService {
             preview.put("sender", lastMsg.getSenderNickname());
             preview.put("time", lastMsg.getCreatedAt().toString());
             
-            redisTemplate.opsForValue().set(previewKey, preview);
+            redisTemplate.opsForValue().set(previewKey, preview, Duration.ofDays(7)); // 조회 시에도 TTL 갱신
             return preview;
         }
         
@@ -286,7 +289,7 @@ public class ChatService {
 
         String pinKey = "chat:pin:" + idolId;
         ChatMessageDto pinDto = convertToDto(message);
-        redisTemplate.opsForValue().set(pinKey, pinDto);
+        redisTemplate.opsForValue().set(pinKey, pinDto); // 공지는 영구 저장 (TTL 없음)
         
         pinDto.setType("PIN");
         chatProducer.sendChatMessage(pinDto);
