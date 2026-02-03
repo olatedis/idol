@@ -33,7 +33,8 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQL8Dialect
-  
+    open-in-view: false # OSIV 끄기 (성능 최적화)
+
   # MongoDB 설정 (조회용)
   data:
     mongodb:
