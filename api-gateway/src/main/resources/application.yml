@@ -6,6 +6,11 @@ server:
 spring:
   application:
     name: apigateway-service
+  
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
   cloud:
     gateway:
@@ -28,6 +33,12 @@ spring:
           uri: lb://AUTH-SERVICE
           predicates:
             - Path=/auth/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5   # 초당 5개 토큰 충전
+                redis-rate-limiter.burstCapacity: 10  # 최대 10개까지 버스트 허용
+                key-resolver: "#{@ipKeyResolver}"     # IP 기준 제한
         
         - id: user-service
           uri: lb://USER-SERVICE
@@ -49,12 +60,24 @@ spring:
           uri: lb://SEARCH-SERVICE
           predicates:
             - Path=/search/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+                key-resolver: "#{@ipKeyResolver}"
 
         # --- Activity Services ---
         - id: voting-service
           uri: lb://VOTING-SERVICE
           predicates:
             - Path=/api/votes/**, /api/admin/votes/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@ipKeyResolver}"
 
         - id: ranking-service
           uri: lb://RANKING-SERVICE
