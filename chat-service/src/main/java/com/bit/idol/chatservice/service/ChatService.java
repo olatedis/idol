@@ -68,7 +68,22 @@ public class ChatService {
                     .collect(Collectors.toList());
         }
 
-        // 2. 내 구독 목록 조회 (Subscription Service)
+        return buildChatRoomList(userId, idols);
+    }
+
+    // 그룹별 채팅방 목록 조회 (추가됨)
+    @CircuitBreaker(name = "chat-room-list", fallbackMethod = "getChatRoomListFallback")
+    public List<ChatRoomListDto> getChatRoomListByGroup(int userId, int groupId) {
+        // 그룹 멤버 조회 (User Service 호출)
+        // TODO: 이것도 Redis에 캐싱하면 좋음 (groups:members:{groupId})
+        List<IdolDto> groupMembers = userFeignClient.getIdolsByGroup(groupId);
+        
+        return buildChatRoomList(userId, groupMembers);
+    }
+
+    // 공통 로직 분리
+    private List<ChatRoomListDto> buildChatRoomList(int userId, List<IdolDto> idols) {
+        // 내 구독 목록 조회 (Subscription Service)
         Set<Integer> subscribedIdolIds = new HashSet<>();
         try {
             List<SubscriptionDto> mySubscriptions = subscriptionFeignClient.getMySubscriptions(userId);
@@ -79,7 +94,6 @@ public class ChatService {
             log.error("구독 정보 조회 실패 (Fallback: 구독 정보 없이 목록 표시): {}", e.getMessage());
         }
 
-        // 3. 데이터 조합
         Set<Integer> finalSubscribedIdolIds = subscribedIdolIds;
         return idols.stream().map(idol -> {
             Long idolId = (long) idol.getIdolId();
@@ -97,7 +111,7 @@ public class ChatService {
                 }
             }
 
-            // --- 안 읽은 메시지 수 계산 (Redis 활용) ---
+            // 안 읽은 메시지 수 계산
             int unreadCount = 0;
             if (finalSubscribedIdolIds.contains(idol.getIdolId())) {
                 String totalCountKey = "chat:room:" + idolId + ":total_count";
@@ -111,7 +125,6 @@ public class ChatService {
                 
                 unreadCount = Math.max(0, total - read);
             }
-            // ----------------------------------------
 
             return ChatRoomListDto.builder()
                     .idolId(idolId)
@@ -128,6 +141,12 @@ public class ChatService {
     // Fallback: User Service 장애 시 빈 목록 반환
     public List<ChatRoomListDto> getChatRoomListFallback(int userId, Throwable t) {
         log.error("채팅방 목록 조회 실패 (User Service 장애): {}", t.getMessage());
+        return Collections.emptyList();
+    }
+    
+    // 오버로딩된 Fallback (파라미터 다름)
+    public List<ChatRoomListDto> getChatRoomListFallback(int userId, int groupId, Throwable t) {
+        log.error("그룹 채팅방 목록 조회 실패 (User Service 장애): {}", t.getMessage());
         return Collections.emptyList();
     }
 
