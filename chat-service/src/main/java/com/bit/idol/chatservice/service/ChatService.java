@@ -14,6 +14,7 @@ import com.bit.idol.chatservice.filter.SuspiciousWordFilter;
 import com.bit.idol.chatservice.producer.ChatProducer;
 import com.bit.idol.chatservice.producer.NotificationProducer;
 import com.bit.idol.chatservice.repository.ChatRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -71,13 +72,24 @@ public class ChatService {
         return buildChatRoomList(userId, idols);
     }
 
-    // 그룹별 채팅방 목록 조회 (추가됨)
+    // 그룹별 채팅방 목록 조회 (캐싱 적용)
     @CircuitBreaker(name = "chat-room-list", fallbackMethod = "getChatRoomListFallback")
     public List<ChatRoomListDto> getChatRoomListByGroup(int userId, int groupId) {
-        // 그룹 멤버 조회 (User Service 호출)
-        // TODO: 이것도 Redis에 캐싱하면 좋음 (groups:members:{groupId})
-        List<IdolDto> groupMembers = userFeignClient.getIdolsByGroup(groupId);
+        String cacheKey = "groups:members:" + groupId;
+        List<IdolDto> groupMembers;
+
+        // 1. Redis 캐시 조회
+        Object cachedData = redisTemplate.opsForValue().get(cacheKey);
         
+        if (cachedData != null) {
+            groupMembers = objectMapper.convertValue(cachedData, new TypeReference<List<IdolDto>>() {});
+        } else {
+            // 2. 없으면 Feign 호출 및 캐싱 (TTL 1시간)
+            groupMembers = userFeignClient.getIdolsByGroup(groupId);
+            redisTemplate.opsForValue().set(cacheKey, groupMembers, Duration.ofHours(1));
+        }
+        
+        // 3. 실시간 데이터 조합
         return buildChatRoomList(userId, groupMembers);
     }
 
