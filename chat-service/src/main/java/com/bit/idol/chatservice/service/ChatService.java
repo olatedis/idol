@@ -467,29 +467,43 @@ public class ChatService {
     }
 
     public List<ChatMessageDto> getChatHistory(Long idolId, String lastId, int size) {
+        List<ChatMessageDto> result = new ArrayList<>();
+
+        // 1. Redis 캐시 조회 (최신 메시지인 경우만)
         if (lastId == null) {
             String cacheKey = "chat:room:" + idolId;
             List<Object> cachedMessages = redisTemplate.opsForList().range(cacheKey, 0, size - 1);
             
             if (cachedMessages != null && !cachedMessages.isEmpty()) {
-                return cachedMessages.stream()
-                        .map(obj -> objectMapper.convertValue(obj, ChatMessageDto.class)) // 안전한 변환 적용
-                        .collect(Collectors.toList());
+                List<ChatMessageDto> redisDtos = cachedMessages.stream()
+                        .map(obj -> objectMapper.convertValue(obj, ChatMessageDto.class))
+                        .toList();
+                result.addAll(redisDtos);
             }
         }
 
-        Pageable pageable = PageRequest.of(0, size);
-        List<ChatMessage> messages;
+        // 2. 부족한 만큼 DB에서 추가 조회
+        if (result.size() < size) {
+            int needMore = size - result.size();
+            Pageable pageable = PageRequest.of(0, needMore);
+            List<ChatMessage> dbMessages;
 
-        if (lastId == null) {
-            messages = chatRepository.findByIdolIdOrderByIdDesc(idolId, pageable);
-        } else {
-            messages = chatRepository.findByIdolIdAndIdLessThanOrderByIdDesc(idolId, lastId, pageable);
+            if (lastId == null) {
+                // Redis에 데이터가 아예 없거나 부족한 경우 (최신순)
+                dbMessages = chatRepository.findByIdolIdOrderByIdDesc(idolId, pageable);
+            } else {
+                // 페이징 조회 (lastId 이전)
+                dbMessages = chatRepository.findByIdolIdAndIdLessThanOrderByIdDesc(idolId, lastId, pageable);
+            }
+            
+            List<ChatMessageDto> dbDtos = dbMessages.stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+            
+            result.addAll(dbDtos);
         }
         
-        return messages.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+        return result;
     }
 
     private ChatMessageDto convertToDto(ChatMessage entity) {
