@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Getter
 @NoArgsConstructor
@@ -14,16 +15,19 @@ import java.time.LocalDateTime;
 @Builder
 public class SubscriptionEvent {
 
-    private String eventType; // CREATED, CANCELED, EXPIRED
-    private int userId;
-    private int idolId; // targetType=IDOL일때
-    private LocalDateTime occurredAt;
+    private String eventId;      // UUID
+    private String type;         // 알림 종류
+    private TargetType targetType; // 대상 타입
+    private String targetId;     // 대상 ID
+    private Map<String, String> args; // 치환 변수
+    private String redirectUrl;  // 클릭 시 이동할 주소
+    private LocalDateTime occurredAt; // 발생 시간
 
-    // 0121 그룹id관련 수정(추가)
-    private int groupId;
-    private TargetType targetType; // targetType=GROUP일때
     public enum TargetType {
-        IDOL, GROUP
+        USER,       // 특정 유저 1명
+        ALL,        // 전체 공지
+        IDOL_SUB,   // 특정 아이돌 구독자들
+        GROUP_SUB   // 특정 그룹 구독자들
     }
 
     public String toJson() {
