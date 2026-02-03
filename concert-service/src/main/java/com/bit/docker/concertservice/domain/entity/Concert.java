@@ -17,6 +17,8 @@ public class Concert {
 
     private int agencyId;
 
+    private int groupId;
+
     private String title;
 
     private String description;
@@ -35,8 +37,9 @@ public class Concert {
     protected Concert() {
     }
 
-    public Concert(int agencyId, String title, String description, String venue, LocalDateTime concertDate, LocalDateTime startTime, LocalDateTime ticketSaleDate) {
+    public Concert(int agencyId, int groupId, String title, String description, String venue, LocalDateTime concertDate, LocalDateTime startTime, LocalDateTime ticketSaleDate) {
         this.agencyId = agencyId;
+        this.groupId = groupId;
         this.title = title;
         this.description = description;
         this.venue = venue;
@@ -46,8 +49,8 @@ public class Concert {
         this.createdAt = LocalDateTime.now();
     }
 
-    public static Concert create(int agencyId, String title, String description, String venue, LocalDateTime concertDate, LocalDateTime startTime, LocalDateTime ticketSaleDate) {
-        return new Concert(agencyId, title, description, venue, concertDate, startTime, ticketSaleDate);
+    public static Concert create(int agencyId, int groupId, String title, String description, String venue, LocalDateTime concertDate, LocalDateTime startTime, LocalDateTime ticketSaleDate) {
+        return new Concert(agencyId, groupId, title, description, venue, concertDate, startTime, ticketSaleDate);
     }
 
     public void update(String title, String description, String venue, LocalDateTime concertDate, LocalDateTime startTime, LocalDateTime ticketSaleDate) {
@@ -63,5 +66,4 @@ public class Concert {
         this.active = false;
     }
 
-    public boolean isActive() { return this.active; }
 }

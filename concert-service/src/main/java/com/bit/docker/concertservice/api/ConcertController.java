@@ -43,9 +43,9 @@ public class ConcertController {
         return ResponseEntity.ok().build();
     }
     @GetMapping
-    public List<Concert> concerts(@RequestParam(name = "agencyId", required = false) Integer agencyId) {
-        if (agencyId == null) return concertQueryService.getConcerts();
-        return concertQueryService.getConcertsByAgency(agencyId);
+    public List<Concert> concerts(@RequestParam(name = "groupId", required = false) Integer groupId) {
+        if (groupId == null) return concertQueryService.getConcerts();
+        return concertQueryService.getConcertsByGroup(groupId);
     }
 
     @GetMapping("/{concertId}")

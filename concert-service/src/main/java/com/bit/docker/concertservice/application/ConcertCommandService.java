@@ -44,9 +44,13 @@ public class ConcertCommandService {
         if (request.getTicketSaleDate().isAfter(request.getConcertDate())) {
             throw new IllegalArgumentException("티켓 판매일은 콘서트 시작일보다 먼저여야 합니다.");
         }
+        if(request.getGroupId() <=0){
+            throw new IllegalArgumentException("그룹은 필수입니다.");
+        }
 
         Concert concert = Concert.create(
                 request.getAgencyId(),
+                request.getGroupId(),
                 request.getTitle(),
                 request.getDescription(),
                 request.getVenue(),
@@ -61,6 +65,7 @@ public class ConcertCommandService {
         String uuid = UUID.randomUUID().toString();
         Map<String, String> map = new HashMap<>();
         map.put("concertName", concert.getTitle());
+        map.put("groupId", String.valueOf(concert.getGroupId()));
         map.put("concertId", String.valueOf(concert.getId()));
         map.put("openAt", concert.getConcertDate().toString());
         NotificationEventDto notify =  new NotificationEventDto();
