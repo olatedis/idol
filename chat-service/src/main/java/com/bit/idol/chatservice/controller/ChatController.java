@@ -97,11 +97,12 @@ public class ChatController {
     @GetMapping("/chat/history/{idolId}")
     @ResponseBody
     public ResponseEntity<List<ChatMessageDto>> getChatHistory(
+            @RequestHeader("X-User-Id") int userId, // userId 추가
             @PathVariable("idolId") Long idolId,
             @RequestParam(value = "lastId", required = false) String lastId,
             @RequestParam(value = "size", defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(chatService.getChatHistory(idolId, lastId, size));
+        return ResponseEntity.ok(chatService.getChatHistory(userId, idolId, lastId, size));
     }
 
     // 채팅방 미리보기 (마지막 메시지) 조회 API
@@ -158,11 +159,12 @@ public class ChatController {
     @GetMapping("/chat/media/{idolId}")
     @ResponseBody
     public ResponseEntity<List<ChatMessageDto>> getChatMedia(
+            @RequestHeader("X-User-Id") int userId, // userId 추가
             @PathVariable("idolId") Long idolId,
             @RequestParam(value = "lastId", required = false) String lastId,
             @RequestParam(value = "size", defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(chatService.getChatMedia(idolId, lastId, size));
+        return ResponseEntity.ok(chatService.getChatMedia(userId, idolId, lastId, size));
     }
 
     // --------------------

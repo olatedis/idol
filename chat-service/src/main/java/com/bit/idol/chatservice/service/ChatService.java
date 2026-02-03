@@ -319,7 +319,7 @@ public class ChatService {
 
     // --- 미디어 모아보기 ---
 
-    public List<ChatMessageDto> getChatMedia(Long idolId, String lastId, int size) {
+    public List<ChatMessageDto> getChatMedia(int userId, Long idolId, String lastId, int size) {
         Pageable pageable = PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "id"));
         List<ChatMessage> messages;
 
@@ -331,6 +331,7 @@ public class ChatService {
 
         return messages.stream()
                 .map(this::convertToDto)
+                .peek(dto -> dto.setMe(dto.getSenderId() == userId)) // isMe 설정
                 .collect(Collectors.toList());
     }
 
@@ -466,7 +467,7 @@ public class ChatService {
         }
     }
 
-    public List<ChatMessageDto> getChatHistory(Long idolId, String lastId, int size) {
+    public List<ChatMessageDto> getChatHistory(int userId, Long idolId, String lastId, int size) {
         List<ChatMessageDto> result = new ArrayList<>();
 
         // 1. Redis 캐시 조회 (최신 메시지인 경우만)
@@ -477,7 +478,7 @@ public class ChatService {
             if (cachedMessages != null && !cachedMessages.isEmpty()) {
                 List<ChatMessageDto> redisDtos = cachedMessages.stream()
                         .map(obj -> objectMapper.convertValue(obj, ChatMessageDto.class))
-                        .toList();
+                        .collect(Collectors.toList());
                 result.addAll(redisDtos);
             }
         }
@@ -502,6 +503,9 @@ public class ChatService {
             
             result.addAll(dbDtos);
         }
+        
+        // 3. isMe 필드 설정
+        result.forEach(dto -> dto.setMe(dto.getSenderId() == userId));
         
         return result;
     }
