@@ -1,19 +1,19 @@
-:root {
-  --peach-fizz: #EF95B3;
-}
+/*:root {*/
+/*  --peach-fizz: #EF95B3;*/
+/*}*/
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/** {*/
+/*  margin: 0;*/
+/*  padding: 0;*/
+/*  box-sizing: border-box;*/
+/*}*/
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #fafafa;
-  color: #1a1a1a;
-}
+/*body {*/
+/*  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;*/
+/*  background: #fafafa;*/
+/*  color: #1a1a1a;*/
+/*}*/
 
-#root {
-  min-height: 100vh;
-}
+/*#root {*/
+/*  min-height: 100vh;*/
+/*}*/
