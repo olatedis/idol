@@ -9,6 +9,15 @@ spring:
   cloud:
     compatibility-verifier:
       enabled: false
+    openfeign:
+      httpclient:
+        hc5:
+          enabled: true
+          pool:
+            max-connections: 1000
+            max-connections-per-route: 200
+            time-to-live: 900
+            time-to-live-unit: seconds
     aws:
       s3:
         bucket: idol--bucket-2026-service

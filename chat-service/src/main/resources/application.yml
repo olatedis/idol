@@ -34,6 +34,8 @@ spring:
           pool:
             max-connections: 1000
             max-connections-per-route: 200
+            time-to-live: 900
+            time-to-live-unit: seconds
 
   # MongoDB 설정
   data:

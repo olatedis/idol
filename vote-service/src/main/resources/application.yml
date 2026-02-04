@@ -44,6 +44,8 @@ spring:
           pool:
             max-connections: 1000
             max-connections-per-route: 200
+            time-to-live: 900
+            time-to-live-unit: seconds
 
 # Swagger 설정 (Gateway 주소 명시)
 springdoc:
