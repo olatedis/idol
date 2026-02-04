@@ -159,7 +159,7 @@ public class ConcertCommandService {
     }
 
     // TODO: 여기 아래 삭제랑 비활성화 로직 다시 한번 확인하기.
-    /*@Transactional
+    @Transactional
     public void deleteConcert(int concertId) {
         if (!concertRepository.existsById(concertId)) {
             throw new IllegalArgumentException("콘서트가 존재하지 않습니다.");
@@ -175,5 +175,5 @@ public class ConcertCommandService {
         concert.deactivate();
         concertRepository.save(concert);
         log.info("콘서트 비활성화: concertId={}", concertId);
-    }*/
+    }
 }

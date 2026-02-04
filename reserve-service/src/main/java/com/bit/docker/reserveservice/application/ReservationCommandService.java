@@ -37,8 +37,8 @@ public class ReservationCommandService {
             PaymentEvent event = new PaymentEvent(
                     userId,
                     null,
-                    "RESERVATION",          // ✅ 결제완료 consumer의 비교값과 일치
-                    reservation.getId(),    // ✅ targetId = reservationId로 추천
+                    "RESERVATION",
+                    seatId,
                     price
             );
 
@@ -49,7 +49,7 @@ public class ReservationCommandService {
 
         } catch (Exception e) {
             try {
-                seatLockRepository.unlock(concertId, seatId, userId);
+                seatLockRepository.unlock(concertId, seatId);
             } catch (Exception ex) {
                 log.error(ex.getMessage(), ex);
             }
