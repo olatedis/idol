@@ -56,14 +56,16 @@ public class SubscriptionExpireScheduler {
             String uuid = UUID.randomUUID().toString();
             Map<String, String> args = new HashMap<>();
             args.put("userId", String.valueOf(sub.getUserId()));
-            args.put("groupId", String.valueOf(sub.getIdolId()));
+            args.put("idolId", String.valueOf(sub.getIdolId()));
+
             eventProducer.publish(
-                    "IDOL_SUB_END",
                     SubscriptionEvent.builder()
                             .eventId(uuid)
+                            .type("IDOL_SUB_END")
                             .targetType(SubscriptionEvent.TargetType.USER)
                             .targetId(String.valueOf(sub.getUserId()))
                             .args(args)
+                            .redirectUrl("/subscription") //TODO: 나중에 라우팅 제대로 맞추기.
                             .occurredAt(LocalDateTime.now())
                             .build()
             );

@@ -14,7 +14,7 @@ public class PaymentEventProducer {
     }
 
     public void publishPaymentCompleted(Payment payment) {
-        kafkaTemplate.send("payment-completed", String.valueOf(payment.getTargetId()));
+        kafkaTemplate.send("payment.completed", String.valueOf(payment.getTargetId()));
     }
 
     public void publishPaymentFailed(int targetId) {

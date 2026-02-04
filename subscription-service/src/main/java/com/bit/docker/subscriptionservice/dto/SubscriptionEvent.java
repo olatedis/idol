@@ -30,6 +30,7 @@ public class SubscriptionEvent {
         GROUP_SUB   // 특정 그룹 구독자들
     }
 
+/*
     public String toJson() {
         try {
             return new ObjectMapper().writeValueAsString(this);
@@ -45,5 +46,6 @@ public class SubscriptionEvent {
             throw new RuntimeException(e);
         }
     }
+*/
 }
 

@@ -32,19 +32,21 @@ public class ReservationCommandService {
         Reservation reservation = null;
         try {
             reservation = Reservation.create(userId, concertId, seatId, price);
-
             reservationRepository.save(reservation);
 
             PaymentEvent event = new PaymentEvent(
                     userId,
                     null,
-                    "Reservation-service",
+                    "RESERVATION",
                     seatId,
                     price
             );
-            eventProducer.publishReservationCreated(event);
+
+            // ✅ 결제 요청만 보냄
+            eventProducer.publishPaymentRequested(event);
 
             return reservation.getId();
+
         } catch (Exception e) {
             try {
                 seatLockRepository.unlock(concertId, seatId);
@@ -54,4 +56,5 @@ public class ReservationCommandService {
             throw e;
         }
     }
+
 }
