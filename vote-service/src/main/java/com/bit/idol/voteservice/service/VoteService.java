@@ -138,12 +138,11 @@ public class VoteService {
         log.info("투표 종료 처리 완료: ID={}, 제목={}", vote.getId(), vote.getTitle());
     }
 
-    @Transactional
     @CircuitBreaker(name = "redis-vote", fallbackMethod = "castVoteFallback")
     public String castVote(int voteId, int userId, int candidateNumber, String clientIp) {
         validateIp(clientIp);
 
-        VoteInfo vote = voteReader.getVoteInfo(voteId);
+        VoteInfo vote = voteReader.getVoteInfo(voteId); // VoteReader가 트랜잭션 처리함
         LocalDateTime now = LocalDateTime.now();
 
         if (now.isBefore(vote.getStartDate())) {
