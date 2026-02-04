@@ -1,4 +1,4 @@
-package com.bit.docker.subscriptionservice.dto;
+package com.bit.reserveservice.domain.dto;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
