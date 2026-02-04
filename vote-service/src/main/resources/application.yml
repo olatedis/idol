@@ -1,5 +1,9 @@
 server:
   port: 8083
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    min-response-size: 2048
 
 spring:
   application:
@@ -38,12 +42,21 @@ spring:
   # Feign 설정 (HttpClient 5 적용 + 튜닝)
   cloud:
     openfeign:
+      compression:
+        request:
+          enabled: true
+          min-request-size: 2048
+          mime-types: text/xml,application/xml,application/json
+        response:
+          enabled: true
       httpclient:
         hc5:
           enabled: true
           pool:
             max-connections: 1000
             max-connections-per-route: 200
+            time-to-live: 900
+            time-to-live-unit: seconds
 
 # Swagger 설정 (Gateway 주소 명시)
 springdoc:

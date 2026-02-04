@@ -89,11 +89,11 @@ public class InternalUserController {
     public ResponseEntity<Integer> resetPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         String newPassword = request.get("newPassword");
-        
+
         log.info("비밀번호 재설정 요청 (Internal): email={}", email);
-        
+
         UserDto updatedUser = userService.resetPassword(email, newPassword);
-        
+
         return ResponseEntity.ok(updatedUser.getUserId());
     }
 

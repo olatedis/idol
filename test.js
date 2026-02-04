@@ -8,7 +8,7 @@ export let options = {
 };
 
 export default function () {
-  let token = "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxMDAwIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsIm5pY2tuYW1lIjoi7YWM7Iqk7Yq47Jyg7KCAIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3Njk0OTI2MzMsImV4cCI6MTc2OTQ5MzgzM30.5DV4SDYioob5upJwCvP2AMHy7yGPjESy94RI9RIsaryEZ51Ic1LS8AwQt6uh2t7A";
+  let token = "yJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJ1c2VyMSIsIm5pY2tuYW1lIjoi7KeA66-87YysIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NzAxNjU4NDUsImV4cCI6MTc3MDE2NzA0NX0.3b57_jtj5n4JR_xM1u0MoXpA738K3QTnhda1VStcGqGB5cNNpQSyQTWozRmRW5AZ";
   
   let params = {
     headers: {
@@ -19,10 +19,15 @@ export default function () {
   // === 테스트할 URL 선택 (주석 해제/처리) ===
   
   // 1. Feign (REST) 테스트
-  //let res = http.get('http://host.docker.internal:8089/benchmark/feign', params);
+  let res = http.get('http://host.docker.internal:8089/benchmark/feign', params);
   
   // 2. gRPC 테스트
-   let res = http.get('http://host.docker.internal:8089/benchmark/grpc', params);
+  // let res = http.get('http://host.docker.internal:8089/benchmark/grpc', params);
+
+  // 에러 발생 시 로그 출력 (디버깅용)
+  if (res.status !== 200) {
+      console.log(`Error: status=${res.status}, body=${res.body}`);
+  }
 
   check(res, { 'status was 200': (r) => r.status == 200 });
   sleep(0.1); // 0.1초 대기

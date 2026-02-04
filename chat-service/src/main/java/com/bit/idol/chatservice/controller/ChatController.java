@@ -1,8 +1,10 @@
 package com.bit.idol.chatservice.controller;
 
+import com.bit.idol.chatservice.client.UserFeignClient;
 import com.bit.idol.chatservice.dto.ChatMessageDto;
 import com.bit.idol.chatservice.dto.ChatRoomListDto;
 import com.bit.idol.chatservice.dto.FileUploadResponseDto;
+import com.bit.idol.chatservice.dto.UserDto;
 import com.bit.idol.chatservice.service.ChatService;
 import com.bit.idol.chatservice.service.S3Service;
 import com.bit.idol.chatservice.service.TranslationService;
@@ -31,6 +33,16 @@ public class ChatController {
     private final S3Service s3Service;
     private final TranslationService translationService;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final UserFeignClient userFeignClient; // 추가됨
+
+    // --- 벤치마크 API (추가됨) ---
+    @GetMapping("/benchmark/feign")
+    @ResponseBody
+    public ResponseEntity<UserDto> benchmarkFeign() {
+        // 1번 유저 정보 조회 (단순 호출 테스트)
+        return ResponseEntity.ok(userFeignClient.getUserInfoById(1));
+    }
+    // ---------------------------
 
     @MessageMapping("/chat/send")
     public void sendMessage(ChatMessageDto messageDto, SimpMessageHeaderAccessor accessor) {

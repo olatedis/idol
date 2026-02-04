@@ -21,8 +21,7 @@ public class ChatConsumer {
     private final ChatSearchRepository chatSearchRepository;
     private final ObjectMapper objectMapper;
 
-    // Batch Listener 적용 (application.yml 설정 필요: listener.type: batch)
-    @KafkaListener(topics = "chat-topic", groupId = "search-service-group", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "chat-message-topic", groupId = "search-service-group", containerFactory = "kafkaListenerContainerFactory")
     public void consume(List<String> messages) {
         
         List<ChatDocument> documents = new ArrayList<>();

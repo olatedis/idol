@@ -20,13 +20,19 @@ public class SubscriptionEventProducer {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
+    // 기존 메서드 (기본 토픽 사용)
     public void publish(SubscriptionEvent event) {
+        publish(NOTIFY_TOPIC, event);
+    }
+
+    // 오버로딩 메서드 (토픽 지정 가능)
+    public void publish(String topic, SubscriptionEvent event) {
         try {
             String json = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(NOTIFY_TOPIC, json);
+            kafkaTemplate.send(topic, json);
 
             log.info("구독 알림 발행: topic={}, type={}, targetType={}, targetId={}",
-                    NOTIFY_TOPIC,
+                    topic,
                     event.getType(),
                     event.getTargetType(),
                     event.getTargetId()

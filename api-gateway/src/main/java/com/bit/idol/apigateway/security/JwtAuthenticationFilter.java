@@ -1,8 +1,8 @@
 package com.bit.idol.apigateway.security;
 
+import com.bit.idol.apigateway.config.JwtProperties;
 import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -26,9 +26,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final List<String> whiteListPath;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, @Value("${jwt.white-list-path}") String[] whiteListPath) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, JwtProperties jwtProperties) {
         this.jwtTokenProvider = jwtTokenProvider;
-        this.whiteListPath = List.of(whiteListPath);
+        this.whiteListPath = jwtProperties.getWhiteListPath();
     }
 
     @Override
@@ -46,10 +46,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        for (String w : whiteListPath) {
-            if (pathMatcher.match(w, path)) {
-                log.info("Whitelisted path: {}", path);
-                return chain.filter(exchange);
+        if (whiteListPath != null) {
+            for (String w : whiteListPath) {
+                if (pathMatcher.match(w, path)) {
+                    log.info("Whitelisted path: {}", path);
+                    return chain.filter(exchange);
+                }
             }
         }
 

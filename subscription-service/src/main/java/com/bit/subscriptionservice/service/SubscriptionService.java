@@ -1,7 +1,8 @@
 package com.bit.subscriptionservice.service;
 
-import com.bit.docker.subscriptionservice.dto.*;
 import com.bit.subscriptionservice.dto.*;
+import com.bit.subscriptionservice.dto.event.PaymentRequestEvent;
+import com.bit.subscriptionservice.dto.event.SubscriptionEventWrapper;
 import com.bit.subscriptionservice.entity.GroupSubscription;
 import com.bit.subscriptionservice.entity.Subscription;
 import com.bit.subscriptionservice.entity.SubscriptionStatus;
@@ -9,9 +10,9 @@ import com.bit.subscriptionservice.repository.GroupSubscriptionRepository;
 import com.bit.subscriptionservice.repository.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,8 +31,7 @@ public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository;
     private final GroupSubscriptionRepository groupSubscriptionRepository;
     private final StringRedisTemplate redisTemplate;
-    private final SubscriptionEventProducer eventProducer;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ApplicationEventPublisher eventPublisher; // 추가됨
 
 
     private static final String KEY_PREFIX_IDOL = "sub:";
@@ -75,7 +75,8 @@ public class SubscriptionService {
                 request.getPlan().getAmount()
         );
 
-        kafkaTemplate.send("payment.requested", event.toJson());
+        // 이벤트 발행 (커밋 후 실행됨)
+        eventPublisher.publishEvent(new PaymentRequestEvent(event));
 
         log.info("개인(아이돌) 구독 준비 완료: userId={}, idolId={}, plan={}, amount={}", 
                 userId, request.getIdolId(), request.getPlan(), request.getPlan().getAmount());
@@ -114,21 +115,21 @@ public class SubscriptionService {
         args.put("idolId", String.valueOf(subscription.getIdolId()));
         args.put("startAt", subscription.getStartedAt().toString());
         args.put("expiredAt", subscription.getExpiredAt().toString());
-        eventProducer.publish(
-                SubscriptionEvent.builder()
-                        .eventId(uuid)
-                        .type("IDOL_SUB_STARTED")
-                        .targetType(SubscriptionEvent.TargetType.USER)
-                        .targetId(String.valueOf(subscription.getUserId()))
-                        .args(args)
-                        .redirectUrl("/subscription") //TODO: 나중에 라우팅 제대로 맞추기.
-                        .occurredAt(LocalDateTime.now())
-                        .build()
-        );
+        
+        SubscriptionEvent subEvent = SubscriptionEvent.builder()
+                .eventId(uuid)
+                .type("IDOL_SUB_STARTED")
+                .targetType(SubscriptionEvent.TargetType.USER)
+                .targetId(String.valueOf(subscription.getUserId()))
+                .args(args)
+                .redirectUrl("/subscription")
+                .occurredAt(LocalDateTime.now())
+                .build();
+
+        // 이벤트 발행 (커밋 후 실행됨)
+        eventPublisher.publishEvent(new SubscriptionEventWrapper("IDOL_SUB_STARTED", subEvent));
 
         log.info("개인(아이돌) 구독 완료: userId={}, idolId={}", subscription.getUserId(), subscription.getIdolId());
-
-
     }
 
     // 개인(아이돌) 구독 해지
@@ -152,17 +153,19 @@ public class SubscriptionService {
         Map<String, String> args = new HashMap<>();
         args.put("userId", String.valueOf(subscription.getUserId()));
         args.put("idolId", String.valueOf(subscription.getIdolId()));
-        eventProducer.publish(
-                SubscriptionEvent.builder()
-                        .eventId(uuid)
-                        .type("IDOL_SUB_END")
-                        .targetType(SubscriptionEvent.TargetType.USER)
-                        .targetId(String.valueOf(subscription.getUserId()))
-                        .args(args)
-                        .redirectUrl("/subscription") //TODO: 나중에 라우팅 제대로 맞추기.
-                        .occurredAt(LocalDateTime.now())
-                        .build()
-        );
+        
+        SubscriptionEvent subEvent = SubscriptionEvent.builder()
+                .eventId(uuid)
+                .type("IDOL_SUB_END")
+                .targetType(SubscriptionEvent.TargetType.USER)
+                .targetId(String.valueOf(subscription.getUserId()))
+                .args(args)
+                .redirectUrl("/subscription")
+                .occurredAt(LocalDateTime.now())
+                .build();
+
+        // 이벤트 발행
+        eventPublisher.publishEvent(new SubscriptionEventWrapper("IDOL_SUB_END", subEvent));
 
         log.info("개인(아이돌) 구독 해지 완료: userId={}, idolId={}", userId, request.getIdolId());
     }
@@ -235,17 +238,19 @@ public class SubscriptionService {
         String uuid = UUID.randomUUID().toString();
         Map<String, String> args = new HashMap<>();
         args.put("groupId", String.valueOf(gs.getGroupId()));
-        eventProducer.publish(
-                SubscriptionEvent.builder()
-                        .eventId(uuid)
-                        .type("GROUP_SUB_STARTED")
-                        .targetType(SubscriptionEvent.TargetType.USER)
-                        .targetId(String.valueOf(gs.getUserId()))
-                        .args(args)
-                        .redirectUrl("/subscription") //TODO: 나중에 라우팅 제대로 맞추기.
-                        .occurredAt(LocalDateTime.now())
-                        .build()
-        );
+        
+        SubscriptionEvent subEvent = SubscriptionEvent.builder()
+                .eventId(uuid)
+                .type("GROUP_SUB_STARTED")
+                .targetType(SubscriptionEvent.TargetType.USER)
+                .targetId(String.valueOf(gs.getUserId()))
+                .args(args)
+                .redirectUrl("/subscription")
+                .occurredAt(LocalDateTime.now())
+                .build();
+
+        // 이벤트 발행
+        eventPublisher.publishEvent(new SubscriptionEventWrapper("GROUP_SUB_STARTED", subEvent));
 
         log.info("그룹 구독 생성 완료: userId={}, groupId={}", userId, request.getGroupId());
         return GroupSubscriptionDto.fromEntity(gs);
@@ -272,17 +277,19 @@ public class SubscriptionService {
         Map<String, String> args = new HashMap<>();
         args.put("userId", String.valueOf(gs.getUserId()));
         args.put("groupId", String.valueOf(gs.getGroupId()));
-        eventProducer.publish(
-                SubscriptionEvent.builder()
-                        .eventId(uuid)
-                        .type("GROUP_SUB_END")
-                        .targetType(SubscriptionEvent.TargetType.USER)
-                        .targetId(String.valueOf(gs.getUserId()))
-                        .args(args)
-                        .redirectUrl("/subscription") //TODO: 나중에 라우팅 제대로 맞추기.
-                        .occurredAt(LocalDateTime.now())
-                        .build()
-        );
+        
+        SubscriptionEvent subEvent = SubscriptionEvent.builder()
+                .eventId(uuid)
+                .type("GROUP_SUB_END")
+                .targetType(SubscriptionEvent.TargetType.USER)
+                .targetId(String.valueOf(gs.getUserId()))
+                .args(args)
+                .redirectUrl("/subscription")
+                .occurredAt(LocalDateTime.now())
+                .build();
+
+        // 이벤트 발행
+        eventPublisher.publishEvent(new SubscriptionEventWrapper("GROUP_SUB_END", subEvent));
 
         log.info("그룹 구독 해지 완료: userId={}, groupId={}", userId, request.getGroupId());
     }
