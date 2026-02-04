@@ -1,5 +1,9 @@
 server:
   port: 8089
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    min-response-size: 2048
 
 spring:
   application:
@@ -22,6 +26,13 @@ spring:
     
     # Feign Client 타임아웃 설정
     openfeign:
+      compression:
+        request:
+          enabled: true
+          min-request-size: 2048
+          mime-types: text/xml,application/xml,application/json
+        response:
+          enabled: true
       client:
         config:
           default:

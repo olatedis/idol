@@ -1,5 +1,9 @@
 server:
   port: 8082
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    min-response-size: 2048
 
 spring:
   application:
@@ -10,6 +14,13 @@ spring:
     compatibility-verifier:
       enabled: false
     openfeign:
+      compression:
+        request:
+          enabled: true
+          min-request-size: 2048
+          mime-types: text/xml,application/xml,application/json
+        response:
+          enabled: true
       httpclient:
         hc5:
           enabled: true
