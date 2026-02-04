@@ -1,10 +1,10 @@
-package com.bit.idol.searchservice.kafka;
+package com.bit.idol.boardservice.kafka;
 
 import lombok.Data;
 
 @Data
 public class PostIndexEvent {
-    //  upsert, delete
+    // upsert / delete
     private String action;
 
     private Long postId;
@@ -18,4 +18,5 @@ public class PostIndexEvent {
 
     private String createdAt;
     private String updatedAt;
+
 }

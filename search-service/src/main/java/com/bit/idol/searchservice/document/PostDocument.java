@@ -33,27 +33,17 @@ public class PostDocument {
     @Field(type = FieldType.Long)
     private Long groupId;
 
-    // nori 분석기 적용(검색 매칭용)
-    @MultiField(
-            mainField = @Field(type = FieldType.Text, analyzer = "nori_analyzer"),
-            otherFields = {
-                    @InnerField(suffix = "keyword", type = FieldType.Keyword)
-            }
-    )
+    // 기본 analyzer 사용(별도 플러그인 불필요)
+    @Field(type = FieldType.Text)
     private String title;
 
     // content는 검색 매칭에만 사용(응답에는 내려주지 않음)
-    @MultiField(
-            mainField = @Field(type = FieldType.Text, analyzer = "nori_analyzer"),
-            otherFields = {
-                    @InnerField(suffix = "keyword", type = FieldType.Keyword)
-            }
-    )
+    @Field(type = FieldType.Text)
     private String content;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
+    @Field(type = FieldType.Date)
     private LocalDateTime createdAt;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
+    @Field(type = FieldType.Date)
     private LocalDateTime updatedAt;
 }

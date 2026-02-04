@@ -1,0 +1,12 @@
+{
+  "properties": {
+    "postId": { "type": "long" },
+    "boardType": { "type": "keyword" },
+    "idolId": { "type": "long" },
+    "groupId": { "type": "long" },
+    "title": { "type": "text" },
+    "content": { "type": "text" },
+    "createdAt": { "type": "date" },
+    "updatedAt": { "type": "date" }
+  }
+}
