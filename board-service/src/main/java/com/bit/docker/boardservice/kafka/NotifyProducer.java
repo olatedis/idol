@@ -20,7 +20,7 @@ public class NotifyProducer {
             String payload = objectMapper.writeValueAsString(event);
             kafkaTemplate.send(TOPIC, event.getEventId(), payload);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("notify event serialize failed");
+            throw new RuntimeException("알림 이벤트 json 변환 실패");
         }
     }
 }

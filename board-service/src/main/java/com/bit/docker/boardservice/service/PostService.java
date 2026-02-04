@@ -23,7 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -325,7 +325,7 @@ public class PostService {
             event.setArgs(args);
 
             event.setRedirectUrl("/board/notice/" + post.getPostId());
-            event.setOccurredAt(OffsetDateTime.now().toString());
+            event.setOccurredAt(LocalDateTime.now().toString());
 
             notifyProducer.send(event);
             return;
@@ -370,7 +370,7 @@ public class PostService {
         }
         event.setRedirectUrl(redirectUrl);
 
-        event.setOccurredAt(OffsetDateTime.now().toString());
+        event.setOccurredAt(LocalDateTime.now().toString());
 
         notifyProducer.send(event);
     }
