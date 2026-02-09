@@ -22,4 +22,25 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Modifying
     @Query("update Post p set p.viewCount = p.viewCount + 1 where p.postId = :postId")
     void increaseViewCount(@Param("postId") Long postId);
+
+
+    // GROUP 추천순
+    Page<Post> findByBoardTypeAndGroupIdOrderByLikeCountDesc(
+            BoardType boardType,
+            Long groupId,
+            Pageable pageable
+    );
+
+    // IDOL 추천순
+    Page<Post> findByBoardTypeAndIdolIdOrderByLikeCountDesc(
+            BoardType boardType,
+            Long idolId,
+            Pageable pageable
+    );
+
+    // ADMIN_NOTICE 추천순(사실상 의미는 적지만 일관성)
+    Page<Post> findByBoardTypeOrderByLikeCountDesc(
+            BoardType boardType,
+            Pageable pageable
+    );
 }
