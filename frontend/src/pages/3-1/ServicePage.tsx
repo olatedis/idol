@@ -1,15 +1,14 @@
 import React from "react";
-import {NavLink, Outlet, useParams} from "react-router-dom";
+import {NavLink, Outlet} from "react-router-dom";
 import Header from "../test/Header";
 
 const ServicePage: React.FC = () => {
-    const {idolId} = useParams();
 
     const tabs = [
-        {label: "게시판", to: `/idol/${idolId}/board`},
-        {label: "투표", to: `/idol/${idolId}/vote`},
-        {label: "콘서트", to: `/idol/${idolId}/concert`},
-        {label: "채팅", to: `/idol/${idolId}/chat`},
+        {label: "게시판", to: "board" },
+        {label: "투표", to: "vote" },
+        {label: "콘서트", to: "concert" },
+        {label: "채팅", to: "chat" },
     ];
 
     return (
@@ -18,9 +17,7 @@ const ServicePage: React.FC = () => {
 
             {/* 세미 헤더 */}
             <div className="sticky top-0 z-10 bg-white">
-
-                <nav
-                    className="
+                <nav className="
               grid grid-cols-4 w-full
               border border-gray-200
               rounded-2xl
@@ -36,8 +33,8 @@ const ServicePage: React.FC = () => {
                             className={({isActive}) =>
                                 [
                                     "w-full text-center select-none",
-                                    "py-[clamp(10px,1.4vw,14px)]",
-                                    "text-[clamp(20px,1.2vw,16px)] font-semibold",
+                                    "py-[clamp(4px,0.9vw,14px)]",
+                                    "text-[clamp(19px,1.2vw,16px)] font-semibold",
                                     "border-r border-gray-200 last:border-r-0",
                                     isActive
                                         ? "bg-[#1FBFB8] text-white hover:bg-[#17AFA8]"
