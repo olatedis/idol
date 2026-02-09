@@ -1,6 +1,6 @@
 package com.bit.subscriptionservice.controller;
 
-import com.bit.docker.subscriptionservice.dto.*;
+import com.bit.subscriptionservice.dto.*;
 import com.bit.subscriptionservice.dto.*;
 import com.bit.subscriptionservice.entity.BillingKey;
 import com.bit.subscriptionservice.entity.Role;

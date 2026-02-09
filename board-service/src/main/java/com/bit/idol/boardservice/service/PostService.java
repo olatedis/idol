@@ -85,22 +85,36 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PostListResponse> selectAll(BoardType boardType, Long idolId, Long groupId, Pageable pageable) {
+    public Page<PostListResponse> selectAll(
+            BoardType boardType,
+            Long idolId,
+            Long groupId,
+            Pageable pageable
+    ) {
         validateBoardScope(boardType, idolId, groupId);
+
+        boolean likeSort =
+                pageable.getSort().getOrderFor("likeCount") !=null;
 
         Page<Post> page;
 
         // IDOL_* 목록
         if (boardType == BoardType.IDOL_OFFICIAL || boardType == BoardType.IDOL_FAN) {
-            page = postRepository.findByBoardTypeAndIdolIdOrderByCreatedAtDesc(boardType, idolId, pageable);
+            page = likeSort
+                    ? postRepository.findByBoardTypeAndIdolIdOrderByLikeCountDesc(boardType, idolId, pageable)
+                    : postRepository.findByBoardTypeAndIdolIdOrderByCreatedAtDesc(boardType, idolId, pageable);
         }
         // GROUP_* 목록
         else if (boardType == BoardType.GROUP_OFFICIAL || boardType == BoardType.GROUP_FAN) {
-            page = postRepository.findByBoardTypeAndGroupIdOrderByCreatedAtDesc(boardType, groupId, pageable);
+            page = likeSort
+                    ? postRepository.findByBoardTypeAndGroupIdOrderByLikeCountDesc(boardType, groupId, pageable)
+                    : postRepository.findByBoardTypeAndGroupIdOrderByCreatedAtDesc(boardType, groupId, pageable);
         }
         // 그 외 케이스는 없음
         else {
-            page = postRepository.findByBoardTypeOrderByCreatedAtDesc(boardType, pageable);
+            page = likeSort
+                    ? postRepository.findByBoardTypeOrderByLikeCountDesc(boardType, pageable)
+                    : postRepository.findByBoardTypeOrderByCreatedAtDesc(boardType, pageable);
         }
 
         return page.map(this::toListResponse);
