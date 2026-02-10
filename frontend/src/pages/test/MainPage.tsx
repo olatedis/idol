@@ -7,14 +7,14 @@ const MainPage: React.FC = () => {
         <div className="h-screen overflow-hidden">
             <Header />
 
-            <main className="h-full overflow-y-scroll snap-y snap-mandatory">
+            <main className="h-full overflow-y-scroll snap-y snap-mandatory  bg-rose-300">
 
                 {/* Slide 1 */}
                 <section className="h-screen snap-start flex flex-col items-center pt-[35vh] text-center">
                     <p className="text-3xl font-semibold leading-relaxed">
                         좋아하는 아이돌에게
                         <br />
-                        직접 마음을 전해보세요.
+                        직접 <a className="text-white">마음</a>을 전해보세요.
                     </p>
                 </section>
 
@@ -91,8 +91,8 @@ const MainPage: React.FC = () => {
                     </p>
 
                     <div className="flex gap-6">
-                        <button className="px-6 py-2 border border-black">login</button>
-                        <button className="px-6 py-2 border border-black">register</button>
+                        <button className="px-6 py-2 border rounded-md border-idol bg-idol">login</button>
+                        <button className="px-6 py-2 border rounded-md border-idol bg-idol">register</button>
                     </div>
                 </section>
 
