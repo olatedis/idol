@@ -49,6 +49,13 @@ spring:
             time-to-live: 900
             time-to-live-unit: seconds
 
+# 카카오 로그인 설정 (추가됨)
+kakao:
+  client-id: ${KAKAO_CLIENT_ID:your-kakao-rest-api-key}
+  redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:5173/oauth/kakao}
+  token-uri: https://kauth.kakao.com/oauth/token
+  user-info-uri: https://kapi.kakao.com/v2/user/me
+
 # gRPC Server 설정
 grpc:
   server:
