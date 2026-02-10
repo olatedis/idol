@@ -35,7 +35,7 @@ public class SocialAuthService {
         Map<String, Object> kakaoAccount = (Map<String, Object>) kakaoInfo.get("kakao_account");
         Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
 
-        String nickname = (String) profile.get("nickname");
+        String realName = (String) profile.get("nickname"); // 카카오 닉네임을 실명으로 사용
         String imgUrl = (String) profile.get("profile_image_url");
         String email = (String) kakaoAccount.get("email"); // 이메일 동의 안 하면 null일 수 있음
 
@@ -43,7 +43,8 @@ public class SocialAuthService {
         UserDto userDto = UserDto.builder()
                 .provider("KAKAO")
                 .providerId(providerId)
-                .nickname(nickname)
+                .realName(realName) // 실명 매핑
+                .nickname(null) // 닉네임은 UserService에서 랜덤 생성
                 .email(email != null ? email : providerId + "@kakao.com") // 이메일 없으면 임시 생성
                 .imgUrl(imgUrl)
                 .role(Role.USER)

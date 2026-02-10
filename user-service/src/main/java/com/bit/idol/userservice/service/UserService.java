@@ -48,7 +48,7 @@ public class UserService {
     private final StringRedisTemplate redisTemplate;
     private final NotificationProducer notificationProducer;
     private final SubscriptionFeignClient subscriptionFeignClient;
-    private final ApplicationEventPublisher eventPublisher; // 추가됨
+    private final ApplicationEventPublisher eventPublisher;
 
     // 닉네임 중복 검사
     public boolean checkNicknameAvailability(String nickname) {
@@ -163,11 +163,18 @@ public class UserService {
                 .orElseGet(() -> {
                     String randomPassword = UUID.randomUUID().toString();
                     String socialUsername = userDto.getProvider() + "_" + userDto.getProviderId();
+                    
+                    // 랜덤 닉네임 생성 (예: 팬돌이_1234)
+                    String randomNickname = "팬돌이_" + (int)(Math.random() * 10000);
+                    while (userRepository.existsByNickname(randomNickname)) {
+                        randomNickname = "팬돌이_" + (int)(Math.random() * 10000);
+                    }
 
                     User newUser = User.builder()
                             .username(socialUsername)
                             .password(passwordEncoder.encode(randomPassword))
-                            .nickname(userDto.getNickname())
+                            .nickname(randomNickname) // 랜덤 닉네임
+                            .realName(userDto.getRealName()) // 실명 (소셜 이름) 저장
                             .email(userDto.getEmail())
                             .role(Role.USER)
                             .provider(userDto.getProvider())
