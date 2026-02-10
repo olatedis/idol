@@ -23,38 +23,42 @@ public class SocialAuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final StringRedisTemplate redisTemplate;
 
-    public Map<String, String> loginKakao(String kakaoAccessToken) {
-        // 1. 카카오 API 호출하여 유저 정보 가져오기
+    public Map<String, String> loginKakao(String code) {
+        // 1. 인가 코드로 Access Token 발급받기 (Server-side)
+        String kakaoAccessToken = kakaoAuthClient.getToken(code);
+
+        // 2. 카카오 API 호출하여 유저 정보 가져오기
         Map<String, Object> kakaoInfo = kakaoAuthClient.getUserInfo(kakaoAccessToken);
         
-        // 2. 데이터 파싱
+        // 3. 데이터 파싱
         String providerId = String.valueOf(kakaoInfo.get("id"));
         Map<String, Object> kakaoAccount = (Map<String, Object>) kakaoInfo.get("kakao_account");
         Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
 
-        String nickname = (String) profile.get("nickname");
+        String realName = (String) profile.get("nickname"); // 카카오 닉네임을 실명으로 사용
         String imgUrl = (String) profile.get("profile_image_url");
         String email = (String) kakaoAccount.get("email"); // 이메일 동의 안 하면 null일 수 있음
 
-        // 3. UserDto 생성
+        // 4. UserDto 생성
         UserDto userDto = UserDto.builder()
                 .provider("KAKAO")
                 .providerId(providerId)
-                .nickname(nickname)
+                .realName(realName) // 실명 매핑
+                .nickname(null) // 닉네임은 UserService에서 랜덤 생성
                 .email(email != null ? email : providerId + "@kakao.com") // 이메일 없으면 임시 생성
                 .imgUrl(imgUrl)
                 .role(Role.USER)
                 .build();
 
-        // 4. User Service 호출 (회원가입 or 조회)
+        // 5. User Service 호출 (회원가입 or 조회)
         UserDto savedUser = userFeignClient.registerSocialUser(userDto);
 
-        // 5. JWT 토큰 발급
+        // 6. JWT 토큰 발급
         String userId = String.valueOf(savedUser.getUserId());
         String accessToken = jwtTokenProvider.createAccessToken(userId, savedUser.getUsername(), savedUser.getNickname(), savedUser.getRole());
         String refreshToken = jwtTokenProvider.createRefreshToken(userId);
 
-        // 6. Refresh Token Redis 저장
+        // 7. Refresh Token Redis 저장
         redisTemplate.opsForValue().set(
                 "RT:" + userId,
                 refreshToken,

@@ -244,6 +244,7 @@ jwt:
   secret: ${JWT_SECRET:your-very-long-and-secure-random-string-idol-link-project}
   white-list-path: 
     - /auth/login
+    - /auth/login/kakao # 👈 추가됨
     - /auth/reissue
     - /users/register
     - /ws-ranking/**
