@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 
-// 타입 (백엔드 스펙 기준)
 type Scope = "group" | "idol" | "global";
 type BoardKind = "official" | "fan" | "notice";
 
@@ -24,16 +23,19 @@ type PostListResponse = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-
-// boardType 변환
 function resolveBoardType(scope: Scope, type: BoardKind): string {
     if (type === "notice") return "ADMIN_NOTICE";
-
-    if (scope === "idol") {
-        return type === "official" ? "IDOL_OFFICIAL" : "IDOL_FAN";
-    }
-
+    if (scope === "idol") return type === "official" ? "IDOL_OFFICIAL" : "IDOL_FAN";
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
+}
+
+function pad2(n: number) {
+    return String(n).padStart(2, "0");
+}
+
+function makeDateForPostId(postId: number) {
+    const day = 1 + ((postId - 1) % 28);
+    return `2026-02-${pad2(day)} 12:${pad2((postId * 7) % 60)}`;
 }
 
 const BoardPage: React.FC = () => {
@@ -41,24 +43,79 @@ const BoardPage: React.FC = () => {
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
 
-    // URL 상태
+    const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+
     const scope = (sp.get("scope") as Scope) || "group";
     const board = (sp.get("type") as BoardKind) || "official";
     const page = Number(sp.get("page") || "1");
     const size = Number(sp.get("size") || "20");
-    const sort = sp.get("sort") || "latest"; // latest | top
-    const q = sp.get("q") || ""; // TODO: 검색 백엔드 연동 시 사용
+    const sort = sp.get("sort") || "latest";
+    const q = sp.get("q") || "";
     const idolId = sp.get("idolId");
+    const searchIn = sp.get("searchIn") || "title";
 
-    // 게시글 상태
     const [posts, setPosts] = useState<PostListResponse[]>([]);
     const [totalPages, setTotalPages] = useState(1);
+    const [totalElements, setTotalElements] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    const [searchInput, setSearchInput] = useState(q);
+    const [searchInInput, setSearchInInput] = useState(searchIn);
 
-    // 게시글 목록 fetch
+    useEffect(() => setSearchInput(q), [q]);
+    useEffect(() => setSearchInInput(searchIn), [searchIn]);
+
+    const MOCK_ALL_POSTS: PostListResponse[] = useMemo(() => {
+        const total = 137;
+        return Array.from({ length: total }).map((_, i) => {
+            const postId = i + 1;
+            const createdAt = makeDateForPostId(postId);
+            return {
+                postId,
+                boardType: "GROUP_OFFICIAL",
+                idolId: null,
+                groupId: 1,
+                authorId: 100 + ((postId * 3) % 17),
+                title: `더미 게시글 제목 ${postId}`,
+                viewCount: (postId * 37) % 5000,
+                likeCount: (postId * 11) % 300,
+                dislikeCount: (postId * 5) % 50,
+                createdAt,
+                updatedAt: createdAt,
+            };
+        });
+    }, []);
+
     useEffect(() => {
+        if (USE_MOCK) {
+            setLoading(false);
+            setError("");
+
+            let list = [...MOCK_ALL_POSTS];
+
+            if (sort === "top") {
+                list.sort((a, b) => {
+                    if (b.likeCount !== a.likeCount) return b.likeCount - a.likeCount;
+                    return b.postId - a.postId;
+                });
+            } else {
+                list.sort((a, b) => b.postId - a.postId);
+            }
+
+            const total = list.length;
+            const pages = Math.max(1, Math.ceil(total / size));
+            const safePage = Math.min(Math.max(1, page), pages);
+
+            const startIdx = (safePage - 1) * size;
+            const sliced = list.slice(startIdx, startIdx + size);
+
+            setTotalElements(total);
+            setTotalPages(pages);
+            setPosts(sliced);
+            return;
+        }
+
         if (!API_BASE_URL) return;
 
         const controller = new AbortController();
@@ -66,27 +123,14 @@ const BoardPage: React.FC = () => {
 
         const params = new URLSearchParams();
         params.set("boardType", boardType);
-        params.set("page", String(page - 1)); // Spring Page는 0-based
+        params.set("page", String(page - 1));
         params.set("size", String(size));
 
-        // 정렬
-        if (sort === "top") {
-            params.set("sort", "likeCount,desc");
-        } else {
-            params.set("sort", "createdAt,desc");
-        }
+        if (sort === "top") params.set("sort", "likeCount,desc");
+        else params.set("sort", "createdAt,desc");
 
-        // 게시판 범위별 id
-        if (boardType.startsWith("GROUP_") && groupId) {
-            params.set("groupId", groupId);
-        }
-
-        if (boardType.startsWith("IDOL_") && idolId) {
-            params.set("idolId", idolId);
-        }
-
-        // TODO: 검색 파라미터는 search-service 연동 시 처리
-        // if (q) params.set("q", q);
+        if (boardType.startsWith("GROUP_") && groupId) params.set("groupId", groupId);
+        if (boardType.startsWith("IDOL_") && idolId) params.set("idolId", idolId);
 
         const url = `${API_BASE_URL}/board/posts?${params.toString()}`;
 
@@ -101,21 +145,20 @@ const BoardPage: React.FC = () => {
             .then((data) => {
                 setPosts(data.content ?? []);
                 setTotalPages(data.totalPages ?? 1);
+                setTotalElements(data.totalElements ?? 0);
             })
             .catch((e) => {
                 if (e.name === "AbortError") return;
                 setError(e.message);
                 setPosts([]);
                 setTotalPages(1);
+                setTotalElements(0);
             })
-            .finally(() => {
-                setLoading(false);
-            });
+            .finally(() => setLoading(false));
 
         return () => controller.abort();
-    }, [API_BASE_URL, scope, board, page, size, sort, idolId, q, groupId]);
+    }, [API_BASE_URL, USE_MOCK, scope, board, page, size, sort, idolId, q, searchIn, groupId, MOCK_ALL_POSTS]);
 
-    // 필터 버튼
     const leftFilters = useMemo(() => {
         const base = [
             { label: "그룹 공식", scope: "group" as Scope, type: "official" as BoardKind },
@@ -144,12 +187,19 @@ const BoardPage: React.FC = () => {
         setSp(next);
     };
 
-    // 페이지네이션
-    const pages = useMemo(() => {
-        const result: number[] = [];
-        for (let i = 1; i <= totalPages; i++) result.push(i);
-        return result;
-    }, [totalPages]);
+    const setSort = (nextSort: "latest" | "top") => {
+        const next = new URLSearchParams(sp);
+        next.set("sort", nextSort);
+        next.set("page", "1");
+        setSp(next);
+    };
+
+    const setSize = (nextSize: number) => {
+        const next = new URLSearchParams(sp);
+        next.set("size", String(nextSize));
+        next.set("page", "1");
+        setSp(next);
+    };
 
     const goPage = (p: number) => {
         const next = new URLSearchParams(sp);
@@ -157,10 +207,38 @@ const BoardPage: React.FC = () => {
         setSp(next);
     };
 
-    // Render
+    const pageBlock = useMemo(() => {
+        const blockSize = 5;
+        const safeTotal = Math.max(1, totalPages);
+        const safePage = Math.min(Math.max(1, page), safeTotal);
+
+        const start = Math.floor((safePage - 1) / blockSize) * blockSize + 1;
+        const end = Math.min(start + blockSize - 1, safeTotal);
+
+        const nums: number[] = [];
+        for (let p = start; p <= end; p++) nums.push(p);
+
+        const prevBlock = Math.max(1, start - blockSize);
+        const nextBlock = Math.min(safeTotal, start + blockSize);
+
+        return { safePage, safeTotal, start, end, nums, prevBlock, nextBlock };
+    }, [page, totalPages]);
+
+    const submitSearch = () => {
+        const next = new URLSearchParams(sp);
+        next.set("searchIn", searchInInput);
+        next.set("q", searchInput.trim());
+        next.set("page", "1");
+        setSp(next);
+    };
+
+    const rowNo = (indexInPage: number) => {
+        const base = totalElements - (pageBlock.safePage - 1) * size;
+        return Math.max(0, base - indexInPage);
+    };
+
     return (
         <div className="space-y-4">
-            {/* 상단 툴바 */}
             <div className="flex justify-between flex-wrap gap-2">
                 <div className="flex gap-2 flex-wrap">
                     {leftFilters.map((f) => (
@@ -179,95 +257,173 @@ const BoardPage: React.FC = () => {
                     ))}
                 </div>
 
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => {
-                            const next = new URLSearchParams(sp);
-                            next.set("sort", "latest");
-                            setSp(next);
-                        }}
-                        className={[
-                            "px-3 py-2 rounded-full text-sm font-semibold border",
-                            sort === "latest"
-                                ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200",
-                        ].join(" ")}
-                    >
-                        최신순
-                    </button>
+                <div className="flex items-center gap-2">
+                    <div className="flex rounded-full border border-gray-200 overflow-hidden">
+                        <button
+                            onClick={() => setSort("latest")}
+                            className={[
+                                "px-3 py-2 text-sm font-semibold",
+                                sort === "latest" ? "bg-[#1FBFB8] text-white" : "bg-white text-gray-800 hover:bg-gray-200",
+                            ].join(" ")}
+                        >
+                            최신순
+                        </button>
+                        <button
+                            onClick={() => setSort("top")}
+                            className={[
+                                "px-3 py-2 text-sm font-semibold border-l border-gray-200",
+                                sort === "top" ? "bg-[#1FBFB8] text-white" : "bg-white text-gray-800 hover:bg-gray-200",
+                            ].join(" ")}
+                        >
+                            추천순
+                        </button>
+                    </div>
 
-                    <button
-                        onClick={() => {
-                            const next = new URLSearchParams(sp);
-                            next.set("sort", "top");
-                            setSp(next);
-                        }}
-                        className={[
-                            "px-3 py-2 rounded-full text-sm font-semibold border",
-                            sort === "top"
-                                ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200",
-                        ].join(" ")}
+                    <select
+                        value={size}
+                        onChange={(e) => setSize(Number(e.target.value))}
+                        className="px-3 py-2 rounded-full border border-gray-200 text-sm font-semibold bg-white"
                     >
-                        추천순
-                    </button>
+                        <option value={20}>20개</option>
+                        <option value={50}>50개</option>
+                    </select>
                 </div>
             </div>
 
-            {/* 게시글 리스트 */}
-            {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
             {error && <div className="text-sm text-red-600">{error}</div>}
 
-            {!loading && posts.length === 0 && (
-                <div className="border rounded-2xl p-6 text-sm text-gray-600">
-                    게시글이 없습니다.
+            <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
+                <div className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                    <div className="text-left">번호</div>
+                    <div className="text-left">제목</div>
+                    <div className="text-left">작성자</div>
+                    <div className="text-left">작성일</div>
+                    <div className="text-right">조회수</div>
+                    <div className="text-right">추천수</div>
                 </div>
-            )}
 
-            <div className="space-y-2">
-                {posts.map((p) => (
-                    <div
-                        key={p.postId}
-                        onClick={() => navigate(`./${p.postId}`)}
-                        className="border rounded-2xl p-4 hover:border-[#1FBFB8] cursor-pointer"
-                    >
-                        <div className="font-semibold">{p.title}</div>
-                        <div className="mt-2 text-sm text-gray-600 flex gap-4">
-                            <span>작성자 {p.authorId}</span>
-                            <span>조회 {p.viewCount}</span>
-                            <span>추천 {p.likeCount}</span>
-                            <span>{new Date(p.createdAt).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                ))}
+                {loading && <div className="px-4 py-6 text-sm text-gray-600">불러오는 중...</div>}
+
+                {!loading && posts.length === 0 && (
+                    <div className="px-4 py-6 text-sm text-gray-600">게시글이 없습니다.</div>
+                )}
+
+                {!loading &&
+                    posts.map((p, idx) => (
+                        <button
+                            key={p.postId}
+                            type="button"
+                            onClick={() => navigate(`./${p.postId}`)}
+                            className="
+                w-full text-left
+                grid grid-cols-[90px_1fr_120px_140px_90px_90px]
+                px-4 py-3
+                border-b border-gray-100 last:border-b-0
+                hover:bg-gray-50
+                transition-colors
+              "
+                        >
+                            <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
+
+                            <div className="min-w-0">
+                                <div className="text-sm font-semibold text-gray-900 truncate">{p.title}</div>
+                            </div>
+
+                            <div className="text-sm text-gray-700 tabular-nums">{p.authorId}</div>
+
+                            <div className="text-sm text-gray-600">{p.createdAt}</div>
+
+                            <div className="text-sm text-gray-700 text-right tabular-nums">{p.viewCount}</div>
+
+                            <div className="text-sm text-gray-700 text-right tabular-nums">{p.likeCount}</div>
+                        </button>
+                    ))}
             </div>
 
-            {/* 페이지네이션 */}
-            <div className="flex justify-center gap-1 pt-4">
-                {pages.map((p) => (
+            <div className="flex items-center justify-center gap-1 pt-2">
+                <button
+                    type="button"
+                    onClick={() => goPage(pageBlock.prevBlock)}
+                    disabled={pageBlock.start === 1}
+                    className="w-9 h-9 rounded-full border border-gray-200 text-sm font-semibold disabled:opacity-40"
+                >
+                    {"<<"}
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => goPage(Math.max(1, pageBlock.safePage - 1))}
+                    disabled={pageBlock.safePage === 1}
+                    className="w-9 h-9 rounded-full border border-gray-200 text-sm font-semibold disabled:opacity-40"
+                >
+                    {"<"}
+                </button>
+
+                {pageBlock.nums.map((p) => (
                     <button
                         key={p}
+                        type="button"
                         onClick={() => goPage(p)}
                         className={[
                             "w-9 h-9 rounded-full border text-sm font-semibold",
-                            p === page
+                            p === pageBlock.safePage
                                 ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200",
+                                : "bg-white border-gray-200 hover:bg-gray-200",
                         ].join(" ")}
                     >
                         {p}
                     </button>
                 ))}
+
+                <button
+                    type="button"
+                    onClick={() => goPage(Math.min(pageBlock.safeTotal, pageBlock.safePage + 1))}
+                    disabled={pageBlock.safePage === pageBlock.safeTotal}
+                    className="w-9 h-9 rounded-full border border-gray-200 text-sm font-semibold disabled:opacity-40"
+                >
+                    {">"}
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => goPage(pageBlock.nextBlock)}
+                    disabled={pageBlock.end === pageBlock.safeTotal}
+                    className="w-9 h-9 rounded-full border border-gray-200 text-sm font-semibold disabled:opacity-40"
+                >
+                    {">>"}
+                </button>
             </div>
 
-            {/* 검색 (UI만) */}
-            <div className="flex justify-center gap-2 pt-4">
-                <input
-                    value={q}
-                    disabled
-                    placeholder="검색 (TODO)"
-                    className="w-full max-w-md px-4 py-3 rounded-2xl border border-gray-200 bg-gray-100"
-                />
+            <div className="flex justify-center pt-4">
+                <div className="w-full max-w-3xl border border-gray-200 rounded-md overflow-hidden flex items-stretch bg-white">
+                    <select
+                        value={searchInInput}
+                        onChange={(e) => setSearchInInput(e.target.value)}
+                        className="px-4 py-3 text-sm border-r border-gray-200 bg-white outline-none"
+                    >
+                        <option value="title">제목</option>
+                        <option value="title_content">제목+내용</option>
+                        <option value="content">내용</option>
+                    </select>
+
+                    <input
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") submitSearch();
+                        }}
+                        placeholder="단어 위주로 검색하면 더 정확한 결과를 얻을 수 있습니다."
+                        className="flex-1 px-4 py-3 text-sm outline-none"
+                    />
+
+                    <button
+                        type="button"
+                        onClick={submitSearch}
+                        className="px-4 py-3 border-l border-gray-200 hover:bg-gray-50"
+                    >
+                        🔍
+                    </button>
+                </div>
             </div>
         </div>
     );
