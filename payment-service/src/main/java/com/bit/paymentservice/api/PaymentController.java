@@ -5,7 +5,7 @@ import com.bit.paymentservice.domain.dto.PaymentConfirmDto;
 import com.bit.paymentservice.domain.dto.PaymentCreateRequest;
 import com.bit.paymentservice.domain.dto.PaymentCreateResponse;
 import com.bit.paymentservice.service.PaymentService;
-import com.bit.docker.paymentservice.domain.dto.*;
+import com.bit.paymentservice.domain.dto.*;
 import com.bit.paymentservice.domain.entity.Payment;
 import com.bit.paymentservice.infra.persistence.PaymentRepository;
 import lombok.AllArgsConstructor;
