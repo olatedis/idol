@@ -50,7 +50,7 @@ const MainPage: React.FC = () => {
                             whileInView={{opacity: 1, y: 0, rotate: -15}}
                             transition={{duration: 0.8}}
                             viewport={{once: true}}
-                            className="w-1/2 h-72 max-w-[350px]  bg-gray-200 z-20"
+                            className="w-1/2 h-72 max-w-[350px]  bg-idol-light z-20"
                         />
 
                         {/* Text */}
@@ -108,7 +108,7 @@ const MainPage: React.FC = () => {
                             whileInView={{opacity: 1, y: 0, rotate: 15}}
                             transition={{duration: 0.8}}
                             viewport={{once: true}}
-                            className="w-1/2 h-72  max-w-[350px] bg-gray-200"
+                            className="w-1/2 h-72  max-w-[350px] bg-idol-light"
                         />
                     </div>
                 </section>

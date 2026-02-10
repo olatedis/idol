@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme{
-    --color-idol: #FF9494;
-    --color-idol-light: #FFD1D1;
-    --color-idol-bg: #FFF5E4;
+    --color-idol: #FF9292;
+    --color-idol-light: #FFE8E8;
+    --color-idol-bg: #FFB4B4;
 }
 /*:root {*/
 /*  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;*/
