@@ -2,7 +2,7 @@ package com.bit.idol.boardservice.service;
 
 import com.bit.idol.boardservice.client.SubscriptionInternalClient;
 import com.bit.idol.boardservice.dto.reaction.PostReactionResponse;
-import com.bit.docker.boardservice.entity.*;
+import com.bit.idol.boardservice.entity.*;
 import com.bit.idol.boardservice.entity.BoardType;
 import com.bit.idol.boardservice.entity.Post;
 import com.bit.idol.boardservice.entity.PostReaction;
