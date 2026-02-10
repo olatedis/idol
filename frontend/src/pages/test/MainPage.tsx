@@ -20,7 +20,7 @@ const MainPage: React.FC = () => {
                         <p className="transform text-3xl font-semibold leading-relaxed text-center mix-blend-multiply">
                             좋아하는 아이돌에게
                             <br/>
-                            직접 <a className="text-idol">마음</a>을 전해보세요.
+                            직접 <a className="text-idol-light">마음</a>을 전해보세요.
                         </p>
 
                     </motion.div>
