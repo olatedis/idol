@@ -1,9 +1,11 @@
 import React from "react";
+import {useNavigate} from "react-router-dom";
 
 const Header: React.FC = () => {
+    const navigate = useNavigate();
     return (
         <header className="w-full flex items-center justify-between px-8 py-4 border-b">
-            <span className="text-lg font-bold hover:text-idol">dolchat</span>
+            <div onClick={(event ) => navigate("/")} className="text-xl font-bold hover:text-idol hover:cursor-pointer">dolchat</div>
 
             <div className="flex gap-6 text-sm">
                 <div className="rounded-md  bg-idol">
