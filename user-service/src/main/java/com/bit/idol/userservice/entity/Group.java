@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "groups")
+@Table(name = "idol_groups") // 예약어 회피
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
