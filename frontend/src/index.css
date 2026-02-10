@@ -1,4 +1,8 @@
 @import "tailwindcss";
+
+@theme{
+    --color-idol: oklch(70.4% 0.191 22.216);
+}
 /*:root {*/
 /*  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;*/
 /*  line-height: 1.5;*/
