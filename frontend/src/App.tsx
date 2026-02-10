@@ -16,7 +16,7 @@ function App() {
                     <Route path="/group/:groupId" element={<ServicePage />}>
                         <Route index element={<Navigate to="board" replace />} />
                         <Route path="board" element={<BoardPage />} />
-                        <Route path="board/:postId" element={<PostDetailPage />} />
+                        {/*<Route path="board/:postId" element={<PostDetailPage />} />*/}
 
 
                     </Route>

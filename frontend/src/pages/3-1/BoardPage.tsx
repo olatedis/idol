@@ -24,7 +24,6 @@ type PostListResponse = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const navigate = useNavigate();
 
 // boardType 변환
 function resolveBoardType(scope: Scope, type: BoardKind): string {
@@ -40,6 +39,7 @@ function resolveBoardType(scope: Scope, type: BoardKind): string {
 const BoardPage: React.FC = () => {
     const { groupId } = useParams();
     const [sp, setSp] = useSearchParams();
+    const navigate = useNavigate();
 
     // URL 상태
     const scope = (sp.get("scope") as Scope) || "group";
