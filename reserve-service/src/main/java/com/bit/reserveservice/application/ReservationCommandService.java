@@ -18,12 +18,13 @@ public class ReservationCommandService {
 
     private final ReservationRepository reservationRepository;
     private final SeatLockRepository seatLockRepository;
-    private final ApplicationEventPublisher eventPublisher; // 변경됨
+    private final ApplicationEventPublisher eventPublisher;
 
 
     @Transactional
     public int reserve(int userId, int concertId, int seatId, int price) {
 
+        // 1. 락 획득
         boolean locked = seatLockRepository.lock(concertId, seatId, userId);
         if (!locked) {
             throw new IllegalStateException("이미 선점된 좌석입니다.");
@@ -31,8 +32,14 @@ public class ReservationCommandService {
 
         Reservation reservation = null;
         try {
+            // 2. DB 저장
             reservation = Reservation.create(userId, concertId, seatId, price);
             reservationRepository.save(reservation);
+
+            // 3. 락 유효성 재확인 (TTL 만료 방지)
+            if (!seatLockRepository.verifyLock(concertId, seatId, userId)) {
+                throw new IllegalStateException("예약 시간이 초과되었습니다. 다시 시도해주세요.");
+            }
 
             PaymentEvent event = new PaymentEvent(
                     userId,
@@ -42,14 +49,17 @@ public class ReservationCommandService {
                     price
             );
 
-            // ✅ 이벤트 발행 (커밋 후 실행됨)
+            // 4. 이벤트 발행
             eventPublisher.publishEvent(new ReservationCreatedEvent(event));
 
             return reservation.getId();
 
         } catch (Exception e) {
+            // 실패 시 락 해제 (내 락일 때만 해제하는 게 좋지만, verifyLock 실패 시엔 이미 내 락이 아님)
             try {
-                seatLockRepository.unlock(concertId, seatId);
+                if (seatLockRepository.verifyLock(concertId, seatId, userId)) {
+                    seatLockRepository.unlock(concertId, seatId);
+                }
             } catch (Exception ex) {
                 log.error(ex.getMessage(), ex);
             }

@@ -26,4 +26,11 @@ public class SeatLockRepository {
     public void unlock(int concertId, int seatId) {
         redisTemplate.delete("seat:lock:%d:%d".formatted(concertId, seatId));
     }
+
+    // 락 소유자 확인
+    public boolean verifyLock(int concertId, int seatId, int userId) {
+        String key = "seat:lock:%d:%d".formatted(concertId, seatId);
+        String ownerId = redisTemplate.opsForValue().get(key);
+        return ownerId != null && ownerId.equals(String.valueOf(userId));
+    }
 }
