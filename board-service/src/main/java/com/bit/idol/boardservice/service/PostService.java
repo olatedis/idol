@@ -20,6 +20,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -37,7 +38,7 @@ public class PostService {
     private final UserInternalClient userInternalClient;
     private final SubscriptionInternalClient subscriptionInternalClient;
 
-    private final ApplicationEventPublisher eventPublisher; // 변경됨
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public PostResponse insert(PostWriteRequest req, Integer userId, Role role) {
@@ -68,11 +69,19 @@ public class PostService {
 
         // OFFICIAL/FAN 모두 상세보기(content)는 구독자만
         requireReadSubscription(post, userId, role);
+        
+        return selectOneWithViewCount(postId, userId, role);
+    }
+    
+    // readOnly 제거 (조회수 증가 때문에 쓰기 트랜잭션 필요)
+    @Transactional
+    public PostResponse selectOneWithViewCount(Long postId, Integer userId, Role role) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
 
-        // 조회수 증가 (TODO: 별도 트랜잭션 분리 필요)
+        requireReadSubscription(post, userId, role);
+
         postRepository.increaseViewCount(postId);
-
-        // 증가된 값 다시 반영
         post.setViewCount(post.getViewCount() + 1);
 
         return toResponse(post);
