@@ -68,9 +68,11 @@ public class PostReactionService {
             postReactionRepository.save(pr);
 
             if (requested == ReactionType.LIKE) {
-                post.setLikeCount(post.getLikeCount() + 1);
+                postRepository.incrementLikeCount(postId);
+                post.setLikeCount(post.getLikeCount() + 1); // 객체 동기화
             } else {
-                post.setDislikeCount(post.getDislikeCount() + 1);
+                postRepository.incrementDislikeCount(postId);
+                post.setDislikeCount(post.getDislikeCount() + 1); // 객체 동기화
             }
 
             return buildResponse(post, requested);
@@ -83,9 +85,11 @@ public class PostReactionService {
             postReactionRepository.delete(existing);
 
             if (requested == ReactionType.LIKE) {
-                post.setLikeCount(post.getLikeCount() - 1);
+                postRepository.decrementLikeCount(postId);
+                post.setLikeCount(post.getLikeCount() - 1); // 객체 동기화
             } else {
-                post.setDislikeCount(post.getDislikeCount() - 1);
+                postRepository.decrementDislikeCount(postId);
+                post.setDislikeCount(post.getDislikeCount() - 1); // 객체 동기화
             }
 
             return buildResponse(post, "NONE");
@@ -97,14 +101,18 @@ public class PostReactionService {
 
         // 카운트 조정
         if (before == ReactionType.LIKE) {
+            postRepository.decrementLikeCount(postId);
             post.setLikeCount(post.getLikeCount() - 1);
         } else {
+            postRepository.decrementDislikeCount(postId);
             post.setDislikeCount(post.getDislikeCount() - 1);
         }
 
         if (requested == ReactionType.LIKE) {
+            postRepository.incrementLikeCount(postId);
             post.setLikeCount(post.getLikeCount() + 1);
         } else {
+            postRepository.incrementDislikeCount(postId);
             post.setDislikeCount(post.getDislikeCount() + 1);
         }
 
