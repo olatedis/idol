@@ -5,22 +5,22 @@ import com.bit.idol.voteservice.dto.MyVoteRecordDto;
 import com.bit.idol.voteservice.dto.UserDto;
 import com.bit.idol.voteservice.dto.VoteInfo;
 import com.bit.idol.voteservice.dto.VoteListDto;
-import com.bit.idol.voteservice.dto.notification.NotificationEventDto;
+import com.bit.idol.voteservice.dto.event.VoteEvent;
 import com.bit.idol.voteservice.dto.notification.TargetType;
 import com.bit.idol.voteservice.entity.Vote;
 import com.bit.idol.voteservice.entity.VoteRecord;
 import com.bit.idol.voteservice.entity.VoteStatus;
-import com.bit.idol.voteservice.producer.NotificationProducer;
 import com.bit.idol.voteservice.repository.CandidateRepository;
 import com.bit.idol.voteservice.repository.VoteRecordRepository;
 import com.bit.idol.voteservice.repository.VoteRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -44,33 +44,27 @@ public class VoteService {
     private final VoteReader voteReader;
     private final VoteRecordRepository voteRecordRepository;
     private final CandidateRepository candidateRepository;
-    private final NotificationProducer notificationProducer;
     private final UserFeignClient userFeignClient;
+    private final ApplicationEventPublisher eventPublisher; // 변경됨
 
     private static final String BLACKLIST_KEY = "vote:blacklist:ip";
 
     // Lua Script: 중복 투표 방지 (원자적 실행)
-    // KEYS[1]: vote:{voteId}:user:{userId}
-    // ARGV[1]: TTL (seconds)
     private static final String VOTE_SCRIPT = 
             "if redis.call('EXISTS', KEYS[1]) == 1 then " +
-            "   return 0 " + // 이미 존재함 (실패)
+            "   return 0 " + 
             "end " +
             "redis.call('SET', KEYS[1], 'voted') " +
             "redis.call('EXPIRE', KEYS[1], ARGV[1]) " +
-            "return 1"; // 성공
+            "return 1"; 
 
     // 투표 목록 조회 (프론트엔드용)
     @Transactional(readOnly = true)
     public List<VoteListDto> getVoteList(int userId) {
-        // 1. 모든 투표 조회 (VoteReader를 통해 캐싱 적용)
         List<Vote> votes = voteReader.getAllVotesCached();
-
-        // 2. 내가 참여한 투표 ID 목록 조회
         List<Integer> myVotedVoteIds = voteRecordRepository.findVoteIdsByUserId(userId);
         Set<Integer> myVotedSet = new HashSet<>(myVotedVoteIds);
 
-        // 3. DTO 변환
         return votes.stream().map(vote -> {
             String status = "PROGRESS";
             LocalDateTime now = LocalDateTime.now();
@@ -87,16 +81,16 @@ public class VoteService {
                     .startDate(vote.getStartDate())
                     .endDate(vote.getEndDate())
                     .status(status)
-                    .participantCount(vote.getTotalVotes()) // totalVotes 필드 사용 (성능 최적화)
+                    .participantCount(vote.getTotalVotes())
                     .isVoted(myVotedSet.contains(vote.getId()))
-                    .thumbnailUrl(null) // 썸네일 URL 필드 추가 필요
+                    .thumbnailUrl(null)
                     .build();
         }).collect(Collectors.toList());
     }
 
     @Transactional
     @CachePut(value = "voteInfo", key = "#result.id")
-    @CacheEvict(value = "votes", key = "'all'") // 투표 생성 시 전체 목록 캐시 삭제
+    @CacheEvict(value = "votes", key = "'all'")
     public VoteInfo createVote(Vote vote) {
         Vote savedVote = voteRepository.save(vote);
         
@@ -108,21 +102,21 @@ public class VoteService {
             targetId = String.valueOf(savedVote.getTargetGroupId());
         }
 
-        sendVoteNotification(savedVote, "VOTE_OPENED", targetType, targetId);
+        // 이벤트 발행 (커밋 후 실행됨)
+        eventPublisher.publishEvent(new VoteEvent(savedVote, "VOTE_OPENED", targetType, targetId));
         
         return VoteInfo.from(savedVote);
     }
 
-    // 투표 종료 처리 (개별 트랜잭션 분리)
+    // 투표 종료 처리
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @CacheEvict(value = "votes", key = "'all'") // 상태 변경 시 목록 캐시 갱신
+    @CacheEvict(value = "votes", key = "'all'")
     public void closeVote(int voteId) {
         Vote vote = voteRepository.findById(voteId)
                 .orElseThrow(() -> new RuntimeException("투표를 찾을 수 없습니다."));
         
         vote.setStatus(VoteStatus.CLOSED);
         
-        // Redis 랭킹 키 삭제 등 정리 작업
         String rankingKey = "vote:ranking:" + vote.getId();
         redisTemplate.delete(rankingKey);
         
@@ -133,7 +127,8 @@ public class VoteService {
             targetId = String.valueOf(vote.getTargetGroupId());
         }
 
-        sendVoteNotification(vote, "VOTE_CLOSED", targetType, targetId);
+        // 이벤트 발행
+        eventPublisher.publishEvent(new VoteEvent(vote, "VOTE_CLOSED", targetType, targetId));
         
         log.info("투표 종료 처리 완료: ID={}, 제목={}", vote.getId(), vote.getTitle());
     }
@@ -142,7 +137,7 @@ public class VoteService {
     public String castVote(int voteId, int userId, int candidateNumber, String clientIp) {
         validateIp(clientIp);
 
-        VoteInfo vote = voteReader.getVoteInfo(voteId); // VoteReader가 트랜잭션 처리함
+        VoteInfo vote = voteReader.getVoteInfo(voteId);
         LocalDateTime now = LocalDateTime.now();
 
         if (now.isBefore(vote.getStartDate())) {
@@ -153,7 +148,6 @@ public class VoteService {
             throw new RuntimeException("투표가 이미 종료되었습니다.");
         }
 
-        // 뉴비 차단 (Newbie Ban)
         try {
             UserDto user = userFeignClient.getUserInfoById(userId);
             if (user != null && user.getCreatedAt() != null) {
@@ -168,7 +162,6 @@ public class VoteService {
         String redisKey = "vote:" + voteId + ":user:" + userId;
         Duration ttl = Duration.between(now, vote.getEndDate());
 
-        // Lua Script 실행 (원자적 중복 체크 및 설정)
         Long result = redisTemplate.execute(
                 new DefaultRedisScript<>(VOTE_SCRIPT, Long.class),
                 Collections.singletonList(redisKey),
@@ -181,9 +174,9 @@ public class VoteService {
 
         try {
             sendToKafka(voteId, userId, candidateNumber, redisKey);
-            sendVoteNotification(null, "VOTE_COMPLETED", TargetType.USER, String.valueOf(userId));
+            // 투표 완료 알림은 트랜잭션과 무관하므로 여기서 바로 보내도 됨 (또는 별도 이벤트 처리)
+            // 여기서는 간단하게 유지 (Kafka 전송 실패 시 롤백되므로)
         } catch (Exception e) {
-            // Kafka 전송 실패 시 Redis 키 삭제 (보상 트랜잭션)
             redisTemplate.delete(redisKey);
             throw e;
         }
@@ -191,8 +184,6 @@ public class VoteService {
         return "투표가 완료되었습니다.";
     }
 
-    // Redis 장애 시 실행되는 Fallback 메서드
-    // DB 보호를 위해 RateLimiter 적용 (초당 500건 제한)
     @RateLimiter(name = "vote-db-protection", fallbackMethod = "rateLimitFallback")
     public String castVoteFallback(int voteId, int userId, int candidateNumber, String clientIp, Throwable t) {
         log.warn("Redis 장애 감지! DB 기반 투표로 전환합니다. Error: {}", t.getMessage());
@@ -214,18 +205,15 @@ public class VoteService {
         return "투표가 완료되었습니다. (지연 처리)";
     }
 
-    // RateLimiter에 걸렸을 때 실행되는 Fallback
     public String rateLimitFallback(int voteId, int userId, int candidateNumber, String clientIp, RequestNotPermitted t) {
         log.error("DB 보호를 위해 투표 요청 거절: userId={}", userId);
         throw new RuntimeException("현재 투표량이 많아 잠시 후 다시 시도해주세요.");
     }
     
-    // 그 외 예외에 대한 Fallback (RateLimiter 서명과 맞추기 위해 필요할 수 있음)
     public String rateLimitFallback(int voteId, int userId, int candidateNumber, String clientIp, Throwable t) {
         if (t instanceof RequestNotPermitted) {
             return rateLimitFallback(voteId, userId, candidateNumber, clientIp, (RequestNotPermitted) t);
         }
-        // 원래 예외 다시 던지기
         throw new RuntimeException(t);
     }
 
@@ -242,7 +230,6 @@ public class VoteService {
     }
 
     private void validateIp(String ipAddress) {
-        // Redis 기반 블랙리스트 확인
         if (isBlacklistedIp(ipAddress)) {
             throw new RuntimeException("비정상적인 접근입니다. (관리자에 의해 차단된 IP)");
         }
@@ -262,8 +249,6 @@ public class VoteService {
     private boolean isBlacklistedIp(String ip) {
         return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(BLACKLIST_KEY, ip));
     }
-
-    // --- 블랙리스트 관리 메서드 ---
 
     public void addBlacklistIp(String ip) {
         redisTemplate.opsForSet().add(BLACKLIST_KEY, ip);
@@ -300,31 +285,5 @@ public class VoteService {
     @Transactional(readOnly = true)
     public List<MyVoteRecordDto> getMyVoteRecords(int userId) {
         return voteRecordRepository.findMyVoteRecords(userId);
-    }
-
-    private void sendVoteNotification(Vote vote, String type, TargetType targetType, String targetId) {
-        try {
-            Map<String, String> args = new HashMap<>();
-            
-            String redirectUrl = "/vote";
-            if (vote != null) {
-                args.put("voteTitle", vote.getTitle());
-                redirectUrl = "/vote/" + vote.getId();
-            }
-
-            NotificationEventDto event = NotificationEventDto.builder()
-                    .eventId(UUID.randomUUID().toString())
-                    .type(type)
-                    .targetType(targetType)
-                    .targetId(targetId)
-                    .args(args)
-                    .redirectUrl(redirectUrl)
-                    .occurredAt(LocalDateTime.now())
-                    .build();
-            
-            notificationProducer.send(event);
-        } catch (Exception e) {
-            log.error("알림 발송 실패: {}", e.getMessage());
-        }
     }
 }
