@@ -27,6 +27,8 @@ public class UserDto {
     @NotBlank(message = "닉네임은 필수입니다.")
     private String nickname;
 
+    private String realName; // 실명 추가
+
     @NotBlank(message = "이메일은 필수입니다.")
     @Email(message = "유효하지 않은 이메일 형식입니다.")
     private String email;
@@ -54,6 +56,7 @@ public class UserDto {
                 .username(user.getUsername())
                 .password(user.getPassword())
                 .nickname(user.getNickname())
+                .realName(user.getRealName()) // 매핑 추가
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .address(user.getAddress())
@@ -63,7 +66,7 @@ public class UserDto {
                 .providerId(user.getProviderId())
                 .status(user.getStatus())
                 .reportCount(user.getReportCount())
-                .createdAt(user.getCreatedAt()) // 추가됨
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 }

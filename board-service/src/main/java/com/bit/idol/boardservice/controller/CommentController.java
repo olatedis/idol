@@ -8,6 +8,8 @@ import com.bit.idol.boardservice.service.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -23,8 +25,15 @@ public class CommentController {
             @PathVariable Long postId,
             @RequestBody CommentWriteRequest req,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role
+            @RequestHeader("X-User-Role") Role role,
+            @RequestHeader(value = "X-Nickname", required = false) String nickname
     ) {
+        if (nickname != null) {
+            // Gateway에서 인코딩된 닉네임을 디코딩
+            req.setNickname(URLDecoder.decode(nickname, StandardCharsets.UTF_8));
+        } else {
+            req.setNickname("알 수 없음");
+        }
         return commentService.write(postId, req, userId, role);
     }
 

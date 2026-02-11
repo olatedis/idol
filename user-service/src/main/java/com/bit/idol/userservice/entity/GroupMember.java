@@ -16,11 +16,11 @@ public class GroupMember {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY) // 지연 로딩 적용
     @JoinColumn(name = "group_id", nullable = false)
     private Group group;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY) // 지연 로딩 적용
     @JoinColumn(name = "idol_id", nullable = false)
     private Idol idol;
 }

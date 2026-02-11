@@ -14,6 +14,7 @@ public class UserDto {
     private String username;
     private String password;
     private String nickname;
+    private String realName; // 실명 추가
     private String email;
     private Role role;
     private String imgUrl;

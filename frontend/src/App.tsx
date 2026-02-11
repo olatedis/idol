@@ -14,6 +14,9 @@ function App() {
                 {/*<Header />*/}
                 <Routes>
                     <Route path="/" element={<MainPage />} />
+                    
+                    {/* 카카오 로그인 리다이렉트 */}
+                    <Route path="/oauth/kakao" element={<OAuthKakao />} />
 
                     {/* 3-1 */}
                     <Route path="/group/:groupId" element={<ServicePage />}>

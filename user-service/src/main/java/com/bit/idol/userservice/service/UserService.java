@@ -48,7 +48,7 @@ public class UserService {
     private final StringRedisTemplate redisTemplate;
     private final NotificationProducer notificationProducer;
     private final SubscriptionFeignClient subscriptionFeignClient;
-    private final ApplicationEventPublisher eventPublisher; // 추가됨
+    private final ApplicationEventPublisher eventPublisher;
 
     // 닉네임 중복 검사
     public boolean checkNicknameAvailability(String nickname) {
@@ -163,11 +163,18 @@ public class UserService {
                 .orElseGet(() -> {
                     String randomPassword = UUID.randomUUID().toString();
                     String socialUsername = userDto.getProvider() + "_" + userDto.getProviderId();
+                    
+                    // 랜덤 닉네임 생성 (예: 팬돌이_1234)
+                    String randomNickname = "팬돌이_" + (int)(Math.random() * 10000);
+                    while (userRepository.existsByNickname(randomNickname)) {
+                        randomNickname = "팬돌이_" + (int)(Math.random() * 10000);
+                    }
 
                     User newUser = User.builder()
                             .username(socialUsername)
                             .password(passwordEncoder.encode(randomPassword))
-                            .nickname(userDto.getNickname())
+                            .nickname(randomNickname) // 랜덤 닉네임
+                            .realName(userDto.getRealName()) // 실명 (소셜 이름) 저장
                             .email(userDto.getEmail())
                             .role(Role.USER)
                             .provider(userDto.getProvider())
@@ -219,16 +226,34 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         String oldImgUrl = user.getImgUrl();
+        String fileUrl = null;
 
-        String fileUrl = s3Service.uploadFile(file);
-        user.setImgUrl(fileUrl);
-        
-        if (oldImgUrl != null && !oldImgUrl.isEmpty()) {
-            try {
-                s3Service.deleteFile(oldImgUrl);
-            } catch (Exception e) {
-                log.warn("기존 프로필 이미지 삭제 실패 (S3): {}", oldImgUrl);
+        try {
+            // 1. S3 업로드
+            fileUrl = s3Service.uploadFile(file);
+            
+            // 2. DB 업데이트
+            user.setImgUrl(fileUrl);
+            userRepository.saveAndFlush(user); // 즉시 반영하여 DB 에러 확인
+
+            // 3. 기존 이미지 삭제 (DB 성공 시)
+            if (oldImgUrl != null && !oldImgUrl.isEmpty()) {
+                try {
+                    s3Service.deleteFile(oldImgUrl);
+                } catch (Exception e) {
+                    log.warn("기존 프로필 이미지 삭제 실패 (S3): {}", oldImgUrl);
+                }
             }
+        } catch (Exception e) {
+            // DB 저장 실패 시 업로드된 새 이미지 삭제 (보상 트랜잭션)
+            if (fileUrl != null) {
+                try {
+                    s3Service.deleteFile(fileUrl);
+                } catch (Exception s3Ex) {
+                    log.error("롤백 중 S3 파일 삭제 실패: {}", fileUrl);
+                }
+            }
+            throw new RuntimeException("프로필 이미지 업데이트 실패", e);
         }
         
         // 이벤트 발행
@@ -275,6 +300,15 @@ public class UserService {
 
         if (!passwordEncoder.matches(checkPassword, user.getPassword())) {
             throw new RuntimeException("비밀번호가 일치하지 않습니다.");
+        }
+
+        // 프로필 이미지 삭제 추가
+        if (user.getImgUrl() != null && !user.getImgUrl().isEmpty()) {
+            try {
+                s3Service.deleteFile(user.getImgUrl());
+            } catch (Exception e) {
+                log.warn("회원 탈퇴 시 프로필 이미지 삭제 실패: {}", user.getImgUrl());
+            }
         }
 
         userRepository.delete(user);

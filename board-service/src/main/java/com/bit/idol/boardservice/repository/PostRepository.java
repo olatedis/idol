@@ -9,38 +9,42 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-    Page<Post> findByBoardTypeOrderByCreatedAtDesc(BoardType boardType, Pageable pageable);
-
+    // IDOL_*
     Page<Post> findByBoardTypeAndIdolIdOrderByCreatedAtDesc(BoardType boardType, Long idolId, Pageable pageable);
+    Page<Post> findByBoardTypeAndIdolIdOrderByLikeCountDesc(BoardType boardType, Long idolId, Pageable pageable);
 
+    // GROUP_*
     Page<Post> findByBoardTypeAndGroupIdOrderByCreatedAtDesc(BoardType boardType, Long groupId, Pageable pageable);
+    Page<Post> findByBoardTypeAndGroupIdOrderByLikeCountDesc(BoardType boardType, Long groupId, Pageable pageable);
 
-    // 게시글 조회수 증가
+    // ADMIN_NOTICE 등
+    Page<Post> findByBoardTypeOrderByCreatedAtDesc(BoardType boardType, Pageable pageable);
+    Page<Post> findByBoardTypeOrderByLikeCountDesc(BoardType boardType, Pageable pageable);
+
+    // 조회수 증가 (동시성 고려 X -> 단순 증가)
     @Modifying
-    @Query("update Post p set p.viewCount = p.viewCount + 1 where p.postId = :postId")
+    @Query("UPDATE Post p SET p.viewCount = p.viewCount + 1 WHERE p.postId = :postId")
     void increaseViewCount(@Param("postId") Long postId);
 
+    // 좋아요 증가
+    @Modifying
+    @Query("UPDATE Post p SET p.likeCount = p.likeCount + 1 WHERE p.postId = :postId")
+    void incrementLikeCount(@Param("postId") Long postId);
 
-    // GROUP 추천순
-    Page<Post> findByBoardTypeAndGroupIdOrderByLikeCountDesc(
-            BoardType boardType,
-            Long groupId,
-            Pageable pageable
-    );
+    // 좋아요 감소
+    @Modifying
+    @Query("UPDATE Post p SET p.likeCount = p.likeCount - 1 WHERE p.postId = :postId")
+    void decrementLikeCount(@Param("postId") Long postId);
 
-    // IDOL 추천순
-    Page<Post> findByBoardTypeAndIdolIdOrderByLikeCountDesc(
-            BoardType boardType,
-            Long idolId,
-            Pageable pageable
-    );
+    // 싫어요 증가
+    @Modifying
+    @Query("UPDATE Post p SET p.dislikeCount = p.dislikeCount + 1 WHERE p.postId = :postId")
+    void incrementDislikeCount(@Param("postId") Long postId);
 
-    // ADMIN_NOTICE 추천순(사실상 의미는 적지만 일관성)
-    Page<Post> findByBoardTypeOrderByLikeCountDesc(
-            BoardType boardType,
-            Pageable pageable
-    );
+    // 싫어요 감소
+    @Modifying
+    @Query("UPDATE Post p SET p.dislikeCount = p.dislikeCount - 1 WHERE p.postId = :postId")
+    void decrementDislikeCount(@Param("postId") Long postId);
 }

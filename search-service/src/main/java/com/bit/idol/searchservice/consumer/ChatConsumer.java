@@ -21,7 +21,7 @@ public class ChatConsumer {
     private final ChatSearchRepository chatSearchRepository;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = "chat-message-topic", groupId = "search-service-group", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "${spring.kafka.topic.chat-message}", groupId = "search-service-group", containerFactory = "kafkaListenerContainerFactory")
     public void consume(List<String> messages) {
         
         List<ChatDocument> documents = new ArrayList<>();

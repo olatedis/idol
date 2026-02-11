@@ -42,8 +42,13 @@ public class AuthController {
 
     @PostMapping("/login/kakao")
     public ResponseEntity<Map<String, String>> loginKakao(@RequestBody Map<String, String> request) {
-        String kakaoAccessToken = request.get("token");
-        Map<String, String> tokens = socialAuthService.loginKakao(kakaoAccessToken);
+        // 프론트엔드에서 인가 코드(code)를 받음
+        String code = request.get("code");
+        if (code == null || code.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        Map<String, String> tokens = socialAuthService.loginKakao(code);
         log.info("카카오 로그인 성공");
         return ResponseEntity.ok(tokens);
     }

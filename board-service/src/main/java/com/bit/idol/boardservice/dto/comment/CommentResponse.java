@@ -9,6 +9,7 @@ public class CommentResponse {
 
     private Long commentId;
     private Integer authorId;
+    private String authorNickname; // 추가됨
 
     private String content;
     private Boolean isDeleted;

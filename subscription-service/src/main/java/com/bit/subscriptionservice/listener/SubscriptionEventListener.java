@@ -5,6 +5,7 @@ import com.bit.subscriptionservice.dto.event.SubscriptionEventWrapper;
 import com.bit.subscriptionservice.service.SubscriptionEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -14,6 +15,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 @Slf4j
 public class SubscriptionEventListener {
+
+    @Value("${spring.kafka.topic.payment-requested}")
+    private String paymentRequestedTopic;
 
     private final SubscriptionEventProducer eventProducer;
     private final KafkaTemplate<String, String> kafkaTemplate;
@@ -34,7 +38,7 @@ public class SubscriptionEventListener {
     public void handlePaymentRequest(PaymentRequestEvent wrapper) {
         log.info("Payment Request 발행 (After Commit): userId={}", wrapper.event().getUserId());
         try {
-            kafkaTemplate.send("payment.requested", wrapper.event().toJson());
+            kafkaTemplate.send(paymentRequestedTopic, wrapper.event().toJson());
         } catch (Exception e) {
             log.error("Kafka 결제 요청 발행 실패: {}", e.getMessage());
         }

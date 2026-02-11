@@ -10,7 +10,7 @@ spring:
     name: voting-service
 
   datasource:
-    url: jdbc:mysql://localhost:3307/idol_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:3307/idol_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
     username: root
     password: ${DB_PASSWORD:1234} # 기본값 1234 설정
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -38,6 +38,8 @@ spring:
       max-poll-records: 500 # 한 번에 최대 500개 가져옴
     listener:
       type: batch # 배치 리스너 활성화
+    topic:
+      vote: vote-topic # 추가됨
 
   # Feign 설정 (HttpClient 5 적용 + 튜닝)
   cloud:

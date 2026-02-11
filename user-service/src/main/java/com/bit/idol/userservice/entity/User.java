@@ -35,6 +35,8 @@ public class User {
     @Column(nullable = false, unique = true) // 닉네임 중복 방지 추가
     private String nickname;
 
+    private String realName; // 실명 (소셜 이름) - 추가됨
+
     @Column(nullable = false)
     private String email;
 
