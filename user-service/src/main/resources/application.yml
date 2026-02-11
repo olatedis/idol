@@ -78,6 +78,9 @@ spring:
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    topic:
+      user-update: user-update-topic # 추가됨
+      notify-request: notify-request-topic # 추가됨
 
   # 파일 업로드 크기 제한 (10MB)
   servlet:

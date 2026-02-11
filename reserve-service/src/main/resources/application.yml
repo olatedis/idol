@@ -31,6 +31,10 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    topic:
+      notify-request: notify-request-topic # 추가됨
+      payment-completed: payment.completed # 추가됨
+      payment-requested: payment.requested # 추가됨
 
 eureka:
   client:
