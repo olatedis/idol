@@ -18,7 +18,7 @@ public class Group {
     @Column(nullable = false, unique = true)
     private String name;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY) // 지연 로딩 적용
     @JoinColumn(name = "agency_id", nullable = false)
     private Agency agency;
 }
