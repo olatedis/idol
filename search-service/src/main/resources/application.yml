@@ -22,6 +22,8 @@ spring:
       max-poll-records: 500 # 한 번에 최대 500개 가져옴
     listener:
       type: batch # 배치 리스너 활성화
+    topic:
+      chat-message: chat-message-topic # 추가됨
 
   # Redis 설정 (구독 정보 캐싱)
   data:

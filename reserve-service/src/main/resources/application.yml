@@ -6,10 +6,11 @@ spring:
     name: reserve-service
 
   datasource:
-    url: jdbc:mysql://localhost:3307/idol_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:3307/idol_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
     username: root
-    password: 1234
+    password: ${DB_PASSWORD:1234}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -18,6 +19,7 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQL8Dialect
+    open-in-view: false # OSIV 끄기
 
   data:
     redis:
@@ -26,11 +28,9 @@ spring:
 
   kafka:
     bootstrap-servers: localhost:9092
-    consumer:
-      group-id: reserve-service
-      auto-offset-reset: latest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 eureka:
   client:
@@ -55,4 +55,5 @@ management:
       endpoint: http://localhost:9411/api/v2/spans
 
 reservation:
-  lock-expire-minutes: 3
+  lock-expire-minutes: 10
+  expire-check-ms: 60000
