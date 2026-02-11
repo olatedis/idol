@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import React, {useEffect, useMemo, useState} from "react";
+import {useParams, useSearchParams, useNavigate} from "react-router-dom";
 
 type Scope = "group" | "idol" | "global";
 type BoardKind = "official" | "fan" | "notice";
@@ -29,17 +29,19 @@ function resolveBoardType(scope: Scope, type: BoardKind): string {
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
 }
 
-function pad2(n: number) {
-    return String(n).padStart(2, "0");
-}
-
-function makeDateForPostId(postId: number) {
-    const day = 1 + ((postId - 1) % 28);
-    return `2026-02-${pad2(day)} 12:${pad2((postId * 7) % 60)}`;
+function readMockPosts(): PostListResponse[] {
+    try {
+        const raw = localStorage.getItem("mock_posts");
+        if (!raw) return [];
+        const arr = JSON.parse(raw) as PostListResponse[];
+        return Array.isArray(arr) ? arr : [];
+    } catch {
+        return [];
+    }
 }
 
 const BoardPage: React.FC = () => {
-    const { groupId } = useParams();
+    const {groupId} = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
 
@@ -52,7 +54,6 @@ const BoardPage: React.FC = () => {
     const sort = sp.get("sort") || "latest";
     const q = sp.get("q") || "";
     const idolId = sp.get("idolId");
-    const searchIn = sp.get("searchIn") || "title";
 
     const [posts, setPosts] = useState<PostListResponse[]>([]);
     const [totalPages, setTotalPages] = useState(1);
@@ -60,29 +61,22 @@ const BoardPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    const [searchInput, setSearchInput] = useState(q);
-    const [searchInInput, setSearchInInput] = useState(searchIn);
-
-    useEffect(() => setSearchInput(q), [q]);
-    useEffect(() => setSearchInInput(searchIn), [searchIn]);
-
     const MOCK_ALL_POSTS: PostListResponse[] = useMemo(() => {
         const total = 137;
-        return Array.from({ length: total }).map((_, i) => {
+        return Array.from({length: total}).map((_, i) => {
             const postId = i + 1;
-            const createdAt = makeDateForPostId(postId);
             return {
                 postId,
                 boardType: "GROUP_OFFICIAL",
                 idolId: null,
                 groupId: 1,
-                authorId: 100 + ((postId * 3) % 17),
+                authorId: 100 + (postId % 20),
                 title: `더미 게시글 제목 ${postId}`,
                 viewCount: (postId * 37) % 5000,
                 likeCount: (postId * 11) % 300,
                 dislikeCount: (postId * 5) % 50,
-                createdAt,
-                updatedAt: createdAt,
+                createdAt: "2026-02-10 12:00",
+                updatedAt: "2026-02-10 12:00",
             };
         });
     }, []);
@@ -92,7 +86,8 @@ const BoardPage: React.FC = () => {
             setLoading(false);
             setError("");
 
-            let list = [...MOCK_ALL_POSTS];
+            const stored = readMockPosts();
+            let list = [...stored, ...MOCK_ALL_POSTS];
 
             if (sort === "top") {
                 list.sort((a, b) => {
@@ -137,7 +132,7 @@ const BoardPage: React.FC = () => {
         setLoading(true);
         setError("");
 
-        fetch(url, { signal: controller.signal })
+        fetch(url, {signal: controller.signal})
             .then((res) => {
                 if (!res.ok) throw new Error("게시글 조회 실패");
                 return res.json();
@@ -157,18 +152,18 @@ const BoardPage: React.FC = () => {
             .finally(() => setLoading(false));
 
         return () => controller.abort();
-    }, [API_BASE_URL, USE_MOCK, scope, board, page, size, sort, idolId, q, searchIn, groupId, MOCK_ALL_POSTS]);
+    }, [API_BASE_URL, USE_MOCK, scope, board, page, size, sort, idolId, q, groupId, MOCK_ALL_POSTS]);
 
     const leftFilters = useMemo(() => {
         const base = [
-            { label: "그룹 공식", scope: "group" as Scope, type: "official" as BoardKind },
-            { label: "그룹 팬", scope: "group" as Scope, type: "fan" as BoardKind },
-            { label: "공지", scope: "global" as Scope, type: "notice" as BoardKind },
+            {label: "그룹 공식", scope: "group" as Scope, type: "official" as BoardKind},
+            {label: "그룹 팬", scope: "group" as Scope, type: "fan" as BoardKind},
+            {label: "공지", scope: "global" as Scope, type: "notice" as BoardKind},
         ];
 
         const idolExtra = [
-            { label: "아이돌 공식", scope: "idol" as Scope, type: "official" as BoardKind },
-            { label: "아이돌 팬", scope: "idol" as Scope, type: "fan" as BoardKind },
+            {label: "아이돌 공식", scope: "idol" as Scope, type: "official" as BoardKind},
+            {label: "아이돌 팬", scope: "idol" as Scope, type: "fan" as BoardKind},
         ];
 
         return scope === "idol" ? [...idolExtra, ...base] : base;
@@ -221,16 +216,8 @@ const BoardPage: React.FC = () => {
         const prevBlock = Math.max(1, start - blockSize);
         const nextBlock = Math.min(safeTotal, start + blockSize);
 
-        return { safePage, safeTotal, start, end, nums, prevBlock, nextBlock };
+        return {safePage, safeTotal, start, end, nums, prevBlock, nextBlock};
     }, [page, totalPages]);
-
-    const submitSearch = () => {
-        const next = new URLSearchParams(sp);
-        next.set("searchIn", searchInInput);
-        next.set("q", searchInput.trim());
-        next.set("page", "1");
-        setSp(next);
-    };
 
     const rowNo = (indexInPage: number) => {
         const base = totalElements - (pageBlock.safePage - 1) * size;
@@ -238,7 +225,7 @@ const BoardPage: React.FC = () => {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 relative">
             <div className="flex justify-between flex-wrap gap-2">
                 <div className="flex gap-2 flex-wrap">
                     {leftFilters.map((f) => (
@@ -290,19 +277,19 @@ const BoardPage: React.FC = () => {
                 </div>
             </div>
 
+            {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
             {error && <div className="text-sm text-red-600">{error}</div>}
 
             <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                <div className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                <div
+                    className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
                     <div className="text-left">번호</div>
                     <div className="text-left">제목</div>
                     <div className="text-left">작성자</div>
                     <div className="text-left">작성일</div>
                     <div className="text-right">조회수</div>
-                    <div className="text-right">추천수</div>
+                    <div className="text-right">좋아요</div>
                 </div>
-
-                {loading && <div className="px-4 py-6 text-sm text-gray-600">불러오는 중...</div>}
 
                 {!loading && posts.length === 0 && (
                     <div className="px-4 py-6 text-sm text-gray-600">게시글이 없습니다.</div>
@@ -340,6 +327,23 @@ const BoardPage: React.FC = () => {
                     ))}
             </div>
 
+            {/* 글쓰기 */}
+            <div className="flex justify-end">
+                <button
+                    type="button"
+                    onClick={() => navigate("./write")}
+                    className="
+                    px-5 py-3 rounded-2xl
+                    bg-[#1FBFB8] text-white text-sm font-semibold
+                    shadow-md hover:bg-[#17AFA8]
+                    "
+                >
+                    글쓰기
+                </button>
+            </div>
+
+
+            {/* 페이지네이션 */}
             <div className="flex items-center justify-center gap-1 pt-2">
                 <button
                     type="button"
@@ -394,12 +398,12 @@ const BoardPage: React.FC = () => {
                 </button>
             </div>
 
+            {/* 검색 (UI만) */}
             <div className="flex justify-center pt-4">
-                <div className="w-full max-w-3xl border border-gray-200 rounded-md overflow-hidden flex items-stretch bg-white">
+                <div className="w-full max-w-xl flex items-center border border-[#1FBFB8] rounded-sm bg-white overflow-hidden">
                     <select
-                        value={searchInInput}
-                        onChange={(e) => setSearchInInput(e.target.value)}
-                        className="px-4 py-3 text-sm border-r border-gray-200 bg-white outline-none"
+                        defaultValue="title"
+                        className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200"
                     >
                         <option value="title">제목</option>
                         <option value="title_content">제목+내용</option>
@@ -407,24 +411,31 @@ const BoardPage: React.FC = () => {
                     </select>
 
                     <input
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") submitSearch();
+                        value={q}
+                        onChange={(e) => {
+                            const next = new URLSearchParams(sp);
+                            next.set("q", e.target.value);
+                            next.set("page", "1");
+                            setSp(next);
                         }}
-                        placeholder="단어 위주로 검색하면 더 정확한 결과를 얻을 수 있습니다."
-                        className="flex-1 px-4 py-3 text-sm outline-none"
+                        placeholder="단어 위주로 검색하시면 보다 정확한 결과를 얻을 수 있습니다."
+                        className="flex-1 h-12 px-4 text-sm outline-none"
                     />
 
                     <button
                         type="button"
-                        onClick={submitSearch}
-                        className="px-4 py-3 border-l border-gray-200 hover:bg-gray-50"
+                        className="h-12 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                        onClick={() => {
+                            // TODO: search-service 연동 시 검색 실행
+                        }}
                     >
                         🔍
                     </button>
                 </div>
             </div>
+
+
+
         </div>
     );
 };
