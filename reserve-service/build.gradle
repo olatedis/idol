@@ -54,6 +54,10 @@ dependencies {
     // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
+    // ShedLock (스케줄러 락) - 추가됨
+    implementation 'net.javacrumbs.shedlock:shedlock-spring:5.10.0'
+    implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.10.0'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
