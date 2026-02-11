@@ -18,6 +18,7 @@ import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.context.ApplicationEventPublisher;
@@ -45,7 +46,10 @@ public class VoteService {
     private final VoteRecordRepository voteRecordRepository;
     private final CandidateRepository candidateRepository;
     private final UserFeignClient userFeignClient;
-    private final ApplicationEventPublisher eventPublisher; // 변경됨
+    private final ApplicationEventPublisher eventPublisher;
+
+    @Value("${spring.kafka.topic.vote}")
+    private String voteTopic;
 
     private static final String BLACKLIST_KEY = "vote:blacklist:ip";
 
@@ -197,7 +201,7 @@ public class VoteService {
         try {
             String uuid = UUID.randomUUID().toString();
             String message = uuid + ":" + voteId + ":" + userId + ":" + candidateNumber;
-            kafkaTemplate.send("vote-topic", message);
+            kafkaTemplate.send(voteTopic, message);
         } catch (Exception e) {
             throw new RuntimeException("투표 시스템 장애로 인해 투표를 처리할 수 없습니다.", e);
         }
@@ -222,7 +226,7 @@ public class VoteService {
         String message = uuid + ":" + voteId + ":" + userId + ":" + candidateNumber;
 
         try {
-            kafkaTemplate.send("vote-topic", message);
+            kafkaTemplate.send(voteTopic, message);
         } catch (Exception e) {
             redisTemplate.delete(redisKey);
             throw new RuntimeException("투표 전송 중 오류가 발생했습니다. 다시 시도해주세요.", e);
