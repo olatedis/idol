@@ -1,6 +1,6 @@
 import React from "react";
 import {NavLink, Outlet} from "react-router-dom";
-import Header from "../test/Header";
+import Header from "../main/Header";
 
 const ServicePage: React.FC = () => {
 
