@@ -1,14 +1,17 @@
 import './App.css'
 
 import {BrowserRouter, Routes, Route, Navigate} from "react-router-dom";
-import MainPage from "./pages/test/MainPage.tsx";
+import MainPage from "./pages/main/MainPage.tsx";
 import ServicePage from "./pages/3-1/ServicePage.tsx";
 import BoardPage from "./pages/3-1/BoardPage.tsx";
+import Header from "./pages/main/Header.tsx";
+import IdolPage from "./pages/2-1/IdolPage.tsx";
 
 function App() {
     return (
         <>
             <BrowserRouter>
+                {/*<Header />*/}
                 <Routes>
                     <Route path="/" element={<MainPage />} />
 
@@ -17,9 +20,8 @@ function App() {
                         <Route index element={<Navigate to="board" replace />} />
                         <Route path="board" element={<BoardPage />} />
                         {/*<Route path="board/:postId" element={<PostDetailPage />} />*/}
-
-
                     </Route>
+                    <Route path="/idol" element={<IdolPage/>} />
                 </Routes>
 
             </BrowserRouter>

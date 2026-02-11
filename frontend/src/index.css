@@ -3,10 +3,18 @@
 @theme{
 
     --color-idol: #FF9292;
-    --color-idol-light: #7D8ABC;
+    --color-idol-point: #7D8ABC;
     --color-idol-dark: #D14D72;
     --color-idol-bg: #FFF8DB;
 
+}
+@layer utilities {
+    .scrollbar-hide {
+        &::-webkit-scrollbar {
+            display: none;
+        }
+        scrollbar-width: none;
+    }
 }
 /*:root {*/
 /*  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;*/
