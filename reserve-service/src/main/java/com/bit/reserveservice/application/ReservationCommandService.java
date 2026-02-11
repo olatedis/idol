@@ -2,11 +2,12 @@ package com.bit.reserveservice.application;
 
 import com.bit.reserveservice.domain.dto.PaymentEvent;
 import com.bit.reserveservice.domain.entity.Reservation;
-import com.bit.reserveservice.infra.kafka.ReservationEventProducer;
+import com.bit.reserveservice.domain.event.ReservationCreatedEvent;
 import com.bit.reserveservice.infra.repository.ReservationRepository;
 import com.bit.reserveservice.infra.redis.SeatLockRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +18,7 @@ public class ReservationCommandService {
 
     private final ReservationRepository reservationRepository;
     private final SeatLockRepository seatLockRepository;
-    private final ReservationEventProducer eventProducer;
+    private final ApplicationEventPublisher eventPublisher; // 변경됨
 
 
     @Transactional
@@ -41,8 +42,8 @@ public class ReservationCommandService {
                     price
             );
 
-            // ✅ 결제 요청만 보냄
-            eventProducer.publishPaymentRequested(event);
+            // ✅ 이벤트 발행 (커밋 후 실행됨)
+            eventPublisher.publishEvent(new ReservationCreatedEvent(event));
 
             return reservation.getId();
 
