@@ -21,13 +21,15 @@ public class Comment {
     private Long commentId;
 
     // 게시글 FK
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
     @Column(nullable = false)
     private Integer authorId;
+
+    @Column(nullable = false)
+    private String authorNickname; // 닉네임 반정규화 (추가됨)
 
     @Column(nullable = false)
     private String content;

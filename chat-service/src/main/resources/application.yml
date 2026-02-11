@@ -8,7 +8,7 @@ server:
 spring:
   application:
     name: chat-service
-  
+
   # Spring Cloud 버전 호환성 체크 비활성화
   cloud:
     compatibility-verifier:
@@ -23,7 +23,7 @@ spring:
         static: ap-northeast-2
       stack:
         auto: false
-    
+
     # Feign Client 타임아웃 설정
     openfeign:
       compression:
@@ -74,6 +74,10 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
       concurrency: 3 # 병렬 처리 (파티션 개수만큼 설정)
+    topic:
+      chat-message: chat-message-topic # 추가됨
+      user-report: user-report-topic # 추가됨
+      chat-ai-check: chat-ai-check-topic # 추가됨
 
   # 파일 업로드 크기 제한 (20MB)
   servlet:

@@ -19,7 +19,7 @@ public class RankingConsumer {
 
     // 투표 완료 메시지 수신 (vote-service에서 보냄)
     // 메시지 포맷: "uuid:voteId:userId:candidateNumber"
-    @KafkaListener(topics = "vote-complete-topic", groupId = "ranking-group")
+    @KafkaListener(topics = "${spring.kafka.topic.vote-complete}", groupId = "ranking-group")
     public void consumeVoteComplete(String message) {
         log.info("랭킹 서비스 - 투표 완료 메시지 수신: {}", message);
 

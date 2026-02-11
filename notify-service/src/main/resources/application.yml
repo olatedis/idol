@@ -1,12 +1,12 @@
 server:
-  port: 8096
+  port: 8085
 
 spring:
   application:
     name: notify-service
 
   datasource:
-    url: jdbc:mysql://localhost:3307/idol_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:3307/idol_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
     username: root
     password: ${DB_PASSWORD:1234}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -18,25 +18,16 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    open-in-view: false # OSIV 끄기
 
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
-      group-id: notify-group
+      group-id: notify-service
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-
-  security:
-    oauth2:
-      resource server:
-        jwt:
-          secret-key: ${JWT_SECRET:your-very-long-and-secure-random-string-idol-link-project}
-
-notify:
-  topics:
-    fanout: notify-fanout-topic
-    user: user.events
 
 eureka:
   client:
@@ -59,3 +50,11 @@ management:
   zipkin:
     tracing:
       endpoint: http://localhost:9411/api/v2/spans
+
+notify:
+  topics:
+    fanout: notify-fanout-topic
+    user: user.events
+  consumer:
+    group-id: notify-service-group
+    user-group-id: notify-user-group

@@ -38,6 +38,7 @@ public class CommentService {
         Comment comment = new Comment();
         comment.setPost(post);
         comment.setAuthorId(userId);
+        comment.setAuthorNickname(req.getNickname()); // 닉네임 저장
         comment.setContent(req.getContent());
 
         commentRepository.save(comment);
@@ -167,6 +168,7 @@ public class CommentService {
         CommentResponse res = new CommentResponse();
         res.setCommentId(c.getCommentId());
         res.setAuthorId(c.getAuthorId());
+        res.setAuthorNickname(c.getAuthorNickname()); // 닉네임 반환
 
         boolean deleted = Boolean.TRUE.equals(c.getIsDeleted());
         res.setIsDeleted(deleted);

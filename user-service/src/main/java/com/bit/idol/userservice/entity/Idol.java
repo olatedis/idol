@@ -15,11 +15,11 @@ public class Idol {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY) // 지연 로딩 적용
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY) // 지연 로딩 적용
     @JoinColumn(name = "agency_id")
     private Agency agency;
 
@@ -29,4 +29,3 @@ public class Idol {
     @Enumerated(EnumType.STRING)
     private IdolStatus status;
 }
-

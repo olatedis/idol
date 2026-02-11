@@ -48,7 +48,8 @@ public class SearchService {
 
         boolean isSubscribed = subscriptionFeignClient.checkSubscription(userId, idolId);
 
-        redisTemplate.opsForValue().set(key, String.valueOf(isSubscribed), Duration.ofHours(24));
+        // TTL 수정
+        redisTemplate.opsForValue().set(key, String.valueOf(isSubscribed), Duration.ofMinutes(30));
 
         return isSubscribed;
     }

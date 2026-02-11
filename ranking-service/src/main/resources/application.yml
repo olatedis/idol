@@ -1,29 +1,35 @@
 server:
-  port: 8085
+  port: 8089
 
 spring:
   application:
     name: ranking-service
 
+  # Redis 설정 (랭킹 데이터 저장소)
   data:
     redis:
       host: localhost
       port: 6379
 
+  # Kafka 설정 (Consumer)
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
-      group-id: ranking-group
+      group-id: ranking-service-group
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      type: batch # 배치 리스너 활성화
+    topic:
+      vote-complete: vote-complete-topic # 추가됨
 
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
+  instance:
+    prefer-ip-address: true
 
 management:
   endpoints:

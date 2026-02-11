@@ -4,6 +4,7 @@ import com.bit.idol.userservice.dto.kafka.UserEventDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +15,9 @@ public class UserSyncProducer {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
-    private static final String TOPIC = "user-update-topic";
+
+    @Value("${spring.kafka.topic.user-update}")
+    private String topic;
 
     public void send(int userId, String type) {
         try {
@@ -24,7 +27,7 @@ public class UserSyncProducer {
                     .build();
             
             String jsonMessage = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(TOPIC, jsonMessage);
+            kafkaTemplate.send(topic, jsonMessage);
             log.info("유저 동기화 이벤트 발행: userId={}, type={}", userId, type);
         } catch (Exception e) {
             log.error("유저 동기화 이벤트 발행 실패: {}", e.getMessage());

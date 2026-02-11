@@ -7,27 +7,23 @@ import com.bit.idol.boardservice.dto.PostResponse;
 import com.bit.idol.boardservice.dto.PostUpdateRequest;
 import com.bit.idol.boardservice.dto.PostWriteRequest;
 import com.bit.idol.boardservice.dto.comment.CommentResponse;
+import com.bit.idol.boardservice.dto.event.PostCreatedEvent;
 import com.bit.idol.boardservice.entity.BoardType;
 import com.bit.idol.boardservice.entity.Comment;
 import com.bit.idol.boardservice.entity.Post;
-import com.bit.idol.boardservice.kafka.NotifyProducer;
-import com.bit.idol.boardservice.kafka.NotifyRequestEvent;
-import com.bit.idol.boardservice.kafka.NotifyTargetType;
 import com.bit.idol.boardservice.repository.CommentRepository;
 import com.bit.idol.boardservice.repository.PostReactionRepository;
 import com.bit.idol.boardservice.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,7 +38,7 @@ public class PostService {
     private final UserInternalClient userInternalClient;
     private final SubscriptionInternalClient subscriptionInternalClient;
 
-    private final NotifyProducer notifyProducer;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public PostResponse insert(PostWriteRequest req, Integer userId, Role role) {
@@ -60,13 +56,12 @@ public class PostService {
 
         Post saved = postRepository.save(post);
 
-        publishNewPostNotify(saved);
-        // TODO: transactional event listener
+        // 이벤트 발행 (커밋 후 실행됨)
+        eventPublisher.publishEvent(new PostCreatedEvent(saved));
 
         return toResponse(saved);
     }
 
-    // TODO: readonly랑 값변화 수정
     @Transactional(readOnly = true)
     public PostResponse selectOne(Long postId, Integer userId, Role role) {
         Post post = postRepository.findById(postId)
@@ -74,11 +69,19 @@ public class PostService {
 
         // OFFICIAL/FAN 모두 상세보기(content)는 구독자만
         requireReadSubscription(post, userId, role);
+        
+        return selectOneWithViewCount(postId, userId, role);
+    }
+    
+    // readOnly 제거 (조회수 증가 때문에 쓰기 트랜잭션 필요)
+    @Transactional
+    public PostResponse selectOneWithViewCount(Long postId, Integer userId, Role role) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
 
-        // 조회수 증가
+        requireReadSubscription(post, userId, role);
+
         postRepository.increaseViewCount(postId);
-
-        // 증가된 값 다시 반영
         post.setViewCount(post.getViewCount() + 1);
 
         return toResponse(post);
@@ -321,75 +324,6 @@ public class PostService {
             boolean ok = subscriptionInternalClient.isActiveGroupSubscriber(post.getGroupId(), userId);
             if (!ok) throw new RuntimeException("구독이 필요합니다.");
         }
-    }
-
-    // Notify
-
-    private void publishNewPostNotify(Post post) {
-        // ADMIN_NOTICE: 전체 공지 알림(ALL)
-        if (post.getBoardType() == BoardType.ADMIN_NOTICE) {
-            NotifyRequestEvent event = new NotifyRequestEvent();
-            event.setEventId(UUID.randomUUID().toString());
-            event.setType("BOARD_ADMIN_NOTICE");
-
-            event.setTargetType(NotifyTargetType.ALL.name());
-            event.setTargetId(null);
-
-            Map<String, String> args = new HashMap<>();
-            args.put("postId", String.valueOf(post.getPostId()));
-            args.put("title", post.getTitle());
-            args.put("boardType", post.getBoardType().name());
-            event.setArgs(args);
-
-            event.setRedirectUrl("/board/notice/" + post.getPostId());
-            event.setOccurredAt(LocalDateTime.now().toString());
-
-            notifyProducer.send(event);
-            return;
-        }
-
-        // FAN 게시판은 기본 알림 없음
-        if (post.getBoardType() == BoardType.IDOL_FAN || post.getBoardType() == BoardType.GROUP_FAN) return;
-
-        // OFFICIAL만 알림 발송
-        if (post.getBoardType() != BoardType.IDOL_OFFICIAL && post.getBoardType() != BoardType.GROUP_OFFICIAL) return;
-
-        NotifyRequestEvent event = new NotifyRequestEvent();
-        event.setEventId(UUID.randomUUID().toString());
-        event.setType("BOARD_NEW_POST");
-
-        // IDOL_OFFICIAL -> IDOL_SUB
-        if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
-            event.setTargetType(NotifyTargetType.IDOL_SUB.name());
-            event.setTargetId(String.valueOf(post.getIdolId()));
-        }
-        // GROUP_OFFICIAL -> GROUP_SUB
-        else if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
-            event.setTargetType(NotifyTargetType.GROUP_SUB.name());
-            event.setTargetId(String.valueOf(post.getGroupId()));
-        }
-
-        Map<String, String> args = new HashMap<>();
-        args.put("postId", String.valueOf(post.getPostId()));
-        args.put("title", post.getTitle());
-        args.put("boardType", post.getBoardType().name());
-        if (post.getIdolId() != null) args.put("idolId", String.valueOf(post.getIdolId()));
-        if (post.getGroupId() != null) args.put("groupId", String.valueOf(post.getGroupId()));
-        event.setArgs(args);
-
-        String redirectUrl;
-        if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
-            redirectUrl = "/board/posts/" + post.getPostId()
-                    + "?boardType=IDOL_OFFICIAL&idolId=" + post.getIdolId();
-        } else {
-            redirectUrl = "/board/posts/" + post.getPostId()
-                    + "?boardType=GROUP_OFFICIAL&groupId=" + post.getGroupId();
-        }
-        event.setRedirectUrl(redirectUrl);
-
-        event.setOccurredAt(LocalDateTime.now().toString());
-
-        notifyProducer.send(event);
     }
 
     // Mapper
