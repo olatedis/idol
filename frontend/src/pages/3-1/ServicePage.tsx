@@ -12,11 +12,11 @@ const ServicePage: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white pt-[72px]">
             <Header/>
 
             {/* 세미 헤더 */}
-            <div className="sticky top-0 z-10 bg-white">
+            <div className="sticky top-[72px] z-10 bg-white">
                 <nav className="
                     grid grid-cols-4 gap-3
                     w-full px-6
