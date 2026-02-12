@@ -17,7 +17,12 @@ public class SecurityConfig {
             .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
             .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
             .authorizeExchange(exchanges -> exchanges
-                .pathMatchers("/**/internal/**").denyAll() // 내부 API 외부 접근 차단
+                .pathMatchers(
+                    "/internal/users/**",
+                    "/internal/subscriptions/**",
+                    "/internal/payments/**",
+                    "/**/internal/**" // 안전장치
+                ).denyAll() // 내부 API 외부 접근 차단
                 .anyExchange().permitAll() // 나머지 요청 허용 (인증은 JwtAuthenticationFilter에서 처리)
             );
         return http.build();
