@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import React, {useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate, useParams, useSearchParams} from "react-router-dom";
 
 // 타입 (백엔드 스펙 기준)
 type Scope = "group" | "idol" | "global";
@@ -34,11 +34,9 @@ function resolveBoardType(scope: Scope, type: BoardKind): string {
 const PAGE_SIZE = 20;
 
 const BoardPage: React.FC = () => {
-    const { groupId } = useParams();
+    const {groupId} = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
-
-    const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
     // URL 상태 (필터/정렬/검색만 유지)
     const scope = (sp.get("scope") as Scope) || "group";
@@ -63,14 +61,14 @@ const BoardPage: React.FC = () => {
     // 필터 버튼
     const leftFilters = useMemo(() => {
         const base = [
-            { label: "그룹 공식", scope: "group" as Scope, type: "official" as BoardKind },
-            { label: "그룹 팬", scope: "group" as Scope, type: "fan" as BoardKind },
-            { label: "공지", scope: "global" as Scope, type: "notice" as BoardKind },
+            {label: "그룹 공식", scope: "group" as Scope, type: "official" as BoardKind},
+            {label: "그룹 팬", scope: "group" as Scope, type: "fan" as BoardKind},
+            {label: "공지", scope: "global" as Scope, type: "notice" as BoardKind},
         ];
 
         const idolExtra = [
-            { label: "아이돌 공식", scope: "idol" as Scope, type: "official" as BoardKind },
-            { label: "아이돌 팬", scope: "idol" as Scope, type: "fan" as BoardKind },
+            {label: "아이돌 공식", scope: "idol" as Scope, type: "official" as BoardKind},
+            {label: "아이돌 팬", scope: "idol" as Scope, type: "fan" as BoardKind},
         ];
 
         return scope === "idol" ? [...idolExtra, ...base] : base;
@@ -81,17 +79,21 @@ const BoardPage: React.FC = () => {
         return scope === f.scope && board === f.type;
     };
 
+    const resetInfiniteState = () => {
+        setPosts([]);
+        setPage(0);
+        setHasMore(true);
+        setTotalElements(null);
+    }
+
     const setFilter = (nextScope: Scope, nextType: BoardKind) => {
         const next = new URLSearchParams(sp);
         next.set("scope", nextScope);
         next.set("type", nextType);
         setSp(next);
 
-        // 수정: 무한스크롤 초기화
-        setPosts([]);
-        setPage(0);
-        setHasMore(true);
-        setTotalElements(null);
+        // 무한스크롤 초기화
+        resetInfiniteState();
     };
 
     const setSort = (nextSort: "latest" | "top") => {
@@ -100,10 +102,7 @@ const BoardPage: React.FC = () => {
         setSp(next);
 
         // 수정: 무한스크롤 초기화
-        setPosts([]);
-        setPage(0);
-        setHasMore(true);
-        setTotalElements(null);
+        resetInfiniteState();
     };
 
     const setQuery = (value: string) => {
@@ -112,10 +111,7 @@ const BoardPage: React.FC = () => {
         setSp(next);
 
         // 수정: 무한스크롤 초기화
-        setPosts([]);
-        setPage(0);
-        setHasMore(true);
-        setTotalElements(null);
+        resetInfiniteState();
     };
 
     // 수정: 무한스크롤용 번호 계산
@@ -128,55 +124,15 @@ const BoardPage: React.FC = () => {
         return posts.length - idx;
     };
 
-    // 수정: (모크) page 단위로 20개씩 생성
-    const makeMockPage = (p: number): { content: PostListResponse[]; last: boolean; totalElements: number } => {
-        const total = 123; // 모크 총 게시글 수(원하는 값으로 조절 가능)
-        const start = p * PAGE_SIZE;
-        const end = Math.min(start + PAGE_SIZE, total);
 
-        const content: PostListResponse[] = Array.from({ length: Math.max(0, end - start) }).map((_, i) => {
-            const globalIdx = start + i; // 0..total-1
-            const displayNo = total - globalIdx; // 최신이 큰 번호
 
-            return {
-                postId: displayNo, // 모크는 최신이 큰 번호가 되도록 postId도 이렇게 둠
-                boardType: resolveBoardType(scope, board),
-                idolId: scope === "idol" ? Number(idolId || 1) : null,
-                groupId: scope === "group" ? Number(groupId || 1) : null,
-                authorId: 100 + displayNo,
-                title: `더미 게시글 제목 ${displayNo}`,
-                viewCount: Math.floor(Math.random() * 1000),
-                likeCount: Math.floor(Math.random() * 300),
-                dislikeCount: Math.floor(Math.random() * 50),
-                createdAt: "2026-02-10 12:00",
-                updatedAt: "2026-02-10 12:00",
-            };
-        });
-
-        const last = end >= total;
-        return { content, last, totalElements: total };
-    };
-
-    // 수정: page 단위 fetch (append)
+    // page 단위 fetch (append)
     const fetchPage = async (nextPage: number, signal?: AbortSignal) => {
-        const boardType = resolveBoardType(scope, board);
-
-        // 모크
-        if (USE_MOCK) {
-            const data = makeMockPage(nextPage);
-
-            if (nextPage === 0) {
-                setPosts(data.content);
-            } else {
-                setPosts((prev) => [...prev, ...data.content]);
-            }
-
-            setTotalElements(data.totalElements);
-            setHasMore(!data.last && data.content.length > 0);
-            return;
+        if (!API_BASE_URL) {
+            throw new Error("VITE_API_BASE_URL이 설정되어 있지 않습니다. ");
         }
 
-        if (!API_BASE_URL) return;
+        const boardType = resolveBoardType(scope, board);
 
         const params = new URLSearchParams();
         params.set("boardType", boardType);
@@ -194,7 +150,7 @@ const BoardPage: React.FC = () => {
 
         const url = `${API_BASE_URL}/board/posts?${params.toString()}`;
 
-        const res = await fetch(url, { signal });
+        const res = await fetch(url, {signal});
         if (!res.ok) throw new Error("게시글 조회 실패");
 
         const data = await res.json();
@@ -206,17 +162,17 @@ const BoardPage: React.FC = () => {
             setPosts((prev) => [...prev, ...content]);
         }
 
-        // 수정: totalElements로 "번호 역순" 유지
+        // totalElements로 "번호 역순" 유지
         if (typeof data.totalElements === "number") {
             setTotalElements(data.totalElements);
         }
 
-        // 수정: 무한스크롤 종료 판단 (Spring Page의 last 활용)
+        // 무한스크롤 종료 판단 (Spring Page의 last 활용)
         const last = Boolean(data.last);
         setHasMore(!last && content.length > 0);
     };
 
-    // 수정: 첫 페이지 로드(필터/정렬/검색 변경 시 0페이지부터 다시)
+    // 첫 페이지 로드(필터/정렬/검색 변경 시 0페이지부터 다시)
     useEffect(() => {
         const controller = new AbortController();
 
@@ -227,11 +183,7 @@ const BoardPage: React.FC = () => {
                 setLoading(true);
                 setLoadingMore(false);
 
-                // 초기화(이미 setFilter/setSort/setQuery에서 해주지만, 안전하게 한 번 더)
-                setPosts([]);
-                setPage(0);
-                setHasMore(true);
-                setTotalElements(null);
+                resetInfiniteState();
 
                 await fetchPage(0, controller.signal);
             } catch (e: any) {
@@ -246,9 +198,9 @@ const BoardPage: React.FC = () => {
 
         run();
         return () => controller.abort();
-    }, [API_BASE_URL, USE_MOCK, scope, board, sort, idolId, groupId, q]);
+    }, [API_BASE_URL, scope, board, sort, idolId, groupId, q]);
 
-    // 수정: page가 증가하면 다음 페이지 append 로드
+    // page가 증가하면 다음 페이지 append 로드
     useEffect(() => {
         if (page === 0) return;
         if (!hasMore) return;
@@ -273,7 +225,7 @@ const BoardPage: React.FC = () => {
         return () => controller.abort();
     }, [page, hasMore]);
 
-    // 수정: IntersectionObserver로 page 증가 트리거
+    // IntersectionObserver로 page 증가 트리거
     useEffect(() => {
         const el = sentinelRef.current;
         if (!el) return;
@@ -288,7 +240,7 @@ const BoardPage: React.FC = () => {
 
                 setPage((prev) => prev + 1);
             },
-            { root: null, rootMargin: "200px", threshold: 0 }
+            {root: null, rootMargin: "200px", threshold: 0}
         );
 
         io.observe(el);
@@ -296,7 +248,7 @@ const BoardPage: React.FC = () => {
     }, [hasMore, loading, loadingMore]);
 
     const scrollTop = () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({top: 0, behavior: "smooth"});
     };
 
     return (
@@ -347,10 +299,11 @@ const BoardPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* 수정: 검색창 가로폭만 살짝 줄임(max-w-2xl -> max-w-xl) */}
             <div className="flex justify-center">
-                <div className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
-                    <select defaultValue="title" className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
+                <div
+                    className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
+                    <select defaultValue="title"
+                            className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
                         <option value="title">제목</option>
                         <option value="title_content">제목+내용</option>
                         <option value="content">내용</option>
@@ -378,15 +331,15 @@ const BoardPage: React.FC = () => {
             {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
             {error && <div className="text-sm text-red-600">{error}</div>}
 
-            {/* 게시글 리스트 (형님이 마음에 들어한 UI 그대로 유지) */}
             <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                <div className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                <div
+                    className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
                     <div className="text-left">번호</div>
                     <div className="text-left">제목</div>
                     <div className="text-left">작성자</div>
                     <div className="text-left">작성일</div>
                     <div className="text-right">조회수</div>
-                    <div className="text-right">좋아요</div>
+                    <div className="text-right">추천수</div>
                 </div>
 
                 {!loading && posts.length === 0 && <div className="px-4 py-6 text-sm text-gray-600">게시글이 없습니다.</div>}
@@ -398,13 +351,13 @@ const BoardPage: React.FC = () => {
                             type="button"
                             onClick={() => navigate(`./${p.postId}`)}
                             className="
-                w-full text-left
-                grid grid-cols-[90px_1fr_120px_140px_90px_90px]
-                px-4 py-3
-                border-b border-gray-100 last:border-b-0
-                hover:bg-gray-50
-                transition-colors
-              "
+                                w-full text-left
+                                grid grid-cols-[90px_1fr_120px_140px_90px_90px]
+                                px-4 py-3
+                                border-b border-gray-100 last:border-b-0
+                                hover:bg-gray-50
+                                transition-colors
+                              "
                         >
                             <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
 
@@ -423,8 +376,8 @@ const BoardPage: React.FC = () => {
                     ))}
             </div>
 
-            {/* 수정: 페이지네이션 삭제 → 무한스크롤 sentinel 추가 */}
-            <div ref={sentinelRef} className="h-10" />
+            {/* 수정: 페이지네이션 삭제 → 무한스크롤 sentinel */}
+            <div ref={sentinelRef} className="h-10"/>
 
             {/* 수정: 추가 로딩 표시 */}
             {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
@@ -434,7 +387,6 @@ const BoardPage: React.FC = () => {
 
             {/* 플로팅 버튼 */}
             <div className="fixed right-4 bottom-6 z-40 flex flex-col items-end gap-3">
-                {/* 수정: 위로가기 버튼 배경 살짝 회색 + 위치는 글쓰기 '오른쪽 위'(같은 right 정렬로 위에 배치) */}
                 <button
                     type="button"
                     onClick={scrollTop}
@@ -453,11 +405,11 @@ const BoardPage: React.FC = () => {
                     type="button"
                     onClick={() => navigate("./write")}
                     className="
-            px-5 py-3 rounded-2xl
-            bg-[#1FBFB8] text-white text-sm font-semibold
-            shadow-md
-            hover:bg-[#17AFA8]
-          "
+                        px-5 py-3 rounded-2xl
+                        bg-[#1FBFB8] text-white text-sm font-semibold
+                        shadow-md
+                        hover:bg-[#17AFA8]
+                      "
                 >
                     글쓰기
                 </button>

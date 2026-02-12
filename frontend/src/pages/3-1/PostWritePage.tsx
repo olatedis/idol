@@ -13,23 +13,6 @@ type PostWriteRequest = {
     content: string;
 };
 
-type PostListResponse = {
-    postId: number;
-    boardType: string;
-    idolId?: number | null;
-    groupId?: number | null;
-
-    authorId: number;
-    title: string;
-
-    viewCount: number;
-    likeCount: number;
-    dislikeCount: number;
-
-    createdAt: string;
-    updatedAt: string;
-};
-
 type PostResponse = {
     postId: number;
     boardType: string;
@@ -58,60 +41,10 @@ function resolveBoardType(scope: Scope, type: BoardKind): string {
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
 }
 
-function readMockPosts(): PostListResponse[] {
-    try {
-        const raw = localStorage.getItem("mock_posts");
-        if (!raw) return [];
-        const arr = JSON.parse(raw) as PostListResponse[];
-        return Array.isArray(arr) ? arr : [];
-    } catch {
-        return [];
-    }
-}
-
-function writeMockPosts(posts: PostListResponse[]) {
-    try {
-        localStorage.setItem("mock_posts", JSON.stringify(posts));
-    } catch {
-        // localStorage 실패는 UI 영향 없이 무시
-    }
-}
-
-function readMockPostDetails(): Record<string, PostResponse> {
-    try {
-        const raw = localStorage.getItem("mock_post_details");
-        if (!raw) return {};
-        const map = JSON.parse(raw) as Record<string, PostResponse>;
-        return map ?? {};
-    } catch {
-        return {};
-    }
-}
-
-function writeMockPostDetails(map: Record<string, PostResponse>) {
-    try {
-        localStorage.setItem("mock_post_details", JSON.stringify(map));
-    } catch {
-        // localStorage 실패는 UI 영향 없이 무시
-    }
-}
-
-function nowStr() {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mi = String(d.getMinutes()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
-}
-
 const PostWritePage: React.FC = () => {
     const { groupId } = useParams();
     const [sp] = useSearchParams();
     const navigate = useNavigate();
-
-    const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
     const scope = (sp.get("scope") as Scope) || "group";
     const board = (sp.get("type") as BoardKind) || "official";
@@ -150,51 +83,11 @@ const PostWritePage: React.FC = () => {
             content: html,
         };
 
-        if (USE_MOCK) {
-            const createdAt = nowStr();
 
-            const stored = readMockPosts();
-            const newId = Date.now();
-
-            const newListItem: PostListResponse = {
-                postId: newId,
-                boardType: req.boardType,
-                idolId: req.idolId,
-                groupId: req.groupId,
-                authorId: 1,
-                title: req.title,
-                viewCount: 0,
-                likeCount: 0,
-                dislikeCount: 0,
-                createdAt,
-                updatedAt: createdAt,
-            };
-
-            writeMockPosts([newListItem, ...stored]);
-
-            const details = readMockPostDetails();
-            details[String(newId)] = {
-                postId: newId,
-                boardType: req.boardType,
-                idolId: req.idolId,
-                groupId: req.groupId,
-                authorId: 1,
-                title: req.title,
-                content: req.content,
-                viewCount: 0,
-                likeCount: 0,
-                dislikeCount: 0,
-                createdAt,
-                updatedAt: createdAt,
-                comments: [],
-            };
-            writeMockPostDetails(details);
-
-            navigate(`../${newId}`);
+        if (!API_BASE_URL) {
+            setError("VITE_API_BASE_URL이 설정되어 있지 않습니다. ")
             return;
         }
-
-        if (!API_BASE_URL) return;
 
         setSubmitting(true);
 
@@ -215,11 +108,10 @@ const PostWritePage: React.FC = () => {
 
             if (!res.ok) throw new Error("글 작성 실패");
 
-            const json = (await res.json()) as { postId?: number };
-            const newPostId = json?.postId;
+            const json = (await res.json()) as PostResponse;
 
-            if (typeof newPostId === "number") {
-                navigate(`../${newPostId}`);
+            if (typeof json?.postId === "number") {
+                navigate(`../${json.postId}`);
             } else {
                 navigate(`../`);
             }
