@@ -24,7 +24,7 @@ public class AdminController {
     public PostResponse writeNotice(
             @RequestBody PostWriteRequest req,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role
+            @RequestHeader("X-Role") Role role
     ) {
         // 공지는 boardType/idolId/groupId 고정
         req.setBoardType(BoardType.ADMIN_NOTICE);
@@ -45,7 +45,7 @@ public class AdminController {
     public PostResponse showNotice(
             @PathVariable Long postId,
             @RequestHeader(value = "X-User-Id", required = false) Integer userId,
-            @RequestHeader(value = "X-User-Role", required = false) Role role
+            @RequestHeader(value = "X-Role", required = false) Role role
     ) {
         // 공지는 구독 체크 안 하므로, 헤더가 없어도 통과되게 기본값 처리
         Integer safeUserId = (userId == null) ? -1 : userId;
@@ -60,7 +60,7 @@ public class AdminController {
             @PathVariable Long postId,
             @RequestBody PostUpdateRequest req,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role
+            @RequestHeader("X-Role") Role role
     ) {
         return postService.update(postId, req, userId, role);
     }
@@ -70,7 +70,7 @@ public class AdminController {
     public void deleteNotice(
             @PathVariable Long postId,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role
+            @RequestHeader("X-Role") Role role
     ) {
         postService.delete(postId, userId, role);
     }

@@ -69,7 +69,7 @@ const PostDetailPage: React.FC = () => {
             method: "GET",
             headers: {
                 "X-User-Id": userId,
-                "X-User-Role": userRole,
+                "X-Role": userRole,
             },
             signal,
         });
@@ -78,7 +78,7 @@ const PostDetailPage: React.FC = () => {
             method: "GET",
             headers: {
                 "X-User-Id": userId,
-                "X-User-Role": userRole,
+                "X-Role": userRole,
             },
             signal,
         });
@@ -148,7 +148,7 @@ const PostDetailPage: React.FC = () => {
                 method: "POST",
                 headers: {
                     "X-User-Id": userId,
-                    "X-User-Role": userRole,
+                    "X-Role": userRole,
                 },
             });
 
@@ -180,7 +180,7 @@ const PostDetailPage: React.FC = () => {
                 method: "POST",
                 headers: {
                     "X-User-Id": userId,
-                    "X-User-Role": userRole,
+                    "X-Role": userRole,
                 },
             });
 
@@ -216,7 +216,7 @@ const PostDetailPage: React.FC = () => {
                 headers: {
                     "Content-Type": "application/json",
                     "X-User-Id": userId,
-                    "X-User-Role": userRole,
+                    "X-Role": userRole,
                     // X-Nickname은 게이트웨이에서 인코딩 전달되는 구조라, 프런트는 당장 안 보내도 됨
                 },
                 body: JSON.stringify({ content }),

@@ -101,7 +101,7 @@ const PostWritePage: React.FC = () => {
                 headers: {
                     "Content-Type": "application/json",
                     "X-User-Id": userId,
-                    "X-User-Role": userRole,
+                    "X-Role": userRole,
                 },
                 body: JSON.stringify(req),
             });
