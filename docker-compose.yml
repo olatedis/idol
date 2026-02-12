@@ -102,23 +102,25 @@ services:
       timeout: 5s
       retries: 5
 
-  zipkin:
-    image: openzipkin/zipkin
-    container_name: idol-zipkin
-    ports:
-      - "9411:9411"
-
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1 # 버전 업그레이드
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
     container_name: idol-elasticsearch
     environment:
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - xpack.security.enabled=false # 개발용 보안 비활성화
+      - xpack.security.enabled=false
     ports:
       - "9200:9200"
     volumes:
       - ./data/elasticsearch/data:/usr/share/elasticsearch/data
+    # 플러그인 설치 후 실행
+    command: >
+      /bin/sh -c "
+        if [ ! -d plugins/analysis-nori ]; then
+          ./bin/elasticsearch-plugin install analysis-nori;
+        fi;
+        /usr/local/bin/docker-entrypoint.sh elasticsearch
+      "
     healthcheck:
       test: curl -s http://localhost:9200 >/dev/null || exit 1
       interval: 10s
@@ -126,7 +128,7 @@ services:
       retries: 5
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.1 # 버전 업그레이드
+    image: docker.elastic.co/kibana/kibana:8.11.1
     container_name: idol-kibana
     depends_on:
       elasticsearch:
@@ -135,33 +137,3 @@ services:
       - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: idol-prometheus
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: idol-grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    depends_on:
-      - prometheus
-
-  k6:
-    image: grafana/k6:latest
-    container_name: idol-k6
-    profiles: ["tools"]
-    volumes:
-      - ./test.js:/test.js
-    command: run /test.js
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
