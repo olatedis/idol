@@ -4,7 +4,7 @@ import {BrowserRouter, Routes, Route, Navigate} from "react-router-dom";
 import MainPage from "./pages/main/MainPage.tsx";
 import ServicePage from "./pages/3-1/ServicePage.tsx";
 import BoardPage from "./pages/3-1/BoardPage.tsx";
-import Header from "./pages/main/Header.tsx";
+// import Header from "./pages/main/Header.tsx";
 import IdolPage from "./pages/2-1/IdolPage.tsx";
 
 function App() {
@@ -16,7 +16,7 @@ function App() {
                     <Route path="/" element={<MainPage />} />
                     
                     {/* 카카오 로그인 리다이렉트 */}
-                    <Route path="/oauth/kakao" element={<OAuthKakao />} />
+                    {/*<Route path="/oauth/kakao" element={<OAuthKakao />} />*/}
 
                     {/* 3-1 */}
                     <Route path="/group/:groupId" element={<ServicePage />}>
