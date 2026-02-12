@@ -12,12 +12,18 @@ services:
       - ./data/zookeeper/data:/var/lib/zookeeper/data
       - ./data/zookeeper/log:/var/lib/zookeeper/log
       - ./data/zookeeper/datalog:/var/lib/zookeeper/datalog
+    healthcheck:
+      test: echo srvr | nc localhost 2181 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: idol-kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -28,17 +34,23 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_NUM_PARTITIONS: 3 # 기본 파티션 개수 3개로 설정 (부하 분산)
+      KAFKA_NUM_PARTITIONS: 3
       KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
     volumes:
       - ./data/kafka/data:/var/lib/kafka/data
     restart: always
+    healthcheck:
+      test: nc -z localhost 9092 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
     container_name: idol-kafdrop
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "9000:9000"
     environment:
@@ -50,23 +62,32 @@ services:
     container_name: idol-redis
     ports:
       - "6379:6379"
-    # 메모리 제한 및 Eviction Policy 설정 추가
     command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
     volumes:
       - ./data/redis/data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db:
     image: mysql:8.0
     container_name: idol-db
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      TZ: Asia/Seoul
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-1234} # 기본값 추가
+      TZ: UTC # UTC로 통일
       MYSQL_ROOT_HOST: '%'
     ports:
       - "3307:3306"
     volumes:
       - ./data/mysql/data:/var/lib/mysql
       - ./data/mysql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mongo:
     image: mongo:latest
@@ -75,6 +96,11 @@ services:
       - "27017:27017"
     volumes:
       - ./data/mongo/data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   zipkin:
     image: openzipkin/zipkin
@@ -83,27 +109,33 @@ services:
       - "9411:9411"
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1 # 버전 업그레이드
     container_name: idol-elasticsearch
     environment:
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false # 개발용 보안 비활성화
     ports:
       - "9200:9200"
     volumes:
       - ./data/elasticsearch/data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: curl -s http://localhost:9200 >/dev/null || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.10
+    image: docker.elastic.co/kibana/kibana:8.11.1 # 버전 업그레이드
     container_name: idol-kibana
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     ports:
       - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
 
-  # Prometheus (모니터링 수집)
   prometheus:
     image: prom/prometheus:latest
     container_name: idol-prometheus
@@ -114,7 +146,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # Grafana (모니터링 시각화)
   grafana:
     image: grafana/grafana:latest
     container_name: idol-grafana
@@ -125,7 +156,6 @@ services:
     depends_on:
       - prometheus
 
-  # 부하 테스트 도구 (k6)
   k6:
     image: grafana/k6:latest
     container_name: idol-k6
