@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import React, {useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate, useParams, useSearchParams} from "react-router-dom";
 
 // 타입 (백엔드 스펙 기준)
 type Scope = "group" | "idol" | "global";
@@ -24,108 +24,51 @@ type PostListResponse = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-
-// boardType 변환
+// 게시판 scope/type → boardType 변환
 function resolveBoardType(scope: Scope, type: BoardKind): string {
     if (type === "notice") return "ADMIN_NOTICE";
-
-    if (scope === "idol") {
-        return type === "official" ? "IDOL_OFFICIAL" : "IDOL_FAN";
-    }
-
+    if (scope === "idol") return type === "official" ? "IDOL_OFFICIAL" : "IDOL_FAN";
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
 }
 
+const PAGE_SIZE = 20;
+
 const BoardPage: React.FC = () => {
-    const { groupId } = useParams();
+    const {groupId} = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
 
-    // URL 상태
+    // URL 상태 (필터/정렬/검색만 유지)
     const scope = (sp.get("scope") as Scope) || "group";
     const board = (sp.get("type") as BoardKind) || "official";
-    const page = Number(sp.get("page") || "1");
-    const size = Number(sp.get("size") || "20");
     const sort = sp.get("sort") || "latest"; // latest | top
-    const q = sp.get("q") || ""; // TODO: 검색 백엔드 연동 시 사용
+    const q = sp.get("q") || "";
     const idolId = sp.get("idolId");
 
     // 게시글 상태
     const [posts, setPosts] = useState<PostListResponse[]>([]);
-    const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState("");
 
+    // 무한 스크롤 상태
+    const [page, setPage] = useState(0); // 0-based
+    const [hasMore, setHasMore] = useState(true);
+    const [totalElements, setTotalElements] = useState<number | null>(null);
 
-    // 게시글 목록 fetch
-    useEffect(() => {
-        if (!API_BASE_URL) return;
-
-        const controller = new AbortController();
-        const boardType = resolveBoardType(scope, board);
-
-        const params = new URLSearchParams();
-        params.set("boardType", boardType);
-        params.set("page", String(page - 1)); // Spring Page는 0-based
-        params.set("size", String(size));
-
-        // 정렬
-        if (sort === "top") {
-            params.set("sort", "likeCount,desc");
-        } else {
-            params.set("sort", "createdAt,desc");
-        }
-
-        // 게시판 범위별 id
-        if (boardType.startsWith("GROUP_") && groupId) {
-            params.set("groupId", groupId);
-        }
-
-        if (boardType.startsWith("IDOL_") && idolId) {
-            params.set("idolId", idolId);
-        }
-
-        // TODO: 검색 파라미터는 search-service 연동 시 처리
-        // if (q) params.set("q", q);
-
-        const url = `${API_BASE_URL}/board/posts?${params.toString()}`;
-
-        setLoading(true);
-        setError("");
-
-        fetch(url, { signal: controller.signal })
-            .then((res) => {
-                if (!res.ok) throw new Error("게시글 조회 실패");
-                return res.json();
-            })
-            .then((data) => {
-                setPosts(data.content ?? []);
-                setTotalPages(data.totalPages ?? 1);
-            })
-            .catch((e) => {
-                if (e.name === "AbortError") return;
-                setError(e.message);
-                setPosts([]);
-                setTotalPages(1);
-            })
-            .finally(() => {
-                setLoading(false);
-            });
-
-        return () => controller.abort();
-    }, [API_BASE_URL, scope, board, page, size, sort, idolId, q, groupId]);
+    const sentinelRef = useRef<HTMLDivElement | null>(null);
 
     // 필터 버튼
     const leftFilters = useMemo(() => {
         const base = [
-            { label: "그룹 공식", scope: "group" as Scope, type: "official" as BoardKind },
-            { label: "그룹 팬", scope: "group" as Scope, type: "fan" as BoardKind },
-            { label: "공지", scope: "global" as Scope, type: "notice" as BoardKind },
+            {label: "그룹 공식", scope: "group" as Scope, type: "official" as BoardKind},
+            {label: "그룹 팬", scope: "group" as Scope, type: "fan" as BoardKind},
+            {label: "공지", scope: "global" as Scope, type: "notice" as BoardKind},
         ];
 
         const idolExtra = [
-            { label: "아이돌 공식", scope: "idol" as Scope, type: "official" as BoardKind },
-            { label: "아이돌 팬", scope: "idol" as Scope, type: "fan" as BoardKind },
+            {label: "아이돌 공식", scope: "idol" as Scope, type: "official" as BoardKind},
+            {label: "아이돌 팬", scope: "idol" as Scope, type: "fan" as BoardKind},
         ];
 
         return scope === "idol" ? [...idolExtra, ...base] : base;
@@ -136,28 +79,178 @@ const BoardPage: React.FC = () => {
         return scope === f.scope && board === f.type;
     };
 
+    const resetInfiniteState = () => {
+        setPosts([]);
+        setPage(0);
+        setHasMore(true);
+        setTotalElements(null);
+    }
+
     const setFilter = (nextScope: Scope, nextType: BoardKind) => {
         const next = new URLSearchParams(sp);
         next.set("scope", nextScope);
         next.set("type", nextType);
-        next.set("page", "1");
         setSp(next);
+
+        // 무한스크롤 초기화
+        resetInfiniteState();
     };
 
-    // 페이지네이션
-    const pages = useMemo(() => {
-        const result: number[] = [];
-        for (let i = 1; i <= totalPages; i++) result.push(i);
-        return result;
-    }, [totalPages]);
-
-    const goPage = (p: number) => {
+    const setSort = (nextSort: "latest" | "top") => {
         const next = new URLSearchParams(sp);
-        next.set("page", String(p));
+        next.set("sort", nextSort);
         setSp(next);
+
+        // 수정: 무한스크롤 초기화
+        resetInfiniteState();
     };
 
-    // Render
+    const setQuery = (value: string) => {
+        const next = new URLSearchParams(sp);
+        next.set("q", value);
+        setSp(next);
+
+        // 수정: 무한스크롤 초기화
+        resetInfiniteState();
+    };
+
+    // 수정: 무한스크롤용 번호 계산
+    // totalElements가 있으면 "최신 글일수록 큰 번호"를 유지할 수 있습니다.
+    // totalElements가 없으면(모크/초기) 로딩된 개수 기준으로만 표시합니다.
+    const rowNo = (idx: number) => {
+        if (typeof totalElements === "number") {
+            return totalElements - idx;
+        }
+        return posts.length - idx;
+    };
+
+
+
+    // page 단위 fetch (append)
+    const fetchPage = async (nextPage: number, signal?: AbortSignal) => {
+        if (!API_BASE_URL) {
+            throw new Error("VITE_API_BASE_URL이 설정되어 있지 않습니다. ");
+        }
+
+        const boardType = resolveBoardType(scope, board);
+
+        const params = new URLSearchParams();
+        params.set("boardType", boardType);
+        params.set("page", String(nextPage));
+        params.set("size", String(PAGE_SIZE));
+
+        if (sort === "top") params.set("sort", "likeCount,desc");
+        else params.set("sort", "createdAt,desc");
+
+        if (boardType.startsWith("GROUP_") && groupId) params.set("groupId", groupId);
+        if (boardType.startsWith("IDOL_") && idolId) params.set("idolId", idolId);
+
+        // TODO: search-service 연동 시 처리
+        // if (q) params.set("q", q);
+
+        const url = `${API_BASE_URL}/board/posts?${params.toString()}`;
+
+        const res = await fetch(url, {signal});
+        if (!res.ok) throw new Error("게시글 조회 실패");
+
+        const data = await res.json();
+        const content = (data.content ?? []) as PostListResponse[];
+
+        if (nextPage === 0) {
+            setPosts(content);
+        } else {
+            setPosts((prev) => [...prev, ...content]);
+        }
+
+        // totalElements로 "번호 역순" 유지
+        if (typeof data.totalElements === "number") {
+            setTotalElements(data.totalElements);
+        }
+
+        // 무한스크롤 종료 판단 (Spring Page의 last 활용)
+        const last = Boolean(data.last);
+        setHasMore(!last && content.length > 0);
+    };
+
+    // 첫 페이지 로드(필터/정렬/검색 변경 시 0페이지부터 다시)
+    useEffect(() => {
+        const controller = new AbortController();
+
+        const run = async () => {
+            setError("");
+
+            try {
+                setLoading(true);
+                setLoadingMore(false);
+
+                resetInfiniteState();
+
+                await fetchPage(0, controller.signal);
+            } catch (e: any) {
+                if (e?.name === "AbortError") return;
+                setError(e?.message || "게시글 조회 실패");
+                setPosts([]);
+                setHasMore(false);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        run();
+        return () => controller.abort();
+    }, [API_BASE_URL, scope, board, sort, idolId, groupId, q]);
+
+    // page가 증가하면 다음 페이지 append 로드
+    useEffect(() => {
+        if (page === 0) return;
+        if (!hasMore) return;
+
+        const controller = new AbortController();
+
+        const run = async () => {
+            setError("");
+            try {
+                setLoadingMore(true);
+                await fetchPage(page, controller.signal);
+            } catch (e: any) {
+                if (e?.name === "AbortError") return;
+                setError(e?.message || "추가 로딩 실패");
+                setHasMore(false);
+            } finally {
+                setLoadingMore(false);
+            }
+        };
+
+        run();
+        return () => controller.abort();
+    }, [page, hasMore]);
+
+    // IntersectionObserver로 page 증가 트리거
+    useEffect(() => {
+        const el = sentinelRef.current;
+        if (!el) return;
+        if (!hasMore) return;
+
+        const io = new IntersectionObserver(
+            (entries) => {
+                const first = entries[0];
+                if (!first.isIntersecting) return;
+                if (loading) return;
+                if (loadingMore) return;
+
+                setPage((prev) => prev + 1);
+            },
+            {root: null, rootMargin: "200px", threshold: 0}
+        );
+
+        io.observe(el);
+        return () => io.disconnect();
+    }, [hasMore, loading, loadingMore]);
+
+    const scrollTop = () => {
+        window.scrollTo({top: 0, behavior: "smooth"});
+    };
+
     return (
         <div className="space-y-4">
             {/* 상단 툴바 */}
@@ -181,32 +274,24 @@ const BoardPage: React.FC = () => {
 
                 <div className="flex gap-2">
                     <button
-                        onClick={() => {
-                            const next = new URLSearchParams(sp);
-                            next.set("sort", "latest");
-                            setSp(next);
-                        }}
+                        onClick={() => setSort("latest")}
                         className={[
                             "px-3 py-2 rounded-full text-sm font-semibold border",
                             sort === "latest"
                                 ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200",
+                                : "bg-white border-gray-200 hover:bg-gray-200",
                         ].join(" ")}
                     >
                         최신순
                     </button>
 
                     <button
-                        onClick={() => {
-                            const next = new URLSearchParams(sp);
-                            next.set("sort", "top");
-                            setSp(next);
-                        }}
+                        onClick={() => setSort("top")}
                         className={[
                             "px-3 py-2 rounded-full text-sm font-semibold border",
                             sort === "top"
                                 ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200",
+                                : "bg-white border-gray-200 hover:bg-gray-200",
                         ].join(" ")}
                     >
                         추천순
@@ -214,60 +299,120 @@ const BoardPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* 게시글 리스트 */}
+            <div className="flex justify-center">
+                <div
+                    className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
+                    <select defaultValue="title"
+                            className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
+                        <option value="title">제목</option>
+                        <option value="title_content">제목+내용</option>
+                        <option value="content">내용</option>
+                    </select>
+
+                    <input
+                        value={q}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="단어 위주로 검색하시면 보다 정확한 결과를 얻을 수 있습니다."
+                        className="flex-1 h-12 px-4 text-sm outline-none"
+                    />
+
+                    <button
+                        type="button"
+                        className="h-12 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                        onClick={() => {
+                            // TODO: search-service 연동 시 검색 실행
+                        }}
+                    >
+                        🔍
+                    </button>
+                </div>
+            </div>
+
             {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
             {error && <div className="text-sm text-red-600">{error}</div>}
 
-            {!loading && posts.length === 0 && (
-                <div className="border rounded-2xl p-6 text-sm text-gray-600">
-                    게시글이 없습니다.
+            <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
+                <div
+                    className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                    <div className="text-left">번호</div>
+                    <div className="text-left">제목</div>
+                    <div className="text-left">작성자</div>
+                    <div className="text-left">작성일</div>
+                    <div className="text-right">조회수</div>
+                    <div className="text-right">추천수</div>
                 </div>
+
+                {!loading && posts.length === 0 && <div className="px-4 py-6 text-sm text-gray-600">게시글이 없습니다.</div>}
+
+                {!loading &&
+                    posts.map((p, idx) => (
+                        <button
+                            key={p.postId}
+                            type="button"
+                            onClick={() => navigate(`./${p.postId}`)}
+                            className="
+                                w-full text-left
+                                grid grid-cols-[90px_1fr_120px_140px_90px_90px]
+                                px-4 py-3
+                                border-b border-gray-100 last:border-b-0
+                                hover:bg-gray-50
+                                transition-colors
+                              "
+                        >
+                            <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
+
+                            <div className="min-w-0">
+                                <div className="text-sm font-semibold text-gray-900 truncate">{p.title}</div>
+                            </div>
+
+                            <div className="text-sm text-gray-700 tabular-nums">{p.authorId}</div>
+
+                            <div className="text-sm text-gray-600">{p.createdAt}</div>
+
+                            <div className="text-sm text-gray-700 text-right tabular-nums">{p.viewCount}</div>
+
+                            <div className="text-sm text-gray-700 text-right tabular-nums">{p.likeCount}</div>
+                        </button>
+                    ))}
+            </div>
+
+            {/* 수정: 페이지네이션 삭제 → 무한스크롤 sentinel */}
+            <div ref={sentinelRef} className="h-10"/>
+
+            {/* 수정: 추가 로딩 표시 */}
+            {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
+            {!loading && !loadingMore && posts.length > 0 && !hasMore && (
+                <div className="text-sm text-gray-500 text-center py-2">마지막 게시글입니다.</div>
             )}
 
-            <div className="space-y-2">
-                {posts.map((p) => (
-                    <div
-                        key={p.postId}
-                        onClick={() => navigate(`./${p.postId}`)}
-                        className="border rounded-2xl p-4 hover:border-[#1FBFB8] cursor-pointer"
-                    >
-                        <div className="font-semibold">{p.title}</div>
-                        <div className="mt-2 text-sm text-gray-600 flex gap-4">
-                            <span>작성자 {p.authorId}</span>
-                            <span>조회 {p.viewCount}</span>
-                            <span>추천 {p.likeCount}</span>
-                            <span>{new Date(p.createdAt).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                ))}
-            </div>
+            {/* 플로팅 버튼 */}
+            <div className="fixed right-4 bottom-6 z-40 flex flex-col items-end gap-3">
+                <button
+                    type="button"
+                    onClick={scrollTop}
+                    className="
+            w-12 h-12 rounded-full
+            bg-gray-100 border border-gray-200
+            shadow-md
+            text-gray-800 font-semibold
+            hover:bg-gray-200
+          "
+                >
+                    ↑
+                </button>
 
-            {/* 페이지네이션 */}
-            <div className="flex justify-center gap-1 pt-4">
-                {pages.map((p) => (
-                    <button
-                        key={p}
-                        onClick={() => goPage(p)}
-                        className={[
-                            "w-9 h-9 rounded-full border text-sm font-semibold",
-                            p === page
-                                ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200",
-                        ].join(" ")}
-                    >
-                        {p}
-                    </button>
-                ))}
-            </div>
-
-            {/* 검색 (UI만) */}
-            <div className="flex justify-center gap-2 pt-4">
-                <input
-                    value={q}
-                    disabled
-                    placeholder="검색 (TODO)"
-                    className="w-full max-w-md px-4 py-3 rounded-2xl border border-gray-200 bg-gray-100"
-                />
+                <button
+                    type="button"
+                    onClick={() => navigate("./write")}
+                    className="
+                        px-5 py-3 rounded-2xl
+                        bg-[#1FBFB8] text-white text-sm font-semibold
+                        shadow-md
+                        hover:bg-[#17AFA8]
+                      "
+                >
+                    글쓰기
+                </button>
             </div>
         </div>
     );

@@ -25,7 +25,7 @@ public class CommentController {
             @PathVariable Long postId,
             @RequestBody CommentWriteRequest req,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role,
+            @RequestHeader("X-Role") Role role,
             @RequestHeader(value = "X-Nickname", required = false) String nickname
     ) {
         if (nickname != null) {
@@ -42,7 +42,7 @@ public class CommentController {
     public List<CommentResponse> showAll(
             @PathVariable Long postId,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role
+            @RequestHeader("X-Role") Role role
     ) {
         return commentService.showAll(postId, userId, role);
     }
@@ -53,7 +53,7 @@ public class CommentController {
             @PathVariable Long commentId,
             @RequestBody CommentUpdateRequest req,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role
+            @RequestHeader("X-Role") Role role
     ) {
         return commentService.update(commentId, req, userId, role);
     }
@@ -63,7 +63,7 @@ public class CommentController {
     public void delete(
             @PathVariable Long commentId,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role
+            @RequestHeader("X-Role") Role role
     ) {
         commentService.delete(commentId, userId, role);
     }

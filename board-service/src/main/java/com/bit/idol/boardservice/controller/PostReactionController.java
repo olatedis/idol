@@ -18,7 +18,7 @@ public class PostReactionController {
     public PostReactionResponse like(
             @PathVariable Long postId,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role
+            @RequestHeader("X-Role") Role role
     ) {
         return postReactionService.like(postId, userId, role);
     }
@@ -28,7 +28,7 @@ public class PostReactionController {
     public PostReactionResponse dislike(
             @PathVariable Long postId,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role
+            @RequestHeader("X-Role") Role role
     ) {
         return postReactionService.dislike(postId, userId, role);
     }
@@ -37,7 +37,7 @@ public class PostReactionController {
     public PostReactionResponse myReaction(
             @PathVariable Long postId,
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") Role role
+            @RequestHeader("X-Role") Role role
     ) {
         return postReactionService.getMyReaction(postId, userId, role);
     }

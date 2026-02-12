@@ -39,7 +39,7 @@ public class PostController {
     @GetMapping("/{postId}")
     public ResponseEntity<?> showOne(
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") String roleRaw,
+            @RequestHeader("X-Role") String roleRaw,
             @PathVariable("postId") Long postId
     ) {
         Role role = parseRole(roleRaw);
@@ -50,7 +50,7 @@ public class PostController {
     @PostMapping
     public ResponseEntity<?> write(
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") String roleRaw,
+            @RequestHeader("X-Role") String roleRaw,
             @RequestBody PostWriteRequest req
     ) {
         Role role = parseRole(roleRaw);
@@ -61,7 +61,7 @@ public class PostController {
     @PutMapping("/{postId}")
     public ResponseEntity<?> update(
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") String roleRaw,
+            @RequestHeader("X-Role") String roleRaw,
             @PathVariable("postId") Long postId,
             @RequestBody PostUpdateRequest req
     ) {
@@ -73,7 +73,7 @@ public class PostController {
     @DeleteMapping("/{postId}")
     public ResponseEntity<?> delete(
             @RequestHeader("X-User-Id") Integer userId,
-            @RequestHeader("X-User-Role") String roleRaw,
+            @RequestHeader("X-Role") String roleRaw,
             @PathVariable("postId") Long postId
     ) {
         Role role = parseRole(roleRaw);

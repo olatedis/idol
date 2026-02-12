@@ -3630,7 +3630,7 @@ instanceKlass org/apache/http/message/HeaderGroup
 instanceKlass org/apache/http/RequestLine
 instanceKlass org/apache/http/concurrent/Cancellable
 instanceKlass org/apache/http/params/HttpParams
-instanceKlass org/apache/http/Header
+instanceKlass org/apache/http/SemiHeader
 instanceKlass org/apache/http/NameValuePair
 instanceKlass org/gradle/internal/resource/transfer/AbstractProgressLoggingHandler$LocationDetails
 instanceKlass org/gradle/internal/resource/ExternalResourceReadMetadataBuildOperationType$Details
@@ -7015,7 +7015,7 @@ instanceKlass org/codehaus/groovy/reflection/MixinInMetaClass
 instanceKlass java/beans/BeanInfo
 instanceKlass groovyjarjarasm/asm/ClassVisitor
 instanceKlass java/security/PrivilegedExceptionAction
-instanceKlass  @bci org/codehaus/groovy/runtime/metaclass/MetaMethodIndex getHeader (Ljava/lang/Class;)Lorg/codehaus/groovy/runtime/metaclass/MetaMethodIndex$Header; 6 <appendix> member <vmtarget> ; # org/codehaus/groovy/runtime/metaclass/MetaMethodIndex$$Lambda+0x00000000a6498e88
+instanceKlass  @bci org/codehaus/groovy/runtime/metaclass/MetaMethodIndex getHeader (Ljava/lang/Class;)Lorg/codehaus/groovy/runtime/metaclass/MetaMethodIndex$SemiHeader; 6 <appendix> member <vmtarget> ; # org/codehaus/groovy/runtime/metaclass/MetaMethodIndex$$Lambda+0x00000000a6498e88
 instanceKlass  @bci org/codehaus/groovy/reflection/CachedClass$2 lambda$initValue$4 ()[Lorg/codehaus/groovy/reflection/CachedConstructor; 44 <appendix> argL0 ; # org/codehaus/groovy/reflection/CachedClass$2$$Lambda+0x00000000a6498c60
 instanceKlass  @bci org/codehaus/groovy/reflection/CachedClass$2 lambda$initValue$4 ()[Lorg/codehaus/groovy/reflection/CachedConstructor; 34 <appendix> member <vmtarget> ; # org/codehaus/groovy/reflection/CachedClass$2$$Lambda+0x00000000a6498a10
 instanceKlass  @bci org/codehaus/groovy/reflection/CachedClass$2 lambda$initValue$4 ()[Lorg/codehaus/groovy/reflection/CachedConstructor; 23 <appendix> argL0 ; # org/codehaus/groovy/reflection/CachedClass$2$$Lambda+0x00000000a64987b8
@@ -7024,7 +7024,7 @@ instanceKlass groovy/lang/ClosureInvokingMethod
 instanceKlass org/codehaus/groovy/runtime/MethodKey
 instanceKlass groovy/lang/ExpandoMetaClass$Callable
 instanceKlass  @bci org/codehaus/groovy/reflection/CachedClass$2 initValue ()[Lorg/codehaus/groovy/reflection/CachedConstructor; 1 <appendix> member <vmtarget> ; # org/codehaus/groovy/reflection/CachedClass$2$$Lambda+0x00000000a6497760
-instanceKlass org/codehaus/groovy/runtime/metaclass/MetaMethodIndex$Header
+instanceKlass org/codehaus/groovy/runtime/metaclass/MetaMethodIndex$SemiHeader
 instanceKlass org/codehaus/groovy/runtime/metaclass/MetaMethodIndex$Entry
 instanceKlass org/codehaus/groovy/runtime/metaclass/MetaMethodIndex$EntryIterator
 instanceKlass org/codehaus/groovy/runtime/metaclass/MetaMethodIndex

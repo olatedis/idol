@@ -5,26 +5,23 @@ import Header from "../main/Header";
 const ServicePage: React.FC = () => {
 
     const tabs = [
-        {label: "게시판", to: "board" },
-        {label: "투표", to: "vote" },
-        {label: "콘서트", to: "concert" },
-        {label: "채팅", to: "chat" },
+        {label: "게시판", to: "board"},
+        {label: "투표", to: "vote"},
+        {label: "콘서트", to: "concert"},
+        {label: "채팅", to: "chat"},
     ];
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white pt-[72px]">
             <Header/>
 
             {/* 세미 헤더 */}
-            <div className="sticky top-0 z-10 bg-white">
+            <div className="sticky top-[72px] z-10 bg-white">
                 <nav className="
-              grid grid-cols-4 w-full
-              border border-gray-200
-              rounded-2xl
-              shadow-sm
-              overflow-hidden
-              mt-3
-            "
+                    grid grid-cols-4 gap-3
+                    w-full px-6
+                    mt-3
+                    "
                 >
                     {tabs.map((t) => (
                         <NavLink
@@ -35,7 +32,7 @@ const ServicePage: React.FC = () => {
                                     "w-full text-center select-none",
                                     "py-[clamp(4px,0.9vw,14px)]",
                                     "text-[clamp(19px,1.2vw,16px)] font-semibold",
-                                    "border-r border-gray-200 last:border-r-0",
+                                    "rounded-xl border border-gray-200",
                                     isActive
                                         ? "bg-[#1FBFB8] text-white hover:bg-[#17AFA8]"
                                         : "bg-white text-gray-800 hover:bg-gray-200",
