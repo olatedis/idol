@@ -39,7 +39,7 @@ const IdolPage: React.FC = () => {
 
     // 전체 아이돌 조회
     const fetchAllIdols = async () => {
-        const res = await fetch("http://localhost:8080/idols");
+        const res = await fetch("http://localhost:8000/idols");
         const data = await res.json();
         setAllIdols(data);
     };
@@ -48,7 +48,7 @@ const IdolPage: React.FC = () => {
     const fetchSubscriptions = async () => {
         if (!token) return;
 
-        const res = await fetch("http://localhost:8080/subscriptions/me", {
+        const res = await fetch("http://localhost:8000/subscriptions/me", {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
