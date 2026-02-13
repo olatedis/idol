@@ -19,6 +19,7 @@ public class GroupSubscriptionDto {
     private int subscriptionId;
     private int userId;
     private int groupId;
+    private String groupName;
     private SubscriptionStatus status;
     private LocalDateTime startedAt;
     private LocalDateTime expiredAt;
@@ -29,6 +30,7 @@ public class GroupSubscriptionDto {
                 .subscriptionId(gs.getId())
                 .userId(gs.getUserId())
                 .groupId(gs.getGroupId())
+                .groupName(gs.getGroupName())
                 .status(gs.getStatus())
                 .startedAt(gs.getStartedAt())
                 .expiredAt(gs.getExpiredAt())
