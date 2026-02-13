@@ -175,6 +175,7 @@ const PostWritePage: React.FC = () => {
                             useCommandShortcut={true}
                         />
 
+
                     </div>
                 </div>
             </div>
