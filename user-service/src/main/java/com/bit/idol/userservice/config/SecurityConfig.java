@@ -18,7 +18,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable) // CSRF 비활성화
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션 사용 안 함 (최적화)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/users/**").permitAll() // 회원가입 등 사용자 관련 API 허용
+                .requestMatchers("/users/**", "/idols/**").permitAll() // 회원가입, 아이돌 조회 등 허용
                 .requestMatchers("/internal/**").permitAll() // 내부 통신용 API 허용
                 .requestMatchers("/actuator/**").permitAll() // 상태 확인용
                 // Swagger 관련 경로 허용

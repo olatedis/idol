@@ -23,6 +23,10 @@ public class Idol {
     @JoinColumn(name = "agency_id")
     private Agency agency;
 
+    @ManyToOne(fetch = FetchType.LAZY) // 그룹 연관관계 추가
+    @JoinColumn(name = "group_id")
+    private Group group;
+
     private String stageName;
 
     @Setter

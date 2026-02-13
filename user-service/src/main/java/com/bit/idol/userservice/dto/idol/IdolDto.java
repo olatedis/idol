@@ -20,6 +20,8 @@ public class IdolDto {
     private String profileImage; // 프로필 이미지 추가
     private int agencyId;
     private String agencyName;
+    private Integer groupId; // 그룹 ID 추가 (Nullable)
+    private String groupName; // 그룹 이름 추가 (Nullable)
     private IdolStatus status;
 
     public static IdolDto fromEntity(Idol idol) {
@@ -30,10 +32,16 @@ public class IdolDto {
                 .stageName(idol.getStageName())
                 .profileImage(idol.getUser().getImgUrl()) // User 엔티티에서 가져옴
                 .agencyId(
-                        idol.getAgency() != null ? idol.getAgency().getId() : null
+                        idol.getAgency() != null ? idol.getAgency().getId() : 0
                 )
                 .agencyName(
                         idol.getAgency() != null ? idol.getAgency().getName() : null
+                )
+                .groupId(
+                        idol.getGroup() != null ? idol.getGroup().getId() : null
+                )
+                .groupName(
+                        idol.getGroup() != null ? idol.getGroup().getName() : null
                 )
                 .status(idol.getStatus())
                 .build();

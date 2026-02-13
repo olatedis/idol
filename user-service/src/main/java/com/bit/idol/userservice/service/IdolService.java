@@ -71,7 +71,8 @@ public class IdolService {
     }
 
     public List<IdolDto> getAllIdols() {
-        return idolRepository.findAll().stream()
+        // N+1 문제 해결을 위해 Fetch Join 사용
+        return idolRepository.findAllWithDetails().stream()
                 .map(IdolDto::fromEntity)
                 .toList();
     }
