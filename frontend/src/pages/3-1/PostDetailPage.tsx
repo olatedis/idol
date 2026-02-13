@@ -54,22 +54,25 @@ const PostDetailPage: React.FC = () => {
 
     const [commentInput, setCommentInput] = useState("");
     const [commentSubmitting, setCommentSubmitting] = useState(false);
-
     const [reactionSubmitting, setReactionSubmitting] = useState(false);
+
+    const getAccessTokenOrThrow = () => {
+        // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) throw new Error("로그인이 필요합니다. (accessToken 없음)");
+        return accessToken;
+    };
 
     const fetchDetailAndReaction = async (signal?: AbortSignal) => {
         if (!postId) throw new Error("postId가 없습니다.");
         if (!API_BASE_URL) throw new Error("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
 
-        // TODO: 로그인 연동되면 실제 값으로 교체
-        const userId = "1";
-        const userRole = "USER";
+        const accessToken = getAccessTokenOrThrow();
 
         const detailReq = fetch(`${API_BASE_URL}/board/posts/${postId}`, {
             method: "GET",
             headers: {
-                "X-User-Id": userId,
-                "X-Role": userRole,
+                Authorization: `Bearer ${accessToken}`,
             },
             signal,
         });
@@ -77,8 +80,7 @@ const PostDetailPage: React.FC = () => {
         const reactionReq = fetch(`${API_BASE_URL}/board/posts/${postId}/reaction`, {
             method: "GET",
             headers: {
-                "X-User-Id": userId,
-                "X-Role": userRole,
+                Authorization: `Bearer ${accessToken}`,
             },
             signal,
         });
@@ -120,7 +122,6 @@ const PostDetailPage: React.FC = () => {
 
     const applyReactionToState = (r: PostReactionResponse) => {
         setReaction(r);
-        // 상세의 like/dislike도 같이 맞춰줌(화면 표시 정합성)
         setData((prev) => {
             if (!prev) return prev;
             return {
@@ -139,16 +140,13 @@ const PostDetailPage: React.FC = () => {
         setReactionSubmitting(true);
         setError("");
 
-        // TODO: 로그인 연동되면 실제 값으로 교체
-        const userId = "1";
-        const userRole = "USER";
-
         try {
+            const accessToken = getAccessTokenOrThrow();
+
             const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/like`, {
                 method: "POST",
                 headers: {
-                    "X-User-Id": userId,
-                    "X-Role": userRole,
+                    Authorization: `Bearer ${accessToken}`,
                 },
             });
 
@@ -171,16 +169,13 @@ const PostDetailPage: React.FC = () => {
         setReactionSubmitting(true);
         setError("");
 
-        // TODO: 로그인 연동되면 실제 값으로 교체
-        const userId = "1";
-        const userRole = "USER";
-
         try {
+            const accessToken = getAccessTokenOrThrow();
+
             const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/dislike`, {
                 method: "POST",
                 headers: {
-                    "X-User-Id": userId,
-                    "X-Role": userRole,
+                    Authorization: `Bearer ${accessToken}`,
                 },
             });
 
@@ -206,18 +201,14 @@ const PostDetailPage: React.FC = () => {
         setCommentSubmitting(true);
         setError("");
 
-        // TODO: 로그인 연동되면 실제 값으로 교체
-        const userId = "1";
-        const userRole = "USER";
-
         try {
+            const accessToken = getAccessTokenOrThrow();
+
             const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/comments`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-User-Id": userId,
-                    "X-Role": userRole,
-                    // X-Nickname은 게이트웨이에서 인코딩 전달되는 구조라, 프런트는 당장 안 보내도 됨
+                    Authorization: `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify({ content }),
             });
@@ -226,7 +217,7 @@ const PostDetailPage: React.FC = () => {
 
             setCommentInput("");
 
-            // 작성 후: 상세 1회 재조회로 comments 갱신(가장 안전)
+            // 작성 후: 상세 1회 재조회로 comments 갱신
             await fetchDetailAndReaction();
         } catch (e: any) {
             setError(e?.message || "댓글 작성 실패");
@@ -257,7 +248,6 @@ const PostDetailPage: React.FC = () => {
                 </div>
 
                 <div className="px-6 py-5 border-t border-gray-100">
-                    {/* HTML 렌더링 (백엔드에서 스크립트 제거 등 안전 처리 전제) */}
                     <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{ __html: data.content }} />
 
                     <div className="mt-8 flex justify-center gap-10">
@@ -314,9 +304,7 @@ const PostDetailPage: React.FC = () => {
                         {data.comments.map((c) => (
                             <div key={c.commentId} className="px-6 py-4">
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
-                  <span className="font-medium text-gray-800">
-                    {c.authorNickname ? c.authorNickname : c.authorId}
-                  </span>
+                                    <span className="font-medium text-gray-800">{c.authorNickname ? c.authorNickname : c.authorId}</span>
                                     <span>{c.createdAt}</span>
                                     {c.isDeleted ? <span className="text-red-500">삭제됨</span> : null}
                                 </div>
