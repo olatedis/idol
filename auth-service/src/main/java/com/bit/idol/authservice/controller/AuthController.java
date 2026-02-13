@@ -1,6 +1,7 @@
 package com.bit.idol.authservice.controller;
 
 import com.bit.idol.authservice.client.UserFeignClient;
+import com.bit.idol.authservice.dto.response.LoginResponseDto;
 import com.bit.idol.authservice.model.LoginRequestDto;
 import com.bit.idol.authservice.service.AuthService;
 import com.bit.idol.authservice.service.RateLimiterService;
@@ -34,15 +35,14 @@ public class AuthController {
     private final StringRedisTemplate redisTemplate;
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequestDto request) {
-        Map<String, String> tokens = authService.login(request.getUsername(), request.getPassword());
+    public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto request) {
+        LoginResponseDto response = authService.login(request.getUsername(), request.getPassword());
         log.info("로그인 성공: username={}", request.getUsername());
-        return ResponseEntity.ok(tokens);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login/kakao")
     public ResponseEntity<Map<String, String>> loginKakao(@RequestBody Map<String, String> request) {
-        // 프론트엔드에서 인가 코드(code)를 받음
         String code = request.get("code");
         if (code == null || code.isEmpty()) {
             return ResponseEntity.badRequest().build();

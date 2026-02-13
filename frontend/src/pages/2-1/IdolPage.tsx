@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import Header from "../main/Header";
 import { useNavigate } from "react-router-dom";
+import { api } from "../../api/axios";
+import { useAuthStore } from "../../stores/authStore";
+import SignupModal from "../../components/auth/SignupModal";
 
 const CARD_WIDTH = 176;
 
@@ -25,50 +28,54 @@ interface GroupSubscriptionDto {
     autoRenew: boolean;
 }
 
-
 const IdolPage: React.FC = () => {
     const navigate = useNavigate();
     const scrollRef = useRef<HTMLDivElement>(null);
+    
+    // user뿐만 아니라 accessToken도 확인하여 로그인 상태 판단 (Hydration 이슈 방지)
+    const { user, accessToken } = useAuthStore();
+    const isLoggedIn = !!user || !!accessToken;
 
     const [allIdols, setAllIdols] = useState<IdolDto[]>([]);
     const [subscribedIdols, setSubscribedIdols] = useState<IdolDto[]>([]);
     const [showLeft, setShowLeft] = useState(false);
     const [showRight, setShowRight] = useState(false);
-
-    const token = localStorage.getItem("accessToken");
+    
+    // 모달 상태
+    const [isSignupOpen, setIsSignupOpen] = useState(false);
 
     // 전체 아이돌 조회
     const fetchAllIdols = async () => {
-        const res = await fetch("http://localhost:8000/idols");
-        const data = await res.json();
-        setAllIdols(data);
+        try {
+            const { data } = await api.get("/idols");
+            setAllIdols(data);
+        } catch (error) {
+            console.error("전체 아이돌 조회 실패:", error);
+        }
     };
 
     // 구독 목록 조회 → idol 상세 조회
     const fetchSubscriptions = async () => {
-        if (!token) return;
+        if (!isLoggedIn) return;
 
-        const res = await fetch("http://localhost:8000/subscriptions/me", {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
+        try {
+            const { data: subs } = await api.get<GroupSubscriptionDto[]>("/subscriptions/me");
 
-        const subs: GroupSubscriptionDto[] = await res.json();
+            const idolPromises = subs.map(sub =>
+                api.get(`/idols/${sub.groupId}`).then(res => res.data)
+            );
 
-        const idolPromises = subs.map(sub =>
-            fetch(`http://localhost:8080/idols/${sub.groupId}`)
-                .then(res => res.json())
-        );
-
-        const idolResults = await Promise.all(idolPromises);
-        setSubscribedIdols(idolResults);
+            const idolResults = await Promise.all(idolPromises);
+            setSubscribedIdols(idolResults);
+        } catch (error) {
+            console.error("구독 목록 조회 실패:", error);
+        }
     };
 
     useEffect(() => {
         fetchAllIdols();
         fetchSubscriptions();
-    }, []);
+    }, [isLoggedIn]);
 
     // 캐러셀 버튼 제어
     const checkOverflow = () => {
@@ -124,37 +131,62 @@ const IdolPage: React.FC = () => {
                         구독중인 아이돌
                     </div>
 
-                    <div className="relative">
+                    {isLoggedIn ? (
+                        <div className="relative">
+                            {showLeft && (
+                                <button
+                                    onClick={scrollLeft}
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10
+                                               bg-white shadow-md rounded-full w-10 h-10">
+                                    ◀
+                                </button>
+                            )}
 
-                        {showLeft && (
-                            <button
-                                onClick={scrollLeft}
-                                className="absolute left-0 top-1/2 -translate-y-1/2 z-10
-                                           bg-white shadow-md rounded-full w-10 h-10">
-                                ◀
-                            </button>
-                        )}
+                            {showRight && (
+                                <button
+                                    onClick={scrollRight}
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10
+                                               bg-white shadow-md rounded-full w-10 h-10">
+                                    ▶
+                                </button>
+                            )}
 
-                        {showRight && (
-                            <button
-                                onClick={scrollRight}
-                                className="absolute right-0 top-1/2 -translate-y-1/2 z-10
-                                           bg-white shadow-md rounded-full w-10 h-10">
-                                ▶
-                            </button>
-                        )}
-
-                        <div
-                            ref={scrollRef}
-                            onScroll={checkOverflow}
-                            className="flex gap-8 overflow-hidden"
-                        >
-                            {subscribedIdols.map(idol => (
-                                <IdolCard key={idol.idolId} idol={idol} />
-                            ))}
+                            <div
+                                ref={scrollRef}
+                                onScroll={checkOverflow}
+                                className="flex gap-8 overflow-hidden"
+                            >
+                                {subscribedIdols.length > 0 ? (
+                                    subscribedIdols.map(idol => (
+                                        <IdolCard key={idol.idolId} idol={idol} />
+                                    ))
+                                ) : (
+                                    <div className="w-full text-center py-10 text-gray-500">
+                                        구독 중인 아이돌이 없습니다.
+                                    </div>
+                                )}
+                            </div>
                         </div>
-
-                    </div>
+                    ) : (
+                        // 로그인/회원가입 유도 UI
+                        <div className="flex flex-col items-center justify-center py-12 bg-white/50 rounded-lg border border-idol-point/20">
+                            <p className="text-gray-600 mb-6 font-medium">로그인하고 내가 구독한 아이돌을 확인해보세요!</p>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => navigate('/', { state: { scrollToLogin: true } })}
+                                    className="px-8 py-2.5 bg-idol text-white rounded-full hover:opacity-90 transition shadow-sm font-semibold"
+                                >
+                                    로그인
+                                </button>
+                                <button
+                                    onClick={() => setIsSignupOpen(true)}
+                                    className="px-8 py-2.5 bg-white text-idol border border-idol rounded-full hover:bg-gray-50 transition shadow-sm font-semibold"
+                                >
+                                    회원가입
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </section>
 
                 {/* 전체 아이돌 */}
@@ -179,6 +211,16 @@ const IdolPage: React.FC = () => {
                 </section>
 
             </main>
+
+            {/* 회원가입 모달 */}
+            <SignupModal 
+                isOpen={isSignupOpen} 
+                onClose={() => setIsSignupOpen(false)}
+                onSwitchToLogin={() => {
+                    setIsSignupOpen(false);
+                    navigate('/', { state: { scrollToLogin: true } });
+                }}
+            />
         </div>
     );
 };

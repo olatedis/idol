@@ -43,7 +43,7 @@ spring:
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
-            - Path=/users/**, /reports/**, /internal/**, /agencies/**, /admin/users/**, /idols/** # 👈 /idols/** 추가됨
+            - Path=/users/**, /reports/**, /internal/**, /agencies/**, /admin/users/**, /idols/**
 
         # --- Community Services ---
         - id: chat-service
@@ -246,6 +246,8 @@ jwt:
     - /auth/login
     - /auth/login/kakao
     - /auth/reissue
+    - /auth/email/** # 👈 추가됨
+    - /auth/password/** # 👈 추가됨
     - /users/register
     - /ws-ranking/**
     - /ws-chat/**
@@ -254,7 +256,7 @@ jwt:
     - /search/**
     - /board/posts/**
     - /concerts/**
-    - /idols/** # 👈 추가됨
+    - /idols/**
     - /v3/api-docs/**
     - /swagger-ui/**
     - /swagger-ui.html

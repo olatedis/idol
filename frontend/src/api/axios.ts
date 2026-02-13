@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
+import { useAuthStore } from '../stores/authStore';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const BASE_URL = 'http://localhost:8000';
 
 // Axios 인스턴스 생성
 export const api = axios.create({
@@ -15,9 +16,9 @@ export const api = axios.create({
 // --- Request Interceptor ---
 api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        const { accessToken } = useAuthStore.getState();
+        if (accessToken) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
         }
         return config;
     },
@@ -57,7 +58,8 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const refreshToken = localStorage.getItem('refreshToken');
+                const { refreshToken, setTokens, logout } = useAuthStore.getState();
+
                 if (!refreshToken) {
                     throw new Error('No refresh token');
                 }
@@ -70,8 +72,7 @@ api.interceptors.response.use(
 
                 const { accessToken: newAccessToken, refreshToken: newRefreshToken } = data;
 
-                localStorage.setItem('accessToken', newAccessToken);
-                localStorage.setItem('refreshToken', newRefreshToken);
+                setTokens(newAccessToken, newRefreshToken);
 
                 isRefreshing = false;
                 onRefreshed(newAccessToken);
@@ -81,9 +82,9 @@ api.interceptors.response.use(
 
             } catch (refreshError) {
                 isRefreshing = false;
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                window.location.href = '/login';
+                useAuthStore.getState().logout();
+                // 로그인 페이지가 없으므로 메인으로 이동
+                window.location.href = '/';
                 return Promise.reject(refreshError);
             }
         }

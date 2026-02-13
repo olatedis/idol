@@ -1,14 +1,20 @@
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import {motion} from "framer-motion";
 import Header from "./Header";
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
-
+import { useLocation, useNavigate } from "react-router-dom";
+import { api } from "../../api/axios";
+import { useAuthStore } from "../../stores/authStore";
+import SignupModal from "../../components/auth/SignupModal";
+import { showSuccessToast, showErrorToast, showAlert } from "../../utils/alert"; // 추가됨
 
 const MainPage: React.FC = () => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [isSignupOpen, setIsSignupOpen] = useState(false);
+    
     const location = useLocation();
+    const navigate = useNavigate();
+    const { login } = useAuthStore();
 
     useEffect(() => {
         if (location.state?.scrollToLogin) {
@@ -28,31 +34,46 @@ const MainPage: React.FC = () => {
         e.preventDefault();
 
         try {
-            const response = await fetch("http://localhost:8080/auth/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    username,
-                    password,
-                }),
+            const response = await api.post("/auth/login", {
+                username,
+                password,
             });
 
-            if (!response.ok) {
-                throw new Error("로그인 실패");
+            console.log("로그인 응답:", response.data);
+
+            const { accessToken, refreshToken, user } = response.data;
+
+            if (!user) {
+                console.error("유저 정보가 없습니다! 백엔드 응답을 확인하세요.");
+                const userRes = await api.get("/users/me", {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                });
+                login(userRes.data, accessToken, refreshToken);
+            } else {
+                login(user, accessToken, refreshToken);
             }
-
-            const data = await response.json();
-            console.log("로그인 성공:", data);
-
-            // 예시: 토큰 저장
-            localStorage.setItem("accessToken", data.accessToken);
+            
+            showSuccessToast("로그인되었습니다."); // 예쁜 알림으로 변경
+            navigate("/idol");
 
         } catch (error) {
             console.error(error);
-            alert("아이디 또는 비밀번호를 확인해주세요.");
+            showErrorToast("아이디 또는 비밀번호를 확인해주세요."); // 예쁜 알림으로 변경
         }
+    };
+
+    const handleKakaoLogin = () => {
+        const REST_API_KEY = import.meta.env.VITE_KAKAO_API_KEY;
+        const REDIRECT_URI = "http://localhost:5173/oauth/kakao";
+        
+        if (!REST_API_KEY) {
+            showAlert("오류", "카카오 API 키가 설정되지 않았습니다.", "error");
+            return;
+        }
+
+        const KAKAO_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
+        
+        window.location.href = KAKAO_URL;
     };
 
     return (
@@ -156,7 +177,7 @@ const MainPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* Slide 4 */}
+                {/* Slide 4 (Login) */}
                 <section id="login-section" className="h-screen snap-end flex flex-col items-center content-center">
                     <motion.div
                         initial={{opacity: 0, y: -80, skewY: 15}}
@@ -176,16 +197,16 @@ const MainPage: React.FC = () => {
                             <div className="w-full justify-center items-center">
                                 <form onSubmit={handleLogin} className="flex flex-col items-center mt-6">
                                     <input type="text"
-                                           id="user-id"
-                                           name="user-id"
+                                           id="username"
+                                           name="username"
                                            placeholder="아이디를 입력하세요."
                                            onChange={(e) => setUsername(e.target.value)}
                                            className="mx-[15%] w-[250px] mb-2 rounded-lg appearance-none border border-gray-300 py-2 px-4 bg-white placeholder-gray-400 text-base
                                                 focus:outline-none focus:ring-2 focus:ring-idol focus:border-transparent"/>
 
                                     <input type="password"
-                                           id="user-pw"
-                                           name="user-pw"
+                                           id="password"
+                                           name="password"
                                            placeholder="비밀번호를 입력하세요."
                                            onChange={(e) => setPassword(e.target.value)}
                                            className="mx-[15%] w-[250px] rounded-lg appearance-none border border-gray-300 py-2 px-4 bg-white placeholder-gray-400 text-base
@@ -196,10 +217,12 @@ const MainPage: React.FC = () => {
                                     </button>
                                     <button
                                         type="button"
+                                        onClick={() => setIsSignupOpen(true)}
                                         className="flex-1/2 mx-[15%] w-[250px] mb-2  px-6 py-2 rounded-md bg-idol text-white hover:cursor-pointer">가입하기
                                     </button>
                                     <button
                                         type="button"
+                                        onClick={handleKakaoLogin}
                                         className="flex-1/2 mx-[15%] w-[250px] mb-2  px-6 py-2 rounded-md bg-yellow-300 text-black hover:cursor-pointer">👁️‍🗨️카카오 계정으로 로그인
                                     </button>
                                 </form>
@@ -218,6 +241,17 @@ const MainPage: React.FC = () => {
                 </section>
 
             </main>
+
+            {/* 회원가입 모달 */}
+            <SignupModal 
+                isOpen={isSignupOpen} 
+                onClose={() => setIsSignupOpen(false)}
+                onSwitchToLogin={() => {
+                    setIsSignupOpen(false);
+                    const el = document.getElementById("login-section");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                }}
+            />
         </div>
     );
 };
