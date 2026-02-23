@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import Header from '../../main/Header';
-import { createPaymentReady, getIdol } from '../../api/payment';
+import Header from '../main/Header';
+import { createPaymentReady, getIdol, authorizeBillingKey } from '../../api/payment';
 import { loadTossPaymentsScript } from '../../utils/tossPayments';
 
 const PRICE_MAP: Record<string, number> = {
@@ -29,28 +29,41 @@ const PaymentPage: React.FC = () => {
         if (!idolId) return;
         setLoading(true);
         try {
-            const userId = Number(localStorage.getItem('userId') || '1');
-            const ready = await createPaymentReady({ userId, amount, domain: 'SUBSCRIPTION', targetId: Number(idolId) });
-
             await loadTossPaymentsScript();
 
-            const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_client_key';
+            const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
             const TossPayments = (window as any).TossPayments;
             if (!TossPayments) throw new Error('TossPayments not available');
 
             const toss = TossPayments(clientKey);
 
-            toss.requestPayment('카드', {
-                amount: ready.amount,
-                orderId: ready.orderId,
-                orderName: `${idol?.stageName || '아이돌'} 구독`,
-                successUrl: `${window.location.origin}/payment/complete`,
-                failUrl: `${window.location.origin}/payment/complete?fail=true`
-            });
+            if (plan === 'MONTHLY') {
+                // 빌링키 발급 (정기 구독)
+                toss.requestBillingAuth('카드', {
+                    amount,
+                    orderId: `billing_${Date.now()}`,
+                    orderName: `${idol?.stageName || '아이돌'} 월간 구독`,
+                    customerKey: `customer_${Date.now()}`,
+                    successUrl: `${window.location.origin}/payment/complete?type=billing`,
+                    failUrl: `${window.location.origin}/payment/complete?fail=true`
+                });
+            } else {
+                // 일반 결제 (연간)
+                const userId = Number(localStorage.getItem('userId') || '1');
+                const ready = await createPaymentReady({ userId, amount, domain: 'SUBSCRIPTION', targetId: Number(idolId) });
+
+                toss.requestPayment('카드', {
+                    amount: ready.amount,
+                    orderId: ready.orderId,
+                    orderName: `${idol?.stageName || '아이돌'} 연간 구독`,
+                    successUrl: `${window.location.origin}/payment/complete`,
+                    failUrl: `${window.location.origin}/payment/complete?fail=true`
+                });
+            }
 
         } catch (e) {
             console.error(e);
-            alert('결제 준비 중 오류가 발생했습니다. 콘솔을 확인하세요.');
+            alert('결제 준비 중 오류가 발생했습니다.');
             setLoading(false);
         }
     };
@@ -68,7 +81,7 @@ const PaymentPage: React.FC = () => {
                             <img src={idol?.profileImage} alt={idol?.stageName} className="w-20 h-20 rounded-full object-cover" />
                             <div>
                                 <div className="font-bold">{idol?.stageName}</div>
-                                <div className="text-sm text-gray-600">{plan} • {amount.toLocaleString()}원</div>
+                                <div className="text-sm text-gray-600">{plan === 'MONTHLY' ? '정기 구독' : '연간 결제'} • {amount.toLocaleString()}원</div>
                             </div>
                         </div>
 
