@@ -34,7 +34,7 @@ const IdolSubscribe: React.FC = () => {
                             </div>
 
                             <div className="mt-6 grid grid-cols-2 gap-4">
-                                <button onClick={() => handleChoose('MONTHLY')} className="py-3 rounded bg-idol-point text-white">매월 결제 — 5,000원</button>
+                                <button onClick={() => handleChoose('MONTHLY')} className="py-3 rounded bg-idol-point text-white">정기 구독 — 매월 5,000원</button>
                                 <button onClick={() => handleChoose('ANNUAL')} className="py-3 rounded bg-gray-800 text-white">연간 결제 — 50,000원</button>
                             </div>
                         </div>

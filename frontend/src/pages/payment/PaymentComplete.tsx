@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../main/Header';
-import { confirmPayment } from '../../api/payment';
+import { confirmPayment, authorizeBillingKey } from '../../api/payment';
 
 const PaymentComplete: React.FC = () => {
     const location = useLocation();
@@ -10,21 +10,38 @@ const PaymentComplete: React.FC = () => {
 
     useEffect(() => {
         const qs = new URLSearchParams(location.search);
+        const type = qs.get('type');
         const paymentKey = qs.get('paymentKey') || qs.get('payment_key') || '';
         const orderId = qs.get('orderId') || qs.get('order_id') || '';
         const amountStr = qs.get('amount') || '0';
         const amount = Number(amountStr);
+        const authKey = qs.get('authKey') || qs.get('auth_key') || '';
+        const customerKey = qs.get('customerKey') || qs.get('customer_key') || '';
+        const idolId = Number(customerKey.split('_')[1]); // customer_{idolId}에서 추출
 
-        if (!paymentKey || !orderId) {
-            setStatus('failed');
-            return;
+        if (type === 'billing') {
+            // 빌링키 발급 처리
+            if (!authKey || !idolId) {
+                setStatus('failed');
+                return;
+            }
+
+            authorizeBillingKey({ idolId, authKey, plan: 'MONTHLY' })
+                .then(() => setStatus('success'))
+                .catch(() => setStatus('failed'));
+        } else {
+            // 일반 결제 처리
+            if (!paymentKey || !orderId) {
+                setStatus('failed');
+                return;
+            }
+
+            const userId = Number(localStorage.getItem('userId') || '1');
+
+            confirmPayment({ paymentKey, orderId, amount }, userId)
+                .then(() => setStatus('success'))
+                .catch(() => setStatus('failed'));
         }
-
-        const userId = Number(localStorage.getItem('userId') || '1');
-
-        confirmPayment({ paymentKey, orderId, amount }, userId)
-            .then(() => setStatus('success'))
-            .catch(() => setStatus('failed'));
     }, [location.search]);
 
     return (
