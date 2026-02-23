@@ -63,7 +63,7 @@ const PaymentPage: React.FC = () => {
 
         } catch (e) {
             console.error(e);
-            alert('결제 준비 중 오류가 발생했습니다. 콘솔을 확인하세요.');
+            alert('결제 준비 중 오류가 발생했습니다.');
             setLoading(false);
         }
     };

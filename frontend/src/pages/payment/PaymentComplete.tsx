@@ -26,6 +26,9 @@ const PaymentComplete: React.FC = () => {
                 return;
             }
 
+            console.log(authKey)
+            console.log(idolId)
+
             authorizeBillingKey({ idolId, authKey, plan: 'MONTHLY' })
                 .then(() => setStatus('success'))
                 .catch(() => setStatus('failed'));
