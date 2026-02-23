@@ -54,9 +54,13 @@ public class PaymentController {
 
     @PostMapping("/ready")
     public ResponseEntity<PaymentCreateResponse> createPayment(
+            @RequestHeader("X-User-Id") int userId, // 헤더에서 ID 추출 (보안 강화)
             @RequestBody PaymentCreateRequest request
     ) {
         try {
+            // 요청 Body의 userId를 무시하고, 인증된 userId로 덮어씌움
+            request.setUserId(userId);
+
             log.info("결제 준비 컨트롤러 호출: userId={}, domain={}, amount={}", 
                     request.getUserId(), request.getDomain(), request.getAmount());
             
