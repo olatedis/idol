@@ -18,6 +18,7 @@ public class SubscriptionDto {
     private int subscriptionId;
     private int userId;
     private int idolId;
+    private String idolStageName; //구독중 아이돌 활동명 : 내 구독 아이돌 출력시 사용
     private SubscriptionStatus status;
     private LocalDateTime startedAt;
     private LocalDateTime expiredAt;
@@ -28,6 +29,7 @@ public class SubscriptionDto {
                 .subscriptionId(subscription.getId())
                 .userId(subscription.getUserId())
                 .idolId(subscription.getIdolId())
+                .idolStageName(subscription.getIdolStageName())
                 .status(subscription.getStatus())
                 .startedAt(subscription.getStartedAt())
                 .expiredAt(subscription.getExpiredAt())

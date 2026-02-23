@@ -12,6 +12,9 @@ import IdolPage from "./pages/2-1/IdolPage.tsx";
 import PostWritePage from "./pages/3-1/PostWritePage.tsx";
 import PostDetailPage from "./pages/3-1/PostDetailPage.tsx";
 import OAuthKakao from "./pages/auth/OAuthKakao.tsx";
+import IdolSubscribe from "./pages/payment/IdolSubscribe.tsx";
+import PaymentPage from "./pages/payment/PaymentPage.tsx";
+import PaymentComplete from "./pages/payment/PaymentComplete.tsx";
 
 function App() {
     return (
@@ -43,6 +46,13 @@ function App() {
 
                 {/* 아이돌 */}
                 <Route path="/idol" element={<IdolPage />} />
+
+            {/*    테스트중*/}
+                <Route path="/idol/:idolId/subscribe" element={<IdolSubscribe />} />
+
+                {/* 결제 플로우 */}
+                <Route path="/payment/:idolId" element={<PaymentPage />} />
+                <Route path="/payment/complete" element={<PaymentComplete />} />
             </Routes>
         </BrowserRouter>
     );

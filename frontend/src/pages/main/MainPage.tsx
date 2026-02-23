@@ -11,7 +11,7 @@ const MainPage: React.FC = () => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [isSignupOpen, setIsSignupOpen] = useState(false);
-    
+
     const location = useLocation();
     const navigate = useNavigate();
     const { login } = useAuthStore();
@@ -52,7 +52,7 @@ const MainPage: React.FC = () => {
             } else {
                 login(user, accessToken, refreshToken);
             }
-            
+
             showSuccessToast("로그인되었습니다."); // 예쁜 알림으로 변경
             navigate("/idol");
 
@@ -65,14 +65,14 @@ const MainPage: React.FC = () => {
     const handleKakaoLogin = () => {
         const REST_API_KEY = import.meta.env.VITE_KAKAO_API_KEY;
         const REDIRECT_URI = "http://localhost:5173/oauth/kakao";
-        
+
         if (!REST_API_KEY) {
             showAlert("오류", "카카오 API 키가 설정되지 않았습니다.", "error");
             return;
         }
 
         const KAKAO_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
-        
+
         window.location.href = KAKAO_URL;
     };
 
@@ -243,8 +243,8 @@ const MainPage: React.FC = () => {
             </main>
 
             {/* 회원가입 모달 */}
-            <SignupModal 
-                isOpen={isSignupOpen} 
+            <SignupModal
+                isOpen={isSignupOpen}
                 onClose={() => setIsSignupOpen(false)}
                 onSwitchToLogin={() => {
                     setIsSignupOpen(false);

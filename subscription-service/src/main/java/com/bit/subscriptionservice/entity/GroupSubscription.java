@@ -37,6 +37,9 @@ public class GroupSubscription {
     @Column(name = "group_id", nullable = false)
     private int groupId;
 
+    @Column(nullable = false)
+    private String groupName;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SubscriptionStatus status;
