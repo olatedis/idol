@@ -13,9 +13,10 @@ public class ReservationController {
         this.reservationCommandService = reservationCommandService;
     }
 
+    // 예매 요청 (본인 인증 필수)
     @PostMapping
     public int reserve(
-            @RequestParam int userId,
+            @RequestHeader("X-User-Id") int userId, // Gateway에서 검증된 사용자 ID
             @RequestParam int concertId,
             @RequestParam int seatId,
             @RequestParam int price

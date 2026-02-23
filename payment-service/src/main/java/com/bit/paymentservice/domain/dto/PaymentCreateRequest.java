@@ -4,8 +4,10 @@ import com.bit.paymentservice.domain.enumtype.PaymentDomain;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter // Setter 추가
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentCreateRequest {
