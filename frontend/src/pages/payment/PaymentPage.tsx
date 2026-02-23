@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import Header from '../../main/Header';
+import Header from '../main/Header';
 import { createPaymentReady, getIdol } from '../../api/payment';
 import { loadTossPaymentsScript } from '../../utils/tossPayments';
 
@@ -34,7 +34,7 @@ const PaymentPage: React.FC = () => {
 
             await loadTossPaymentsScript();
 
-            const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_client_key';
+            const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
             const TossPayments = (window as any).TossPayments;
             if (!TossPayments) throw new Error('TossPayments not available');
 

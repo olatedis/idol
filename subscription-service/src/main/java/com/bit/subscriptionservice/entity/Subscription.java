@@ -41,6 +41,8 @@ public class Subscription {
     @Column(nullable = false)
     private SubscriptionStatus status;
 
+    private String idolStageName;
+
     @Column(nullable = false)
     private LocalDateTime startedAt;
 

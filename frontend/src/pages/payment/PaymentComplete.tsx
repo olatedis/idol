@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Header from '../../main/Header';
+import Header from '../main/Header';
 import { confirmPayment } from '../../api/payment';
 
 const PaymentComplete: React.FC = () => {
