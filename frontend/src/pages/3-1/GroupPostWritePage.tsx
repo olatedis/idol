@@ -21,7 +21,7 @@ function resolveBoardType(scope: Scope, type: BoardKind): string {
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
 }
 
-const PostWritePage: React.FC = () => {
+const GroupPostWritePage: React.FC = () => {
     const { groupId } = useParams();
     const [sp] = useSearchParams();
     const navigate = useNavigate();
@@ -161,4 +161,4 @@ const PostWritePage: React.FC = () => {
     );
 };
 
-export default PostWritePage;
+export default GroupPostWritePage;

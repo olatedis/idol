@@ -33,7 +33,7 @@ function resolveBoardType(scope: Scope, type: BoardKind): string {
 
 const PAGE_SIZE = 20;
 
-const BoardPage: React.FC = () => {
+const GroupBoardPage: React.FC = () => {
     const { groupId } = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
@@ -424,4 +424,4 @@ const BoardPage: React.FC = () => {
     );
 };
 
-export default BoardPage;
+export default GroupBoardPage;

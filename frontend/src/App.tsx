@@ -6,11 +6,11 @@ import NoticeListPage from "./pages/main/notice/NoticeListPage.tsx";
 import NoticeDetailPage from "./pages/main/notice/NoticeDetailPage.tsx";
 import NoticeWritePage from "./pages/main/notice/NoticeWritePage.tsx";
 import NoticeEditPage from "./pages/main/notice/NoticeEditPage.tsx";
-import ServicePage from "./pages/3-1/ServicePage.tsx";
-import BoardPage from "./pages/3-1/BoardPage.tsx";
+import GroupServicePage from "./pages/3-1/GroupServicePage.tsx";
+import GroupBoardPage from "./pages/3-1/GroupBoardPage.tsx";
 import IdolPage from "./pages/2-1/IdolPage.tsx";
-import PostWritePage from "./pages/3-1/PostWritePage.tsx";
-import PostDetailPage from "./pages/3-1/PostDetailPage.tsx";
+import GroupPostWritePage from "./pages/3-1/GroupPostWritePage.tsx";
+import GroupPostDetailPage from "./pages/3-1/GroupPostDetailPage.tsx";
 import OAuthKakao from "./pages/auth/OAuthKakao.tsx";
 import IdolSubscribe from "./pages/payment/IdolSubscribe.tsx";
 import PaymentPage from "./pages/payment/PaymentPage.tsx";
@@ -36,13 +36,13 @@ function App() {
                 <Route path="/oauth/kakao" element={<OAuthKakao />} />
 
                 {/* 그룹 서비스 */}
-                <Route path="/group/:groupId" element={<ServicePage />}>
+                <Route path="/group/:groupId" element={<GroupServicePage />}>
                     <Route index element={<Navigate to="board" replace />} />
-                    <Route path="board" element={<BoardPage />} />
+                    <Route path="board" element={<GroupBoardPage />} />
 
                     {/* board/write가 board/:postId에 먹히는 케이스 방지 */}
-                    <Route path="board/write" element={<PostWritePage />} />
-                    <Route path="board/:postId" element={<PostDetailPage />} />
+                    <Route path="board/write" element={<GroupPostWritePage />} />
+                    <Route path="board/:postId" element={<GroupPostDetailPage />} />
                 </Route>
 
                 {/* 아이돌 */}
