@@ -38,6 +38,8 @@ const NoticeEditPage: React.FC = () => {
             setError("");
 
             try {
+                if (!API_BASE_URL) throw new Error("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
+
                 const res = await fetch(`${API_BASE_URL}/board/notices/${postId}`, {
                     method: "GET",
                     signal: controller.signal,
@@ -45,7 +47,7 @@ const NoticeEditPage: React.FC = () => {
 
                 if (!res.ok) throw new Error("공지 불러오기 실패");
 
-                const json: NoticeDetail = await res.json();
+                const json = (await res.json()) as NoticeDetail;
                 setTitle(json.title);
 
                 // 에디터에 기존 내용 세팅
@@ -62,9 +64,14 @@ const NoticeEditPage: React.FC = () => {
 
         run();
         return () => controller.abort();
-    }, [postId]);
+    }, [API_BASE_URL, postId]);
 
     const handleUpdate = async () => {
+        if (!API_BASE_URL) {
+            setError("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
+            return;
+        }
+
         if (!accessToken) {
             setError("로그인이 필요합니다.");
             return;
@@ -105,13 +112,9 @@ const NoticeEditPage: React.FC = () => {
                 }),
             });
 
-            if (res.status === 403) {
-                throw new Error("권한이 없습니다.");
-            }
-
-            if (!res.ok) {
-                throw new Error("공지 수정 실패");
-            }
+            if (res.status === 401) throw new Error("로그인이 필요합니다.");
+            if (res.status === 403) throw new Error("권한이 없습니다. (ADMIN 전용)");
+            if (!res.ok) throw new Error("공지 수정 실패");
 
             navigate(`/notices/${postId}`);
         } catch (e: any) {
@@ -121,7 +124,7 @@ const NoticeEditPage: React.FC = () => {
         }
     };
 
-    if (loading) return <div>불러오는 중...</div>;
+    if (loading) return <div className="text-sm text-gray-600">불러오는 중...</div>;
 
     return (
         <div className="space-y-4">
@@ -130,12 +133,14 @@ const NoticeEditPage: React.FC = () => {
                     <div className="text-lg font-semibold">공지 수정 (관리자)</div>
                     <div className="flex gap-2">
                         <button
+                            type="button"
                             onClick={() => navigate(-1)}
                             className="px-4 py-2 rounded-full border text-sm"
                         >
                             취소
                         </button>
                         <button
+                            type="button"
                             onClick={handleUpdate}
                             disabled={submitting}
                             className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm disabled:opacity-60"

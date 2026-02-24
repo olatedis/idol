@@ -1,9 +1,6 @@
-import {Editor} from "@toast-ui/react-editor";
-import React, { useMemo, useState, useRef } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-
-type Scope = "group" | "idol" | "global";
-type BoardKind = "official" | "fan" | "notice";
+import { Editor } from "@toast-ui/react-editor";
+import React, { useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 type PostWriteRequest = {
     boardType: string;
@@ -13,44 +10,11 @@ type PostWriteRequest = {
     content: string;
 };
 
-type PostResponse = {
-    postId: number;
-    boardType: string;
-    idolId: number | null;
-    groupId: number | null;
-
-    authorId: number;
-    title: string;
-    content: string;
-
-    viewCount: number;
-    likeCount: number;
-    dislikeCount: number;
-
-    createdAt: string;
-    updatedAt: string;
-
-    comments: any[];
-};
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-function resolveBoardType(scope: Scope, type: BoardKind): string {
-    if (type === "notice") return "ADMIN_NOTICE";
-    if (scope === "idol") return type === "official" ? "IDOL_OFFICIAL" : "IDOL_FAN";
-    return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
-}
-
-const PostWritePage: React.FC = () => {
-    const { groupId } = useParams();
-    const [sp] = useSearchParams();
+const IdolPostWritePage: React.FC = () => {
+    const { idolId } = useParams();
     const navigate = useNavigate();
-
-    const scope = (sp.get("scope") as Scope) || "group";
-    const board = (sp.get("type") as BoardKind) || "official";
-    const idolId = sp.get("idolId");
-
-    const boardType = useMemo(() => resolveBoardType(scope, board), [scope, board]);
 
     const [title, setTitle] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -58,8 +22,21 @@ const PostWritePage: React.FC = () => {
 
     const editorRef = useRef<Editor>(null);
 
+    // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
+    const accessToken = localStorage.getItem("accessToken");
+
     const onSubmit = async () => {
         setError("");
+
+        if (!accessToken) {
+            setError("로그인이 필요합니다.");
+            return;
+        }
+
+        if (!idolId) {
+            setError("idolId가 없습니다.");
+            return;
+        }
 
         if (!title.trim()) {
             setError("제목을 입력해주세요.");
@@ -76,28 +53,19 @@ const PostWritePage: React.FC = () => {
         }
 
         const req: PostWriteRequest = {
-            boardType,
-            idolId: boardType.startsWith("IDOL_") ? Number(idolId) : null,
-            groupId: boardType.startsWith("GROUP_") ? Number(groupId) : null,
+            boardType: "IDOL_OFFICIAL",
+            idolId: Number(idolId),
+            groupId: null,
             title: title.trim(),
             content: html,
         };
 
-
         if (!API_BASE_URL) {
-            setError("VITE_API_BASE_URL이 설정되어 있지 않습니다. ")
-            return;
-        }
-
-        // TODO: 로그인 연동되면 실제 값으로 교체
-        const accessToken = localStorage.getItem("accessToken");
-        if(!accessToken) {
-            setError("로그인이 필요합니다.");
+            setError("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
             return;
         }
 
         setSubmitting(true);
-
 
         try {
             const res = await fetch(`${API_BASE_URL}/board/posts`, {
@@ -109,13 +77,15 @@ const PostWritePage: React.FC = () => {
                 body: JSON.stringify(req),
             });
 
+            if (res.status === 401) throw new Error("로그인이 필요합니다.");
+            if (res.status === 403) throw new Error("권한이 없습니다.");
             if (!res.ok) throw new Error("글 작성 실패");
 
-            // POST 응답은 PostResponse 전체
-            const json = (await res.json()) as PostResponse;
+            const json = (await res.json()) as any;
+            const newPostId = json?.postId;
 
-            if (typeof json?.postId === "number") {
-                navigate(`../${json.postId}`);
+            if (typeof newPostId === "number") {
+                navigate(`../${newPostId}`);
             } else {
                 navigate(`../`);
             }
@@ -126,12 +96,11 @@ const PostWritePage: React.FC = () => {
         }
     };
 
-
     return (
         <div className="space-y-4">
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                    <div className="text-lg font-semibold text-gray-900">글쓰기</div>
+                    <div className="text-lg font-semibold text-gray-900">아이돌 공식 글쓰기</div>
                     <div className="flex gap-2">
                         <button
                             type="button"
@@ -174,8 +143,6 @@ const PostWritePage: React.FC = () => {
                             height="360px"
                             useCommandShortcut={true}
                         />
-
-
                     </div>
                 </div>
             </div>
@@ -183,4 +150,4 @@ const PostWritePage: React.FC = () => {
     );
 };
 
-export default PostWritePage;
+export default IdolPostWritePage;

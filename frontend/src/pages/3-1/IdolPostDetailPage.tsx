@@ -47,7 +47,7 @@ type PostReactionResponse = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const PostDetailPage: React.FC = () => {
+const IdolPostDetailPage: React.FC = () => {
     const { postId } = useParams();
     const navigate = useNavigate();
 
@@ -396,4 +396,4 @@ const PostDetailPage: React.FC = () => {
     );
 };
 
-export default PostDetailPage;
+export default IdolPostDetailPage;

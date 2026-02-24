@@ -1,8 +1,10 @@
 import { Editor } from "@toast-ui/react-editor";
-import React, { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-type NoticeWriteRequest = {
+type BoardKind = "official" | "fan";
+
+type PostWriteRequest = {
     boardType: string;
     idolId: number | null;
     groupId: number | null;
@@ -10,30 +12,20 @@ type NoticeWriteRequest = {
     content: string;
 };
 
-/*type PostResponse = {
-    postId: number;
-    boardType: string;
-    idolId: number | null;
-    groupId: number | null;
-
-    authorId: number;
-    title: string;
-    content: string;
-
-    viewCount: number;
-    likeCount: number;
-    dislikeCount: number;
-
-    createdAt: string;
-    updatedAt: string;
-
-    comments: any[];
-};*/
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const NoticeWritePage: React.FC = () => {
+function resolveBoardType(type: BoardKind): string {
+    return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
+}
+
+const GroupPostWritePage: React.FC = () => {
+    const { groupId } = useParams();
+    const [sp] = useSearchParams();
     const navigate = useNavigate();
+
+    // type만 유지(official/fan)
+    const board = (sp.get("type") as BoardKind) || "official";
+    const boardType = useMemo(() => resolveBoardType(board), [board]);
 
     const [title, setTitle] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -41,8 +33,16 @@ const NoticeWritePage: React.FC = () => {
 
     const editorRef = useRef<Editor>(null);
 
+    // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
+    const accessToken = localStorage.getItem("accessToken");
+
     const onSubmit = async () => {
         setError("");
+
+        if (!accessToken) {
+            setError("로그인이 필요합니다.");
+            return;
+        }
 
         if (!title.trim()) {
             setError("제목을 입력해주세요.");
@@ -58,31 +58,23 @@ const NoticeWritePage: React.FC = () => {
             return;
         }
 
+        const req: PostWriteRequest = {
+            boardType,
+            idolId: null,
+            groupId: Number(groupId),
+            title: title.trim(),
+            content: html,
+        };
+
         if (!API_BASE_URL) {
             setError("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
             return;
         }
 
-        // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) {
-            setError("로그인이 필요합니다. (accessToken 없음)");
-            return;
-        }
-
-        const req: NoticeWriteRequest = {
-            boardType: "ADMIN_NOTICE",
-            idolId: null,
-            groupId: null,
-            title: title.trim(),
-            content: html,
-        };
-
         setSubmitting(true);
 
         try {
-            // /board/admin/** -> board-service /admin/**
-            const res = await fetch(`${API_BASE_URL}/board/admin/notices`, {
+            const res = await fetch(`${API_BASE_URL}/board/posts`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -92,19 +84,19 @@ const NoticeWritePage: React.FC = () => {
             });
 
             if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다. (ADMIN 전용)");
-            if (!res.ok) throw new Error("공지 작성 실패");
+            if (res.status === 403) throw new Error("권한이 없습니다.");
+            if (!res.ok) throw new Error("글 작성 실패");
 
             const json = (await res.json()) as any;
             const newPostId = json?.postId;
 
             if (typeof newPostId === "number") {
-                navigate(`/notices/${newPostId}`);
+                navigate(`../${newPostId}`);
             } else {
-                navigate(`/notices`);
+                navigate(`../`);
             }
         } catch (e: any) {
-            setError(e?.message || "공지 작성 실패");
+            setError(e?.message || "글 작성 실패");
         } finally {
             setSubmitting(false);
         }
@@ -114,7 +106,7 @@ const NoticeWritePage: React.FC = () => {
         <div className="space-y-4">
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                    <div className="text-lg font-semibold text-gray-900">공지 작성(관리자)</div>
+                    <div className="text-lg font-semibold text-gray-900">글쓰기</div>
                     <div className="flex gap-2">
                         <button
                             type="button"
@@ -142,7 +134,7 @@ const NoticeWritePage: React.FC = () => {
                         <input
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            placeholder="공지 제목을 입력해주세요."
+                            placeholder="제목을 입력해주세요."
                             className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none"
                         />
                     </div>
@@ -164,4 +156,4 @@ const NoticeWritePage: React.FC = () => {
     );
 };
 
-export default NoticeWritePage;
+export default GroupPostWritePage;
