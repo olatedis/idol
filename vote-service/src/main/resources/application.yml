@@ -39,7 +39,7 @@ spring:
     listener:
       type: batch # 배치 리스너 활성화
     topic:
-      vote: vote-topic # 추가됨
+      vote: vote-topic # vote-topic -> vote-complete-topic 수정 내역 롤백
 
   # Feign 설정 (HttpClient 5 적용 + 튜닝)
   cloud:
@@ -72,6 +72,8 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+  instance:
+    prefer-ip-address: true # IP 주소 사용 강제 (DNS 문제 해결)
 
 management:
   endpoints:

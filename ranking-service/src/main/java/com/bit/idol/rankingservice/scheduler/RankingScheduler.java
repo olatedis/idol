@@ -34,10 +34,12 @@ public class RankingScheduler {
         // 2. 각 투표방에 랭킹 정보 전송
         for (String voteIdStr : activeVoteIds) {
             try {
-                int voteId = Integer.parseInt(voteIdStr);
+                // 따옴표 및 공백 제거 (모든 따옴표 제거)
+                String cleanId = voteIdStr.replaceAll("\"", "").trim();
+                int voteId = Integer.parseInt(cleanId);
                 rankingService.broadcastRanking(voteId);
             } catch (NumberFormatException e) {
-                log.error("잘못된 voteId 형식: {}", voteIdStr);
+                log.error("잘못된 voteId 형식: '{}' (원본: '{}')", voteIdStr.replaceAll("\"", "").trim(), voteIdStr, e);
             } catch (Exception e) {
                 log.error("랭킹 브로드캐스트 실패: voteId={}", voteIdStr, e);
             }

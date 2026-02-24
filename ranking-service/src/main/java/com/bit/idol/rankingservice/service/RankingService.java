@@ -20,31 +20,36 @@ public class RankingService {
     private final SimpMessagingTemplate messagingTemplate;
 
     // 랭킹 업데이트 (Kafka Consumer가 호출)
-    public void updateRanking(int voteId, int candidateNumber) {
+    public void updateRanking(int voteId, int candidateNumber, int scoreDelta) {
         String key = "vote:ranking:" + voteId;
         String member = String.valueOf(candidateNumber);
 
-        // 1. Redis ZSET 점수 증가
-        redisTemplate.opsForZSet().incrementScore(key, member, 1);
-        
+        // 1. Redis ZSET 점수 증감
+        redisTemplate.opsForZSet().incrementScore(key, member, scoreDelta);
+
         // 2. 활성 투표 목록에 추가 (스케줄러가 확인하도록)
         redisTemplate.opsForSet().add("vote:active-list", String.valueOf(voteId));
-        
-        log.info("랭킹 점수 반영 완료: voteId={}, candidate={}", voteId, candidateNumber);
+
+        log.info("랭킹 점수 반영 완료: voteId={}, candidate={}, delta={}", voteId, candidateNumber, scoreDelta);
     }
 
     // 랭킹 조회 (API 호출용 - Delta 계산 없음)
     public List<RankingDto> getRanking(int voteId) {
         String key = "vote:ranking:" + voteId;
-        
-        Set<ZSetOperations.TypedTuple<String>> allRankings = redisTemplate.opsForZSet().reverseRangeWithScores(key, 0, -1);
-        
+
+        Set<ZSetOperations.TypedTuple<String>> allRankings = redisTemplate.opsForZSet().reverseRangeWithScores(key, 0,
+                -1);
+
         if (allRankings == null || allRankings.isEmpty()) {
             return Collections.emptyList();
         }
 
         return allRankings.stream()
-                .map(tuple -> new RankingDto(Integer.parseInt(tuple.getValue()), tuple.getScore().intValue(), 0)) // 초기 조회 시 Delta는 0
+                .map(tuple -> new RankingDto(Integer.parseInt(tuple.getValue()), tuple.getScore().intValue(), 0)) // 초기
+                                                                                                                  // 조회
+                                                                                                                  // 시
+                                                                                                                  // Delta는
+                                                                                                                  // 0
                 .collect(Collectors.toList());
     }
 
@@ -54,9 +59,11 @@ public class RankingService {
         String prevScoreKey = "vote:ranking:prev:" + voteId;
 
         // 1. 현재 랭킹 조회
-        Set<ZSetOperations.TypedTuple<String>> allRankings = redisTemplate.opsForZSet().reverseRangeWithScores(key, 0, -1);
-        
-        if (allRankings == null || allRankings.isEmpty()) return;
+        Set<ZSetOperations.TypedTuple<String>> allRankings = redisTemplate.opsForZSet().reverseRangeWithScores(key, 0,
+                -1);
+
+        if (allRankings == null || allRankings.isEmpty())
+            return;
 
         // 2. 이전 점수 조회 (Redis Hash)
         // Key: candidateNumber, Value: score
@@ -68,7 +75,7 @@ public class RankingService {
         for (ZSetOperations.TypedTuple<String> tuple : allRankings) {
             int candidateNum = Integer.parseInt(tuple.getValue());
             int currentScore = tuple.getScore().intValue();
-            
+
             // 이전 점수 가져오기 (없으면 0)
             int prevScore = 0;
             if (prevScores.containsKey(String.valueOf(candidateNum))) {
@@ -79,7 +86,7 @@ public class RankingService {
             int delta = currentScore - prevScore;
 
             rankingList.add(new RankingDto(candidateNum, currentScore, delta));
-            
+
             // 다음 계산을 위해 현재 점수 저장 준비
             currentScoresToSave.put(String.valueOf(candidateNum), String.valueOf(currentScore));
         }

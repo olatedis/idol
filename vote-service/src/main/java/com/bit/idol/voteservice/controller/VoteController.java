@@ -25,13 +25,13 @@ public class VoteController {
     private final VoteService voteService;
     private final VoteReader voteReader;
 
-    // 투표 생성
+    // 투표 생성 (ADMIN 추가됨)
     @PostMapping
     public ResponseEntity<?> createVote(
             @RequestHeader("X-Role") String role,
             @RequestBody @Valid CreateVoteRequestDto requestDto) {
 
-        if (!"IDOL".equals(role) && !"AGENCY".equals(role)) {
+        if (!"IDOL".equals(role) && !"AGENCY".equals(role) && !"ADMIN".equals(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("투표 생성 권한이 없습니다.");
         }
@@ -43,18 +43,20 @@ public class VoteController {
     // 투표 목록 조회 (기존: 검색/페이징용 - 비로그인 가능)
     @GetMapping
     public ResponseEntity<Page<VoteInfo>> getVoteList(
+            @RequestParam(required = false) Long groupId, // 그룹 ID 필터 추가
             @RequestParam(required = false) String keyword,
             @PageableDefault(size = 10, sort = "startDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        
-        Page<VoteInfo> voteList = voteReader.getVoteList(keyword, pageable);
+
+        Page<VoteInfo> voteList = voteReader.getVoteList(groupId, keyword, pageable);
         return ResponseEntity.ok(voteList);
     }
 
     // 투표 목록 조회 (로그인 유저용 - 내 참여 여부 포함)
     @GetMapping("/list")
     public ResponseEntity<List<VoteListDto>> getVoteListWithStatus(
-            @RequestHeader("X-User-Id") int userId) {
-        return ResponseEntity.ok(voteService.getVoteList(userId));
+            @RequestHeader("X-User-Id") int userId,
+            @RequestParam(required = false) Long groupId) { // 그룹 ID 필터 추가
+        return ResponseEntity.ok(voteService.getVoteList(userId, groupId));
     }
 
     // 내 투표 기록 조회
@@ -70,7 +72,7 @@ public class VoteController {
     public ResponseEntity<VoteDetailDto> getVoteDetail(
             @PathVariable int voteId,
             @RequestHeader(value = "X-User-Id", required = false) Integer userId) {
-        
+
         VoteDetailDto voteDetail = voteReader.getVoteDetail(voteId, userId);
         return ResponseEntity.ok(voteDetail);
     }
@@ -104,8 +106,7 @@ public class VoteController {
                 voteId,
                 userId,
                 requestDto.getCandidateNumber(),
-                clientIp
-        );
+                clientIp);
 
         return ResponseEntity.ok(result);
     }
@@ -115,7 +116,7 @@ public class VoteController {
     public ResponseEntity<String> cancelVote(
             @PathVariable int voteId,
             @RequestHeader("X-User-Id") int userId) {
-        
+
         voteService.cancelVote(voteId, userId);
         return ResponseEntity.ok("투표가 취소되었습니다.");
     }

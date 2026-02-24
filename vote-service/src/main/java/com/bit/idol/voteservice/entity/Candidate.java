@@ -1,5 +1,6 @@
 package com.bit.idol.voteservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,11 +13,17 @@ public class Candidate {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    private int candidateNumber;
+    @Column(name = "candidate_number")
+    private int number; // candidateNumber -> number
+
     private String name;
-    private String imageUrl;
+    
+    @Column(name = "image_url")
+    private String image; // imageUrl -> image
+
     private Integer voteCount = 0;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vote_id")
     private Vote vote;

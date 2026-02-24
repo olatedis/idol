@@ -53,43 +53,42 @@ public class VoteService {
 
     private static final String BLACKLIST_KEY = "vote:blacklist:ip";
 
-    // Lua Script: 중복 투표 방지 (원자적 실행)
-    private static final String VOTE_SCRIPT = 
-            "if redis.call('EXISTS', KEYS[1]) == 1 then " +
-            "   return 0 " + 
+    private static final String VOTE_SCRIPT = "if redis.call('EXISTS', KEYS[1]) == 1 then " +
+            "   return 0 " +
             "end " +
             "redis.call('SET', KEYS[1], 'voted') " +
             "redis.call('EXPIRE', KEYS[1], ARGV[1]) " +
-            "return 1"; 
+            "return 1";
 
-    // 투표 목록 조회 (프론트엔드용)
     @Transactional(readOnly = true)
-    public List<VoteListDto> getVoteList(int userId) {
+    public List<VoteListDto> getVoteList(int userId, Long groupId) {
         List<Vote> votes = voteReader.getAllVotesCached();
         List<Integer> myVotedVoteIds = voteRecordRepository.findVoteIdsByUserId(userId);
         Set<Integer> myVotedSet = new HashSet<>(myVotedVoteIds);
 
-        return votes.stream().map(vote -> {
-            String status = "PROGRESS";
-            LocalDateTime now = LocalDateTime.now();
-            if (now.isBefore(vote.getStartDate())) {
-                status = "UPCOMING";
-            } else if (now.isAfter(vote.getEndDate())) {
-                status = "ENDED";
-            }
+        return votes.stream()
+                .filter(vote -> groupId == null || groupId.equals(vote.getTargetGroupId())) // 그룹 필터 적용
+                .map(vote -> {
+                    String status = "PROGRESS";
+                    LocalDateTime now = LocalDateTime.now();
+                    if (now.isBefore(vote.getStartDate())) {
+                        status = "UPCOMING";
+                    } else if (now.isAfter(vote.getEndDate())) {
+                        status = "ENDED";
+                    }
 
-            return VoteListDto.builder()
-                    .id((long) vote.getId())
-                    .title(vote.getTitle())
-                    .description(vote.getDescription())
-                    .startDate(vote.getStartDate())
-                    .endDate(vote.getEndDate())
-                    .status(status)
-                    .participantCount(vote.getTotalVotes())
-                    .isVoted(myVotedSet.contains(vote.getId()))
-                    .thumbnailUrl(null)
-                    .build();
-        }).collect(Collectors.toList());
+                    return VoteListDto.builder()
+                            .id((long) vote.getId())
+                            .title(vote.getTitle())
+                            .description(vote.getDescription())
+                            .startDate(vote.getStartDate())
+                            .endDate(vote.getEndDate())
+                            .status(status)
+                            .participantCount(vote.getTotalVotes())
+                            .isVoted(myVotedSet.contains(vote.getId()))
+                            .thumbnailUrl(null)
+                            .build();
+                }).collect(Collectors.toList());
     }
 
     @Transactional
@@ -97,33 +96,35 @@ public class VoteService {
     @CacheEvict(value = "votes", key = "'all'")
     public VoteInfo createVote(Vote vote) {
         Vote savedVote = voteRepository.save(vote);
-        
+
         TargetType targetType = TargetType.ALL;
         String targetId = null;
-        
+
         if (savedVote.getTargetGroupId() != null) {
             targetType = TargetType.GROUP_SUB;
             targetId = String.valueOf(savedVote.getTargetGroupId());
         }
 
-        // 이벤트 발행 (커밋 후 실행됨)
         eventPublisher.publishEvent(new VoteEvent(savedVote, "VOTE_OPENED", targetType, targetId));
-        
+
         return VoteInfo.from(savedVote);
     }
 
-    // 투표 종료 처리
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @CacheEvict(value = "votes", key = "'all'")
     public void closeVote(int voteId) {
         Vote vote = voteRepository.findById(voteId)
                 .orElseThrow(() -> new RuntimeException("투표를 찾을 수 없습니다."));
-        
+
         vote.setStatus(VoteStatus.CLOSED);
-        
+
         String rankingKey = "vote:ranking:" + vote.getId();
+        String prevScoreKey = "vote:ranking:prev:" + vote.getId();
+
+        // ZSET, 이전 점수 해시, 그리고 활성화 투표 목록에서 해당 voteId 제거
         redisTemplate.delete(rankingKey);
-        
+        redisTemplate.delete(prevScoreKey);
+        redisTemplate.opsForSet().remove("vote:active-list", String.valueOf(vote.getId()));
         TargetType targetType = TargetType.ALL;
         String targetId = null;
         if (vote.getTargetGroupId() != null) {
@@ -131,9 +132,8 @@ public class VoteService {
             targetId = String.valueOf(vote.getTargetGroupId());
         }
 
-        // 이벤트 발행
         eventPublisher.publishEvent(new VoteEvent(vote, "VOTE_CLOSED", targetType, targetId));
-        
+
         log.info("투표 종료 처리 완료: ID={}, 제목={}", vote.getId(), vote.getTitle());
     }
 
@@ -169,8 +169,7 @@ public class VoteService {
         Long result = redisTemplate.execute(
                 new DefaultRedisScript<>(VOTE_SCRIPT, Long.class),
                 Collections.singletonList(redisKey),
-                String.valueOf(ttl.getSeconds())
-        );
+                String.valueOf(ttl.getSeconds()));
 
         if (result == null || result == 0) {
             throw new RuntimeException("이미 투표에 참여하였습니다.");
@@ -178,8 +177,6 @@ public class VoteService {
 
         try {
             sendToKafka(voteId, userId, candidateNumber, redisKey);
-            // 투표 완료 알림은 트랜잭션과 무관하므로 여기서 바로 보내도 됨 (또는 별도 이벤트 처리)
-            // 여기서는 간단하게 유지 (Kafka 전송 실패 시 롤백되므로)
         } catch (Exception e) {
             redisTemplate.delete(redisKey);
             throw e;
@@ -193,7 +190,7 @@ public class VoteService {
         log.warn("Redis 장애 감지! DB 기반 투표로 전환합니다. Error: {}", t.getMessage());
 
         VoteInfo vote = voteReader.getVoteInfo(voteId);
-        
+
         if (voteRecordRepository.findByVoteIdAndUserId(voteId, userId).isPresent()) {
             throw new RuntimeException("이미 투표에 참여하였습니다. (DB Check)");
         }
@@ -209,15 +206,13 @@ public class VoteService {
         return "투표가 완료되었습니다. (지연 처리)";
     }
 
-    public String rateLimitFallback(int voteId, int userId, int candidateNumber, String clientIp, RequestNotPermitted t) {
-        log.error("DB 보호를 위해 투표 요청 거절: userId={}", userId);
-        throw new RuntimeException("현재 투표량이 많아 잠시 후 다시 시도해주세요.");
-    }
-    
+    // RateLimiter Fallback 메서드 (파라미터 일치시킴)
     public String rateLimitFallback(int voteId, int userId, int candidateNumber, String clientIp, Throwable t) {
         if (t instanceof RequestNotPermitted) {
-            return rateLimitFallback(voteId, userId, candidateNumber, clientIp, (RequestNotPermitted) t);
+            log.error("DB 보호를 위해 투표 요청 거절: userId={}", userId);
+            throw new RuntimeException("현재 투표량이 많아 잠시 후 다시 시도해주세요.");
         }
+        // 다른 예외는 그대로 던짐
         throw new RuntimeException(t);
     }
 
@@ -249,7 +244,7 @@ public class VoteService {
             throw new RuntimeException("비정상적인 투표 시도가 감지되었습니다. 잠시 후 다시 시도해주세요.");
         }
     }
-    
+
     private boolean isBlacklistedIp(String ip) {
         return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(BLACKLIST_KEY, ip));
     }
@@ -269,18 +264,42 @@ public class VoteService {
         VoteRecord record = voteRecordRepository.findByVoteIdAndUserId(voteId, userId)
                 .orElseThrow(() -> new RuntimeException("투표 이력이 없습니다."));
 
-        VoteInfo vote = voteReader.getVoteInfo(voteId);
+        VoteInfo voteInfo = voteReader.getVoteInfo(voteId);
 
-        if (LocalDateTime.now().isAfter(vote.getEndDate())) {
+        if (LocalDateTime.now().isAfter(voteInfo.getEndDate())) {
             throw new RuntimeException("이미 종료된 투표는 취소할 수 없습니다.");
         }
 
+        // DB 차감: 기록 삭제, 후보자 득표수 감소, 투표 전체 참여자수 감소
         voteRecordRepository.delete(record);
-        candidateRepository.decrementVoteCount(record.getCandidateId());
+        voteRecordRepository.flush(); // 영속성 컨텍스트 즉시 DB 반영 (삭제 확실히 보장)
 
+        candidateRepository.decrementVoteCount(record.getCandidateId());
+        candidateRepository.flush();
+
+        com.bit.idol.voteservice.entity.Vote voteEntity = voteRepository.findById(voteId)
+                .orElseThrow(() -> new RuntimeException("투표를 찾을 수 없습니다."));
+        if (voteEntity.getTotalVotes() > 0) {
+            voteEntity.setTotalVotes(voteEntity.getTotalVotes() - 1);
+            voteRepository.saveAndFlush(voteEntity);
+        }
+
+        // Kafka 전송: ranking-service가 ZSET에서 점수를 빼도록 마이너스 번호로 보냄
+        com.bit.idol.voteservice.entity.Candidate candidate = candidateRepository.findById(record.getCandidateId())
+                .orElseThrow(() -> new RuntimeException("후보자를 찾을 수 없습니다."));
+        try {
+            String uuid = UUID.randomUUID().toString();
+            String message = uuid + ":" + voteId + ":" + userId + ":-" + candidate.getNumber();
+            kafkaTemplate.send("vote-complete-topic", message);
+        } catch (Exception e) {
+            log.error("랭킹 서비스로 취소 이벤트 전송 실패: {}", e.getMessage());
+        }
+
+        // Redis 중복 방지 키 롤백
         try {
             String redisKey = "vote:" + voteId + ":user:" + userId;
-            redisTemplate.delete(redisKey);
+            String processedKey = "processed:vote:" + voteId + ":user:" + userId;
+            redisTemplate.delete(Arrays.asList(redisKey, processedKey));
         } catch (Exception e) {
             log.error("Redis 키 삭제 실패 (투표 취소): {}", e.getMessage());
         }

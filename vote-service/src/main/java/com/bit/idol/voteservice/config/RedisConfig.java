@@ -24,19 +24,19 @@ import java.time.Duration;
 public class RedisConfig {
 
     @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
+    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory connectionFactory) { // <String, String>으로 변경
+        RedisTemplate<String, String> template = new RedisTemplate<>(); // <String, String>으로 변경
         template.setConnectionFactory(connectionFactory);
 
-        // Key는 String으로 직렬화
-        template.setKeySerializer(new StringRedisSerializer());
-        
-        // Value는 JSON으로 직렬화 (객체 저장 가능)
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        // Key와 Value 모두 StringRedisSerializer 사용
+        StringRedisSerializer stringSerializer = new StringRedisSerializer();
+        template.setKeySerializer(stringSerializer);
+        template.setValueSerializer(stringSerializer);
+        template.setStringSerializer(stringSerializer); // String 타입에 대한 Serializer도 명시
 
-        // Hash Key/Value도 동일하게 설정
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        // Hash Key/Value도 StringRedisSerializer 사용 (필요에 따라 GenericJackson2JsonRedisSerializer 사용 가능)
+        template.setHashKeySerializer(stringSerializer);
+        template.setHashValueSerializer(stringSerializer);
 
         return template;
     }

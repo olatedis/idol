@@ -2,6 +2,7 @@ package com.bit.idol.rankingservice.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -12,18 +13,26 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // 클라이언트가 연결할 엔드포인트: ws://localhost:8085/ws-ranking
         registry.addEndpoint("/ws-ranking")
-                .setAllowedOriginPatterns("*") // 모든 도메인 허용 (CORS)
-                .withSockJS(); // SockJS 지원
+                .setAllowedOriginPatterns("*")
+                .withSockJS(); 
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // 클라이언트가 구독할 경로 접두사: /topic/votes/{voteId}/ranking
-        registry.enableSimpleBroker("/topic");
-        
-        // 클라이언트가 서버로 메시지 보낼 때 접두사 (지금은 안 씀)
+        // 1. 하트비트 설정 추가
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("wss-heartbeat-");
+        scheduler.initialize();
+
+        // 2. /topic 경로에 대해 10초 간격으로 하트비트 설정
+        // 서버 -> 클라이언트: 10초마다 ping
+        // 클라이언트 -> 서버: 10초 내에 응답 없으면 연결 끊음
+        registry.enableSimpleBroker("/topic")
+                .setHeartbeatValue(new long[]{10000, 10000})
+                .setTaskScheduler(scheduler);
+
         registry.setApplicationDestinationPrefixes("/app");
     }
 }

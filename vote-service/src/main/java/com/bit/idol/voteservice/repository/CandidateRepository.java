@@ -12,11 +12,11 @@ import java.util.Optional;
 public interface CandidateRepository extends JpaRepository<Candidate, Integer> {
     List<Candidate> findByVoteId(int voteId);
     
-    // 워밍업용 (findByVoteId와 동일하지만 명시적으로 추가)
+    // 워밍업용
     List<Candidate> findAllByVoteId(int voteId);
 
-    Optional<Candidate> findByCandidateNumber(int candidateNumber);
-    Optional<Candidate> findByVoteIdAndCandidateNumber(int voteId, int candidateNumber);
+    Optional<Candidate> findByNumber(int number); // candidateNumber -> number
+    Optional<Candidate> findByVoteIdAndNumber(int voteId, int number); // candidateNumber -> number
 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Candidate c SET c.voteCount = c.voteCount + 1 WHERE c.id = :id")
