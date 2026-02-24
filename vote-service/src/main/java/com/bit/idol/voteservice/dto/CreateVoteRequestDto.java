@@ -1,6 +1,8 @@
 package com.bit.idol.voteservice.dto;
 
+import com.bit.idol.voteservice.entity.Candidate;
 import com.bit.idol.voteservice.entity.Vote;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,6 +10,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 public class CreateVoteRequestDto {
@@ -25,12 +29,35 @@ public class CreateVoteRequestDto {
     @Future(message = "종료일은 현재 시간보다 미래여야 합니다.")
     private LocalDateTime endDate;
 
+    @Valid
+    @NotNull(message = "후보 목록은 필수입니다.")
+    @Size(min = 2, message = "후보는 최소 2명 이상이어야 합니다.")
+    private List<CandidateDto> candidates; // 후보 목록 추가
+
+    private Long targetGroupId; // 특정 그룹 대상 투표 (null이면 전체)
+
     public Vote toEntity() {
         Vote vote = new Vote();
         vote.setTitle(this.title);
         vote.setDescription(this.description);
         vote.setStartDate(this.startDate);
         vote.setEndDate(this.endDate);
+        vote.setTargetGroupId(this.targetGroupId);
+
+        if (candidates != null) {
+            List<Candidate> candidateEntities = candidates.stream()
+                    .map(dto -> {
+                        Candidate candidate = new Candidate();
+                        candidate.setNumber(dto.getNumber());
+                        candidate.setName(dto.getName());
+                        candidate.setImage(dto.getImage());
+                        candidate.setVote(vote); // 연관관계 설정 필수
+                        return candidate;
+                    })
+                    .collect(Collectors.toList());
+            vote.setCandidate(candidateEntities);
+        }
+
         return vote;
     }
 }
