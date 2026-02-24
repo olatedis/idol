@@ -49,7 +49,7 @@ function App() {
                     <Route path="board/write" element={<GroupPostWritePage />} />
                     <Route path="board/:postId" element={<GroupPostDetailPage />} />
 
-                    {/* [CHANGED] 아이돌 공식 게시판(그룹 내부 진입) */}
+                    {/* 아이돌 공식 게시판 */}
                     <Route path="idol/:idolId/board" element={<IdolBoardPage />} />
 
                     {/* board/write가 board/:postId에 먹히는 케이스 방지 */}
