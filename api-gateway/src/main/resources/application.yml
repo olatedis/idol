@@ -24,8 +24,14 @@ spring:
             allowedMethods:
               - GET
               - POST
+              - PUT
+              - DELETE
+              - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
 
       routes:
         # --- Core Services ---
@@ -246,8 +252,8 @@ jwt:
     - /auth/login
     - /auth/login/kakao
     - /auth/reissue
-    - /auth/email/** # 👈 추가됨
-    - /auth/password/** # 👈 추가됨
+    - /auth/email/**
+    - /auth/password/**
     - /users/register
     - /ws-ranking/**
     - /ws-chat/**
