@@ -15,7 +15,10 @@ import OAuthKakao from "./pages/auth/OAuthKakao.tsx";
 import IdolSubscribe from "./pages/payment/IdolSubscribe.tsx";
 import PaymentPage from "./pages/payment/PaymentPage.tsx";
 import PaymentComplete from "./pages/payment/PaymentComplete.tsx";
-import VotePage from "./pages/3-1/VotePage.tsx"; // 추가됨
+import VotePage from "./pages/3-1/VotePage.tsx";
+import IdolBoardPage from "./pages/3-1/IdolBoardPage.tsx";
+import IdolPostWritePage from "./pages/3-1/IdolPostWritePage.tsx";
+import IdolPostDetailPage from "./pages/3-1/IdolPostDetailPage.tsx"; // 추가됨
 
 function App() {
     return (
@@ -38,11 +41,20 @@ function App() {
                 {/* 그룹 서비스 */}
                 <Route path="/group/:groupId" element={<GroupServicePage />}>
                     <Route index element={<Navigate to="board" replace />} />
+
+                    {/* 그룹 게시판 */}
                     <Route path="board" element={<GroupBoardPage />} />
 
                     {/* board/write가 board/:postId에 먹히는 케이스 방지 */}
                     <Route path="board/write" element={<GroupPostWritePage />} />
                     <Route path="board/:postId" element={<GroupPostDetailPage />} />
+
+                    {/* [CHANGED] 아이돌 공식 게시판(그룹 내부 진입) */}
+                    <Route path="idol/:idolId/board" element={<IdolBoardPage />} />
+
+                    {/* board/write가 board/:postId에 먹히는 케이스 방지 */}
+                    <Route path="idol/:idolId/board/write" element={<IdolPostWritePage />} />
+                    <Route path="idol/:idolId/board/:postId" element={<IdolPostDetailPage />} />
                 </Route>
 
                 {/* 아이돌 */}
