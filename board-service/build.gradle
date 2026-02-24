@@ -25,8 +25,8 @@ repositories {
 }
 
 /**
- * ✅ Spring Cloud 의존성 버전 정합(BOM)
- * - OpenFeign / Eureka / Tracing 등을 안정적으로 받기 위해 필요
+ * ??Spring Cloud ?�존??버전 ?�합(BOM)
+ * - OpenFeign / Eureka / Tracing ?�을 ?�정?�으�?받기 ?�해 ?�요
  */
 ext {
     set('springCloudVersion', "2024.0.0")
@@ -47,7 +47,7 @@ dependencies {
     // Kafka (notify-request-topic producer)
     implementation 'org.springframework.kafka:spring-kafka'
 
-    // Redis session (정말 쓸 때만 유지)
+    // Redis session (?�말 ???�만 ?��?)
     implementation 'org.springframework.session:spring-session-data-redis'
 
     // OpenFeign
@@ -58,11 +58,11 @@ dependencies {
 
     // Actuator + Tracing(Zipkin) + Prometheus
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+
+
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
-    // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
+    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
     // Lombok / Devtools / DB

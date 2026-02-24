@@ -30,28 +30,28 @@ ext {
 
 dependencies {
     // Web
-    implementation 'org.springframework.boot:spring-boot-starter-web' // webmvc -> web 변경
+    implementation 'org.springframework.boot:spring-boot-starter-web' // webmvc -> web 변�?
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
     // Database & Redis
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // JPA 추가
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis' // reactive 제거 (일반 redis 사용 권장)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // JPA 추�?
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis' // reactive ?�거 (?�반 redis ?�용 권장)
     runtimeOnly 'com.mysql:mysql-connector-j'
 
-    // Actuator & Prometheus (모니터링)
+    // Actuator & Prometheus (모니?�링)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
     implementation 'org.springframework.kafka:spring-kafka'
 
     // Zipkin & Micrometer Tracing
-    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
-    // MSA (Eureka - 필요 시 주석 해제)
+
+
+    // MSA (Eureka - ?�요 ??주석 ?�제)
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
-    // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
+    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
     // Lombok
