@@ -27,7 +27,7 @@ import java.util.UUID;
 public class VoteScheduler {
 
     private final VoteRepository voteRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate; // <String, Object> -> <String, String>
     private final NotificationProducer notificationProducer;
     private final VoteService voteService; // 추가됨
 
@@ -63,7 +63,7 @@ public class VoteScheduler {
 
         for (Vote vote : closingVotes) {
             String notifyKey = "vote:notify:closing:" + vote.getId();
-            if (!redisTemplate.hasKey(notifyKey)) {
+            if (Boolean.FALSE.equals(redisTemplate.hasKey(notifyKey))) { // hasKey가 null을 반환할 수 있으므로 Boolean.FALSE.equals로 안전하게 비교
                 
                 TargetType targetType = TargetType.ALL;
                 String targetId = null;

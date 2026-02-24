@@ -22,7 +22,7 @@ public class VoteRecordRepositoryImpl implements VoteRecordRepositoryCustom {
                 .select(Projections.constructor(MyVoteRecordDto.class,
                         voteRecord.voteId,
                         vote.title,
-                        candidate.candidateNumber,
+                        candidate.number, // candidateNumber -> number 수정
                         candidate.name,
                         voteRecord.votedAt
                 ))

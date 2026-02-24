@@ -22,7 +22,7 @@ public class VoteInitializer {
 
     private final VoteRepository voteRepository;
     private final CandidateRepository candidateRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate; // <String, Object> -> <String, String>
 
     /**
      * 애플리케이션 시작 시 Redis 데이터 복구 (Warm-up)
@@ -50,7 +50,7 @@ public class VoteInitializer {
 
                 for (Candidate candidate : candidates) {
                     // 3. Redis ZSET 복구 (이미 값이 있어도 덮어씀)
-                    redisTemplate.opsForZSet().add(rankingKey, String.valueOf(candidate.getCandidateNumber()), candidate.getVoteCount());
+                    redisTemplate.opsForZSet().add(rankingKey, String.valueOf(candidate.getNumber()), candidate.getVoteCount());
                 }
 
                 // 4. 활성 목록 추가 (랭킹 서비스 스케줄러용)

@@ -8,24 +8,44 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-// Serializable 는 자바 내부 객체를 외부 (Redis)로 보내주기 위해 사용하는 인터페이스
 public class VoteInfo implements Serializable {
     private int id;
     private String title;
+    private String description;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private String status;
+    private Long targetGroupId; // 그룹 식별자 추가
+    private List<CandidateDto> candidates; // 후보 목록 추가
 
     public static VoteInfo from(Vote vote) {
+        LocalDateTime now = LocalDateTime.now();
+        String status = "OPEN";
+
+        if (now.isBefore(vote.getStartDate())) {
+            status = "UPCOMING";
+        } else if (now.isAfter(vote.getEndDate())) {
+            status = "CLOSED";
+        }
+
         return VoteInfo.builder()
                 .id(vote.getId())
                 .title(vote.getTitle())
+                .description(vote.getDescription())
                 .startDate(vote.getStartDate())
                 .endDate(vote.getEndDate())
+                .status(status)
+                .targetGroupId(vote.getTargetGroupId())
+                .candidates(vote.getCandidate().stream()
+                        .map(CandidateDto::from)
+                        .collect(Collectors.toList())) // 후보 목록 매핑
                 .build();
     }
 }
