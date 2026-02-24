@@ -39,6 +39,13 @@ const PaymentPage: React.FC = () => {
 
             if (plan === 'MONTHLY') {
                 // 빌링키 발급 (정기 구독)
+                // 이전 페이지에서 사용할 수 있도록 idolId와 plan을 세션에 저장
+                try {
+                    sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId: Number(idolId), plan: 'MONTHLY' }));
+                } catch (e) {
+                    console.warn('sessionStorage not available', e);
+                }
+
                 toss.requestBillingAuth('카드', {
                     amount,
                     orderId: `billing_${Date.now()}`,
@@ -49,6 +56,12 @@ const PaymentPage: React.FC = () => {
                 });
             } else {
                 // 일반 결제 (연간)
+                // 이전 페이지에서 사용할 수 있도록 idolId와 plan을 세션에 저장
+                try {
+                    sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId: Number(idolId), plan: 'ANNUAL' }));
+                } catch (e) {
+                    console.warn('sessionStorage not available', e);
+                }
                 const userId = Number(localStorage.getItem('userId') || '1');
                 const ready = await createPaymentReady({ userId, amount, domain: 'SUBSCRIPTION', targetId: Number(idolId) });
 

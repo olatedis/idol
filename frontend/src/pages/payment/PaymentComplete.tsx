@@ -16,21 +16,29 @@ const PaymentComplete: React.FC = () => {
         const amountStr = qs.get('amount') || '0';
         const amount = Number(amountStr);
         const authKey = qs.get('authKey') || qs.get('auth_key') || '';
-        const customerKey = qs.get('customerKey') || qs.get('customer_key') || '';
-        const idolId = Number(customerKey.split('_')[1]); // customer_{idolId}에서 추출
+        // 이전 페이지에서 저장한 대기중 구독 정보를 사용 (sessionStorage)
+        let pending: { idolId?: number; plan?: string } | null = null;
+        try {
+            const raw = sessionStorage.getItem('pendingSubscription');
+            if (raw) pending = JSON.parse(raw);
+        } catch (e) {
+            console.warn('sessionStorage read failed', e);
+        }
 
         if (type === 'billing') {
             // 빌링키 발급 처리
-            if (!authKey || !idolId) {
+            const pendingIdolId = pending?.idolId;
+            if (!authKey || !pendingIdolId) {
                 setStatus('failed');
                 return;
             }
 
-            console.log(authKey)
-            console.log(idolId)
-
-            authorizeBillingKey({ idolId, authKey, plan: 'MONTHLY' })
-                .then(() => setStatus('success'))
+            authorizeBillingKey({ idolId: pendingIdolId, authKey, plan: 'MONTHLY' })
+                .then(() => {
+                    // 처리 후 세션청소
+                    try { sessionStorage.removeItem('pendingSubscription'); } catch {}
+                    setStatus('success');
+                })
                 .catch(() => setStatus('failed'));
         } else {
             // 일반 결제 처리
@@ -42,7 +50,10 @@ const PaymentComplete: React.FC = () => {
             const userId = Number(localStorage.getItem('userId') || '1');
 
             confirmPayment({ paymentKey, orderId, amount }, userId)
-                .then(() => setStatus('success'))
+                .then(() => {
+                    try { sessionStorage.removeItem('pendingSubscription'); } catch {}
+                    setStatus('success');
+                })
                 .catch(() => setStatus('failed'));
         }
     }, [location.search]);
