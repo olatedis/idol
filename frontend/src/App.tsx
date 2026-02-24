@@ -71,7 +71,7 @@ function App() {
                 <Route path="/idol/:idolId/subscribe" element={<IdolSubscribe />} />
 
                 {/* 결제 플로우 */}
-                <Route path="/payment/:idolId" element={<PaymentPage />} />
+                <Route path="/payment" element={<PaymentPage />} />
                 <Route path="/payment/complete" element={<PaymentComplete />} />
 
 

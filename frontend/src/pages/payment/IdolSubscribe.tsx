@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import Header from '../main/Header';
+import { useLocation, useNavigate } from 'react-router-dom';
+import Header from '../../main/Header';
 import { getIdol } from '../../api/payment';
 
 const IdolSubscribe: React.FC = () => {
-    const { idolId } = useParams();
+    const location = useLocation();
     const navigate = useNavigate();
     const [idol, setIdol] = useState<any>(null);
+
+    const idolId = location.state?.idolId;
 
     useEffect(() => {
         if (!idolId) return;
@@ -14,7 +16,7 @@ const IdolSubscribe: React.FC = () => {
     }, [idolId]);
 
     const handleChoose = (plan: 'MONTHLY' | 'ANNUAL') => {
-        navigate(`/payment/${idolId}?plan=${plan}`);
+        navigate(`/payment`, { state: { idolId, plan } });
     };
 
     return (

@@ -156,7 +156,7 @@ const IdolPage: React.FC = () => {
                                     ))
                                 ) : (
                                     <div className="w-full text-center py-10 text-gray-500">
-                                        구독 중인 그룹이 없습니다.
+                                        구독 중인 아이돌이 없습니다.
                                     </div>
                                 )}
                             </div>

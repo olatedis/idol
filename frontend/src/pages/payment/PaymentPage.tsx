@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../main/Header';
 import { createPaymentReady, getIdol, authorizeBillingKey } from '../../api/payment';
 import { loadTossPaymentsScript } from '../../utils/tossPayments';
@@ -10,14 +10,13 @@ const PRICE_MAP: Record<string, number> = {
 };
 
 const PaymentPage: React.FC = () => {
-    const { idolId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [idol, setIdol] = useState<any>(null);
 
-    const qs = new URLSearchParams(location.search);
-    const plan = (qs.get('plan') || 'MONTHLY') as 'MONTHLY' | 'ANNUAL';
+    const idolId = location.state?.idolId;
+    const plan = location.state?.plan || 'MONTHLY';
     const amount = PRICE_MAP[plan];
 
     useEffect(() => {
@@ -50,8 +49,8 @@ const PaymentPage: React.FC = () => {
                     amount,
                     orderId: `billing_${Date.now()}`,
                     orderName: `${idol?.stageName || '아이돌'} 월간 구독`,
-                    customerKey: `customer_${Date.now()}`,
-                    successUrl: `${window.location.origin}/payment/complete?type=billing`,
+                    customerKey: `customer_${idolId}`,
+                    successUrl: `${window.location.origin}/payment/complete?type=billing&idolId=${idolId}`,
                     failUrl: `${window.location.origin}/payment/complete?fail=true`
                 });
             } else {
