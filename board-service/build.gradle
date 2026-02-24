@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
@@ -25,8 +25,8 @@ repositories {
 }
 
 /**
- * ??Spring Cloud ?�존??버전 ?�합(BOM)
- * - OpenFeign / Eureka / Tracing ?�을 ?�정?�으�?받기 ?�해 ?�요
+ * ??Spring Cloud ?�존??버전 ?�합(BOM)
+ * - OpenFeign / Eureka / Tracing ?�을 ?�정?�으�?받기 ?�해 ?�요
  */
 ext {
     set('springCloudVersion', "2024.0.0")
@@ -47,7 +47,7 @@ dependencies {
     // Kafka (notify-request-topic producer)
     implementation 'org.springframework.kafka:spring-kafka'
 
-    // Redis session (?�말 ???�만 ?��?)
+    // Redis session (?�말 ???�만 ?��?)
     implementation 'org.springframework.session:spring-session-data-redis'
 
     // OpenFeign
@@ -56,13 +56,7 @@ dependencies {
     // Eureka Client
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
-    // Actuator + Tracing(Zipkin) + Prometheus
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-
-    implementation 'io.micrometer:micrometer-registry-prometheus'
-
-    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
+    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
     // Lombok / Devtools / DB
@@ -81,3 +75,4 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+

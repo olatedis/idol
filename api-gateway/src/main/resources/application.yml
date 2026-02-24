@@ -274,12 +274,3 @@ logging:
     org.springframework.http.server.reactive: DEBUG
     org.springframework.web.reactive: DEBUG
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, info, prometheus
-  metrics:
-    tags:
-      application: ${spring.application.name}
-

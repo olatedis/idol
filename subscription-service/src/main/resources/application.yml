@@ -42,12 +42,3 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, info, prometheus
-  metrics:
-    tags:
-      application: ${spring.application.name}
-  secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R

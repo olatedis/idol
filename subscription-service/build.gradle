@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
@@ -41,15 +41,11 @@ dependencies {
     // Eureka Client
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
-    // Actuator & Prometheus (모니?�링)
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
-
     // Zipkin & Micrometer Tracing
 
 
 
-    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
+    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
     compileOnly 'org.projectlombok:lombok'
@@ -58,7 +54,7 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
-    // Security Test ?�거??
+    // Security Test ?�거??
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -71,3 +67,4 @@ dependencyManagement {
 tasks.named('test') {
     useJUnitPlatform()
 }
+

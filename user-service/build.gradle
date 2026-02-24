@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
@@ -26,10 +26,6 @@ dependencies {
     // Web
     implementation 'org.springframework.boot:spring-boot-starter-web'
     
-    // Actuator & Prometheus (모니?�링)
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
-    
     // Database (MySQL & MongoDB & Redis)
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
@@ -47,8 +43,8 @@ dependencies {
 
     // MSA
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign' // Feign 추�?
-    implementation 'io.github.openfeign:feign-hc5' // Feign ?�능 ?�닝 추�?
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign' // Feign 추�?
+    implementation 'io.github.openfeign:feign-hc5' // Feign ?�능 ?�닝 추�?
 
     // Swagger (API 문서??
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
@@ -60,7 +56,7 @@ dependencies {
     // Validation
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-    // Jackson Afterburner (JSON ?�능 ?�닝)
+    // Jackson Afterburner (JSON ?�능 ?�닝)
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
     // Lombok
@@ -83,3 +79,4 @@ dependencyManagement {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
