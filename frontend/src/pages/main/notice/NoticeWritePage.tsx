@@ -10,7 +10,7 @@ type NoticeWriteRequest = {
     content: string;
 };
 
-type PostResponse = {
+/*type PostResponse = {
     postId: number;
     boardType: string;
     idolId: number | null;
@@ -28,7 +28,7 @@ type PostResponse = {
     updatedAt: string;
 
     comments: any[];
-};
+};*/
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -81,7 +81,7 @@ const NoticeWritePage: React.FC = () => {
         setSubmitting(true);
 
         try {
-            // 게이트웨이 라우팅 전제: /board/admin/** -> board-service /admin/**
+            // /board/admin/** -> board-service /admin/**
             const res = await fetch(`${API_BASE_URL}/board/admin/notices`, {
                 method: "POST",
                 headers: {
@@ -91,21 +91,15 @@ const NoticeWritePage: React.FC = () => {
                 body: JSON.stringify(req),
             });
 
-            if (res.status === 401) {
-                throw new Error("로그인이 필요합니다.");
-            }
-            if (res.status === 403) {
-                throw new Error("권한이 없습니다. (ADMIN 전용)");
-            }
-            if (!res.ok) {
-                throw new Error("공지 작성 실패");
-            }
+            if (res.status === 401) throw new Error("로그인이 필요합니다.");
+            if (res.status === 403) throw new Error("권한이 없습니다. (ADMIN 전용)");
+            if (!res.ok) throw new Error("공지 작성 실패");
 
-            const json = (await res.json()) as PostResponse;
+            const json = (await res.json()) as any;
+            const newPostId = json?.postId;
 
-            // 작성 후 공지 상세로 이동
-            if (typeof json?.postId === "number") {
-                navigate(`/notices/${json.postId}`);
+            if (typeof newPostId === "number") {
+                navigate(`/notices/${newPostId}`);
             } else {
                 navigate(`/notices`);
             }

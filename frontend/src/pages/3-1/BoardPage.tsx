@@ -1,5 +1,5 @@
-import React, {useEffect, useMemo, useRef, useState} from "react";
-import {useNavigate, useParams, useSearchParams} from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 // 타입 (백엔드 스펙 기준)
 type Scope = "group" | "idol" | "global";
@@ -34,7 +34,7 @@ function resolveBoardType(scope: Scope, type: BoardKind): string {
 const PAGE_SIZE = 20;
 
 const BoardPage: React.FC = () => {
-    const {groupId} = useParams();
+    const { groupId } = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
 
@@ -58,17 +58,20 @@ const BoardPage: React.FC = () => {
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+    // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
+    const accessToken = localStorage.getItem("accessToken");
+
     // 필터 버튼
     const leftFilters = useMemo(() => {
         const base = [
-            {label: "그룹 공식", scope: "group" as Scope, type: "official" as BoardKind},
-            {label: "그룹 팬", scope: "group" as Scope, type: "fan" as BoardKind},
-            {label: "공지", scope: "global" as Scope, type: "notice" as BoardKind},
+            { label: "그룹 공식", scope: "group" as Scope, type: "official" as BoardKind },
+            { label: "그룹 팬", scope: "group" as Scope, type: "fan" as BoardKind },
+            { label: "공지", scope: "global" as Scope, type: "notice" as BoardKind },
         ];
 
         const idolExtra = [
-            {label: "아이돌 공식", scope: "idol" as Scope, type: "official" as BoardKind},
-            {label: "아이돌 팬", scope: "idol" as Scope, type: "fan" as BoardKind},
+            { label: "아이돌 공식", scope: "idol" as Scope, type: "official" as BoardKind },
+            { label: "아이돌 팬", scope: "idol" as Scope, type: "fan" as BoardKind },
         ];
 
         return scope === "idol" ? [...idolExtra, ...base] : base;
@@ -79,44 +82,36 @@ const BoardPage: React.FC = () => {
         return scope === f.scope && board === f.type;
     };
 
-    const resetInfiniteState = () => {
+    const resetInfinite = () => {
         setPosts([]);
         setPage(0);
         setHasMore(true);
         setTotalElements(null);
-    }
+    };
 
     const setFilter = (nextScope: Scope, nextType: BoardKind) => {
         const next = new URLSearchParams(sp);
         next.set("scope", nextScope);
         next.set("type", nextType);
         setSp(next);
-
-        // 무한스크롤 초기화
-        resetInfiniteState();
+        resetInfinite();
     };
 
     const setSort = (nextSort: "latest" | "top") => {
         const next = new URLSearchParams(sp);
         next.set("sort", nextSort);
         setSp(next);
-
-        // 수정: 무한스크롤 초기화
-        resetInfiniteState();
+        resetInfinite();
     };
 
     const setQuery = (value: string) => {
         const next = new URLSearchParams(sp);
         next.set("q", value);
         setSp(next);
-
-        // 수정: 무한스크롤 초기화
-        resetInfiniteState();
+        resetInfinite();
     };
 
-    // 수정: 무한스크롤용 번호 계산
-    // totalElements가 있으면 "최신 글일수록 큰 번호"를 유지할 수 있습니다.
-    // totalElements가 없으면(모크/초기) 로딩된 개수 기준으로만 표시합니다.
+    // 무한스크롤용 번호 계산
     const rowNo = (idx: number) => {
         if (typeof totalElements === "number") {
             return totalElements - idx;
@@ -124,15 +119,11 @@ const BoardPage: React.FC = () => {
         return posts.length - idx;
     };
 
-
-
     // page 단위 fetch (append)
     const fetchPage = async (nextPage: number, signal?: AbortSignal) => {
-        if (!API_BASE_URL) {
-            throw new Error("VITE_API_BASE_URL이 설정되어 있지 않습니다. ");
-        }
-
         const boardType = resolveBoardType(scope, board);
+
+        if (!API_BASE_URL) return;
 
         const params = new URLSearchParams();
         params.set("boardType", boardType);
@@ -150,7 +141,7 @@ const BoardPage: React.FC = () => {
 
         const url = `${API_BASE_URL}/board/posts?${params.toString()}`;
 
-        const res = await fetch(url, {signal});
+        const res = await fetch(url, { signal });
         if (!res.ok) throw new Error("게시글 조회 실패");
 
         const data = await res.json();
@@ -162,12 +153,10 @@ const BoardPage: React.FC = () => {
             setPosts((prev) => [...prev, ...content]);
         }
 
-        // totalElements로 "번호 역순" 유지
         if (typeof data.totalElements === "number") {
             setTotalElements(data.totalElements);
         }
 
-        // 무한스크롤 종료 판단 (Spring Page의 last 활용)
         const last = Boolean(data.last);
         setHasMore(!last && content.length > 0);
     };
@@ -183,8 +172,7 @@ const BoardPage: React.FC = () => {
                 setLoading(true);
                 setLoadingMore(false);
 
-                resetInfiniteState();
-
+                resetInfinite();
                 await fetchPage(0, controller.signal);
             } catch (e: any) {
                 if (e?.name === "AbortError") return;
@@ -240,7 +228,7 @@ const BoardPage: React.FC = () => {
 
                 setPage((prev) => prev + 1);
             },
-            {root: null, rootMargin: "200px", threshold: 0}
+            { root: null, rootMargin: "200px", threshold: 0 }
         );
 
         io.observe(el);
@@ -248,7 +236,27 @@ const BoardPage: React.FC = () => {
     }, [hasMore, loading, loadingMore]);
 
     const scrollTop = () => {
-        window.scrollTo({top: 0, behavior: "smooth"});
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    // 토큰 없으면 이동 차단
+    const requireLoginOrStop = () => {
+        if (accessToken) return true;
+
+        alert("로그인이 필요합니다.");
+        // TODO: 로그인 페이지로 이동
+        // navigate("/login");
+        return false;
+    };
+
+    const onClickRow = (p: PostListResponse) => {
+        if (!requireLoginOrStop()) return;
+        navigate(`./${p.postId}`);
+    };
+
+    const onClickWrite = () => {
+        if (!requireLoginOrStop()) return;
+        navigate("./write");
     };
 
     return (
@@ -299,11 +307,10 @@ const BoardPage: React.FC = () => {
                 </div>
             </div>
 
+            {/* 검색창 */}
             <div className="flex justify-center">
-                <div
-                    className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
-                    <select defaultValue="title"
-                            className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
+                <div className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
+                    <select defaultValue="title" className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
                         <option value="title">제목</option>
                         <option value="title_content">제목+내용</option>
                         <option value="content">내용</option>
@@ -331,15 +338,15 @@ const BoardPage: React.FC = () => {
             {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
             {error && <div className="text-sm text-red-600">{error}</div>}
 
+            {/* 게시글 리스트 */}
             <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                <div
-                    className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                <div className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
                     <div className="text-left">번호</div>
                     <div className="text-left">제목</div>
                     <div className="text-left">작성자</div>
                     <div className="text-left">작성일</div>
                     <div className="text-right">조회수</div>
-                    <div className="text-right">추천수</div>
+                    <div className="text-right">좋아요</div>
                 </div>
 
                 {!loading && posts.length === 0 && <div className="px-4 py-6 text-sm text-gray-600">게시글이 없습니다.</div>}
@@ -349,7 +356,7 @@ const BoardPage: React.FC = () => {
                         <button
                             key={p.postId}
                             type="button"
-                            onClick={() => navigate(`./${p.postId}`)}
+                            onClick={() => onClickRow(p)}
                             className="
                                 w-full text-left
                                 grid grid-cols-[90px_1fr_120px_140px_90px_90px]
@@ -357,7 +364,7 @@ const BoardPage: React.FC = () => {
                                 border-b border-gray-100 last:border-b-0
                                 hover:bg-gray-50
                                 transition-colors
-                              "
+                            "
                         >
                             <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
 
@@ -376,10 +383,9 @@ const BoardPage: React.FC = () => {
                     ))}
             </div>
 
-            {/* 수정: 페이지네이션 삭제 → 무한스크롤 sentinel */}
-            <div ref={sentinelRef} className="h-10"/>
+            {/* 무한스크롤 sentinel */}
+            <div ref={sentinelRef} className="h-10" />
 
-            {/* 수정: 추가 로딩 표시 */}
             {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
             {!loading && !loadingMore && posts.length > 0 && !hasMore && (
                 <div className="text-sm text-gray-500 text-center py-2">마지막 게시글입니다.</div>
@@ -391,25 +397,25 @@ const BoardPage: React.FC = () => {
                     type="button"
                     onClick={scrollTop}
                     className="
-            w-12 h-12 rounded-full
-            bg-gray-100 border border-gray-200
-            shadow-md
-            text-gray-800 font-semibold
-            hover:bg-gray-200
-          "
+                        w-12 h-12 rounded-full
+                        bg-gray-100 border border-gray-200
+                        shadow-md
+                        text-gray-800 font-semibold
+                        hover:bg-gray-200
+                    "
                 >
                     ↑
                 </button>
 
                 <button
                     type="button"
-                    onClick={() => navigate("./write")}
+                    onClick={onClickWrite}
                     className="
                         px-5 py-3 rounded-2xl
                         bg-[#1FBFB8] text-white text-sm font-semibold
                         shadow-md
                         hover:bg-[#17AFA8]
-                      "
+                    "
                 >
                     글쓰기
                 </button>

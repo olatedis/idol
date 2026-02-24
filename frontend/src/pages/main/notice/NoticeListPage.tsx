@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import React, {useEffect, useState} from "react";
+import {useNavigate, useSearchParams} from "react-router-dom";
 
 type NoticeListItem = {
     postId: number;
@@ -20,7 +20,6 @@ type PageResponse<T> = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 const PAGE_SIZE = 20;
 
 const NoticeListPage: React.FC = () => {
@@ -32,6 +31,10 @@ const NoticeListPage: React.FC = () => {
     const [data, setData] = useState<PageResponse<NoticeListItem> | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    // TODO: 로그인 확정되면 교체
+    const userRole = localStorage.getItem("role"); // admin / user
+    const isAdmin = userRole === "ADMIN";
 
     useEffect(() => {
         const controller = new AbortController();
@@ -50,7 +53,6 @@ const NoticeListPage: React.FC = () => {
                 params.set("size", String(PAGE_SIZE));
                 params.set("sort", "createdAt,desc");
 
-                // 게이트웨이 라우팅 전제: /board/notices/** -> board-service /notices/**
                 const res = await fetch(`${API_BASE_URL}/board/notices?${params.toString()}`, {
                     method: "GET",
                     signal: controller.signal,
@@ -79,6 +81,14 @@ const NoticeListPage: React.FC = () => {
         setSp(nextSp);
     };
 
+    const scrollTop = () => {
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    };
+
+    const onClickWrite = () => {
+        navigate("/admin/notices/write");
+    };
+
     return (
         <div className="space-y-4">
             <div className="text-xl font-semibold text-gray-900">공지사항</div>
@@ -88,7 +98,8 @@ const NoticeListPage: React.FC = () => {
 
             {!loading && !error && data && (
                 <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                    <div className="grid grid-cols-[90px_1fr_140px_140px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                    <div
+                        className="grid grid-cols-[90px_1fr_140px_140px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
                         <div className="text-left">번호</div>
                         <div className="text-left">제목</div>
                         <div className="text-left">작성일</div>
@@ -104,13 +115,13 @@ const NoticeListPage: React.FC = () => {
                                 type="button"
                                 onClick={() => navigate(`/notices/${n.postId}`)}
                                 className="
-                  w-full text-left
-                  grid grid-cols-[90px_1fr_140px_140px]
-                  px-4 py-3
-                  border-b border-gray-100 last:border-b-0
-                  hover:bg-gray-50
-                  transition-colors
-                "
+                                    w-full text-left
+                                    grid grid-cols-[90px_1fr_140px_140px]
+                                    px-4 py-3
+                                    border-b border-gray-100 last:border-b-0
+                                    hover:bg-gray-50
+                                    transition-colors
+                                "
                             >
                                 <div className="text-sm text-gray-900 tabular-nums">
                                     {data.totalElements - (page * PAGE_SIZE + idx)}
@@ -154,6 +165,37 @@ const NoticeListPage: React.FC = () => {
                     </button>
                 </div>
             )}
+
+            <div className="fixed right-4 bottom-6 z-40 flex flex-col items-end gap-3">
+                <button
+                    type="button"
+                    onClick={scrollTop}
+                    className="
+            w-12 h-12 rounded-full
+            bg-gray-100 border border-gray-200
+            shadow-md
+            text-gray-800 font-semibold
+            hover:bg-gray-200
+          "
+                >
+                    ↑
+                </button>
+
+                {isAdmin && (
+                    <button
+                        type="button"
+                        onClick={onClickWrite}
+                        className="
+              px-5 py-3 rounded-2xl
+              bg-[#1FBFB8] text-white text-sm font-semibold
+              shadow-md
+              hover:bg-[#17AFA8]
+            "
+                    >
+                        작성하기
+                    </button>
+                )}
+            </div>
         </div>
     );
 };
