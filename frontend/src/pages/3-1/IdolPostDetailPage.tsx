@@ -27,23 +27,27 @@ type PostResponse = {
     likeCount: number;
     dislikeCount: number;
 
+    // 상세 응답에 포함된다고 확정
+    // NONE / LIKE / DISLIKE
     myReaction: string;
 
     createdAt: string;
     updatedAt: string;
 
+    // 상세 응답에 포함된다고 확정
     comments: CommentResponse[];
 };
 
 type PostReactionResponse = {
     likeCount: number;
     dislikeCount: number;
+    // NONE / LIKE / DISLIKE
     myReaction: string;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const GroupPostDetailPage: React.FC = () => {
+const IdolPostDetailPage: React.FC = () => {
     const { postId } = useParams();
     const navigate = useNavigate();
 
@@ -85,6 +89,7 @@ const GroupPostDetailPage: React.FC = () => {
 
         const json = (await res.json()) as PostResponse;
 
+        // 안전 처리: comments가 null/undefined로 올 경우 대비
         return {
             ...json,
             comments: Array.isArray(json.comments) ? json.comments : [],
@@ -92,6 +97,7 @@ const GroupPostDetailPage: React.FC = () => {
         };
     };
 
+    // 1) 최초 상세 로드
     useEffect(() => {
         const controller = new AbortController();
 
@@ -127,6 +133,7 @@ const GroupPostDetailPage: React.FC = () => {
         return () => controller.abort();
     }, [API_BASE_URL, postId, accessToken]);
 
+    // 2) 추천 토글
     const onClickLike = async () => {
         if (!data) return;
         if (!API_BASE_URL) return;
@@ -172,6 +179,7 @@ const GroupPostDetailPage: React.FC = () => {
         }
     };
 
+    // 3) 비추천 토글
     const onClickDislike = async () => {
         if (!data) return;
         if (!API_BASE_URL) return;
@@ -217,6 +225,7 @@ const GroupPostDetailPage: React.FC = () => {
         }
     };
 
+    // 4) 댓글 작성 → 성공 후 상세 재조회(권장 방식)
     const onSubmitComment = async () => {
         if (!data) return;
         if (!API_BASE_URL) return;
@@ -387,4 +396,4 @@ const GroupPostDetailPage: React.FC = () => {
     );
 };
 
-export default GroupPostDetailPage;
+export default IdolPostDetailPage;

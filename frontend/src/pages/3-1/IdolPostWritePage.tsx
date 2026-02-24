@@ -1,8 +1,6 @@
 import { Editor } from "@toast-ui/react-editor";
-import React, { useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-
-type BoardKind = "official" | "fan";
+import React, { useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 type PostWriteRequest = {
     boardType: string;
@@ -14,18 +12,9 @@ type PostWriteRequest = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-function resolveBoardType(type: BoardKind): string {
-    return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
-}
-
-const GroupPostWritePage: React.FC = () => {
-    const { groupId } = useParams();
-    const [sp] = useSearchParams();
+const IdolPostWritePage: React.FC = () => {
+    const { idolId } = useParams();
     const navigate = useNavigate();
-
-    // type만 유지(official/fan)
-    const board = (sp.get("type") as BoardKind) || "official";
-    const boardType = useMemo(() => resolveBoardType(board), [board]);
 
     const [title, setTitle] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -44,6 +33,11 @@ const GroupPostWritePage: React.FC = () => {
             return;
         }
 
+        if (!idolId) {
+            setError("idolId가 없습니다.");
+            return;
+        }
+
         if (!title.trim()) {
             setError("제목을 입력해주세요.");
             return;
@@ -59,9 +53,9 @@ const GroupPostWritePage: React.FC = () => {
         }
 
         const req: PostWriteRequest = {
-            boardType,
-            idolId: null,
-            groupId: Number(groupId),
+            boardType: "IDOL_OFFICIAL",
+            idolId: Number(idolId),
+            groupId: null,
             title: title.trim(),
             content: html,
         };
@@ -106,7 +100,7 @@ const GroupPostWritePage: React.FC = () => {
         <div className="space-y-4">
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                    <div className="text-lg font-semibold text-gray-900">글쓰기</div>
+                    <div className="text-lg font-semibold text-gray-900">아이돌 공식 글쓰기</div>
                     <div className="flex gap-2">
                         <button
                             type="button"
@@ -156,4 +150,4 @@ const GroupPostWritePage: React.FC = () => {
     );
 };
 
-export default GroupPostWritePage;
+export default IdolPostWritePage;
