@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8089
   compression:
     enabled: true
@@ -113,14 +113,6 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: http://localhost:9411/api/v2/spans
-
-# Resilience4j 설정
 resilience4j:
   circuitbreaker:
     instances:
@@ -148,3 +140,4 @@ openai:
 # DeepL 설정 (번역)
 deepl:
   api-key: fake-key
+

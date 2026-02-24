@@ -34,24 +34,24 @@ dependencies {
     // Kafka
     implementation 'org.springframework.kafka:spring-kafka'
 
-    // JSON (ObjectMapper 사용) - web 스타터에 포함이긴 한데 명시해도 OK
+    // JSON (ObjectMapper ?�용) - web ?��??�에 ?�함?�긴 ?�데 명시?�도 OK
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
-    // Validation (필요 시 DTO 검증용)
+    // Validation (?�요 ??DTO 검증용)
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     // MSA
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
-    // Actuator & Prometheus (모니터링)
+    // Actuator & Prometheus (모니?�링)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
     // Zipkin & Micrometer Tracing
-    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
-    // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
+
+
+    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

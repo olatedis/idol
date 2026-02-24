@@ -30,10 +30,10 @@ ext {
 
 dependencies {
     // Web
-    implementation 'org.springframework.boot:spring-boot-starter-web' // webmvc -> web 변경
+    implementation 'org.springframework.boot:spring-boot-starter-web' // webmvc -> web 변�?
 
     // Database & Redis
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // JPA 추가
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // JPA 추�?
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     runtimeOnly 'com.mysql:mysql-connector-j'
 
@@ -43,18 +43,18 @@ dependencies {
     // MSA (Eureka)
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
-    // Actuator & Prometheus (모니터링)
+    // Actuator & Prometheus (모니?�링)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
     // Zipkin & Micrometer Tracing
-    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
-    // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
+
+
+    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
-    // ShedLock (스케줄러 락) - 추가됨
+    // ShedLock (?��?줄러 ?? - 추�???
     implementation 'net.javacrumbs.shedlock:shedlock-spring:5.10.0'
     implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.10.0'
 

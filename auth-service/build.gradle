@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'com.google.protobuf' version '0.9.4' // Protobuf 플러그인 추가
+    id 'com.google.protobuf' version '0.9.4' // Protobuf ?�러그인 추�?
 }
 
 group = 'com.bit.idol'
@@ -29,13 +29,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
-    // Actuator & Prometheus (모니터링)
+    // Actuator & Prometheus (모니?�링)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-    // Feign HttpClient 5 (성능 튜닝)
+    // Feign HttpClient 5 (?�능 ?�닝)
     implementation 'io.github.openfeign:feign-hc5'
 
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
@@ -52,14 +52,14 @@ dependencies {
     // Rate Limiting (Bucket4j)
     implementation 'com.github.vladimir-bukhtoyarov:bucket4j-core:7.6.0'
 
-    // Swagger (API 문서화)
+    // Swagger (API 문서??
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
     // Zipkin & Micrometer Tracing
-    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
-    // Jackson Afterburner (JSON 성능 튜닝) - 추가됨
+
+
+    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
     implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
@@ -79,7 +79,7 @@ dependencyManagement {
     }
 }
 
-// Protobuf 설정
+// Protobuf ?�정
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:${protobufVersion}"

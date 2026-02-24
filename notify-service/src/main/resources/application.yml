@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8096
 
 spring:
@@ -44,17 +44,4 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: http://localhost:9411/api/v2/spans
 
-notify:
-  topics:
-    fanout: notify-fanout-topic
-    user: user.events
-  consumer:
-    group-id: notify-service-group
-    user-group-id: notify-user-group

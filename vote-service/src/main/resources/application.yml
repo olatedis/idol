@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8083
   compression:
     enabled: true
@@ -83,14 +83,6 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: http://localhost:9411/api/v2/spans
-
-# Resilience4j 설정
 resilience4j:
   circuitbreaker:
     instances:
@@ -111,3 +103,4 @@ resilience4j:
         limitForPeriod: 500      # 1초에 500개 허용 (DB 스펙에 따라 조절)
         limitRefreshPeriod: 1s
         timeoutDuration: 0       # 대기 없이 즉시 거절 (Fail Fast)
+

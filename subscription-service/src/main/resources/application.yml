@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8088
 
 spring:
@@ -50,12 +50,4 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: http://localhost:9411/api/v2/spans
-
-toss:
   secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R

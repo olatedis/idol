@@ -29,11 +29,11 @@ ext {
 }
 
 dependencies {
-    // Web (WebSocket 포함)
+    // Web (WebSocket ?�함)
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
-    // Actuator & Prometheus (모니터링)
+    // Actuator & Prometheus (모니?�링)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
@@ -43,7 +43,7 @@ dependencies {
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
-    // ShedLock (스케줄러 중복 실행 방지)
+    // ShedLock (?��?줄러 중복 ?�행 방�?)
     implementation 'net.javacrumbs.shedlock:shedlock-spring:5.10.0'
     implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.10.0'
 
@@ -51,8 +51,8 @@ dependencies {
     implementation 'org.springframework.kafka:spring-kafka'
 
     // Zipkin & Micrometer Tracing
-    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+
+
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
