@@ -6,4 +6,7 @@ export default defineConfig({
     plugins: [
         tailwindcss(),react()
     ],
+    define: {
+        global: 'window', // sockjs-client 호환성 해결
+    },
 })
