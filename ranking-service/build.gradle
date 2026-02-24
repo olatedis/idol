@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
@@ -29,13 +29,9 @@ ext {
 }
 
 dependencies {
-    // Web (WebSocket ?�함)
+    // Web (WebSocket ?�함)
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
-
-    // Actuator & Prometheus (모니?�링)
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
 
     // MSA (Eureka)
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
@@ -43,7 +39,7 @@ dependencies {
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
-    // ShedLock (?��?줄러 중복 ?�행 방�?)
+    // ShedLock (?��?줄러 중복 ?�행 방�?)
     implementation 'net.javacrumbs.shedlock:shedlock-spring:5.10.0'
     implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.10.0'
 
@@ -72,3 +68,4 @@ dependencyManagement {
 tasks.named('test') {
     useJUnitPlatform()
 }
+

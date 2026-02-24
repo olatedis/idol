@@ -53,15 +53,6 @@ springdoc:
   servers:
     - url: http://localhost:8000
       description: Gateway Server
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, info, prometheus
-  metrics:
-    tags:
-      application: ${spring.application.name}
 resilience4j:
   circuitbreaker:
     instances:
@@ -73,4 +64,5 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         waitDurationInOpenState: 10s
         failureRateThreshold: 50
+
 

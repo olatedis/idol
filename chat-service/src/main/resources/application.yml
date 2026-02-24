@@ -104,15 +104,6 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, info, prometheus
-  metrics:
-    tags:
-      application: ${spring.application.name}
 resilience4j:
   circuitbreaker:
     instances:
@@ -140,4 +131,5 @@ openai:
 # DeepL 설정 (번역)
 deepl:
   api-key: fake-key
+
 

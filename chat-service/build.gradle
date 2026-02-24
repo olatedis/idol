@@ -1,8 +1,8 @@
-plugins {
+﻿plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'com.google.protobuf' version '0.9.4' // Protobuf ?�러그인 추�?
+    id 'com.google.protobuf' version '0.9.4' // Protobuf ?�러그인 추�?
 }
 
 group = 'com.bit.idol'
@@ -31,11 +31,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     
-    // Actuator & Prometheus (모니?�링)
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
-    
-    // WebClient (?��? API ?�출??
+    // WebClient (?��? API ?�출??
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
     // Database (MongoDB & Redis)
@@ -51,7 +47,7 @@ dependencies {
     // MSA
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-    // Feign HttpClient 5 (?�능 ?�닝)
+    // Feign HttpClient 5 (?�능 ?�닝)
     implementation 'io.github.openfeign:feign-hc5'
 
     // gRPC Client & Protobuf
@@ -77,13 +73,13 @@ dependencies {
     implementation 'com.github.ben-manes.caffeine:caffeine'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
 
-    // Jackson Afterburner (JSON ?�능 ?�닝)
+    // Jackson Afterburner (JSON ?�능 ?�닝)
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
-    // Thumbnailator (?��?지 ?�네???�성)
+    // Thumbnailator (?��?지 ?�네???�성)
     implementation 'net.coobird:thumbnailator:0.4.20'
 
-    // Commons Text (XSS 방어?? - 추�???
+    // Commons Text (XSS 방어?? - 추�???
     implementation 'org.apache.commons:commons-text:1.10.0'
 
     // Lombok
@@ -102,7 +98,7 @@ dependencyManagement {
     }
 }
 
-// Protobuf ?�정
+// Protobuf ?�정
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:${protobufVersion}"
@@ -122,3 +118,4 @@ protobuf {
 tasks.named('test') {
     useJUnitPlatform()
 }
+

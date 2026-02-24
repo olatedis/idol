@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
@@ -32,14 +32,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-    // Actuator & Prometheus (모니?�링)
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
-
     // MSA (Eureka & Feign)
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-    // Feign HttpClient 5 (?�능 ?�닝)
+    // Feign HttpClient 5 (?�능 ?�닝)
     implementation 'io.github.openfeign:feign-hc5'
 
     // Circuit Breaker (Resilience4j)
@@ -59,7 +55,7 @@ dependencies {
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
-    // ShedLock (?��?줄러 중복 ?�행 방�?)
+    // ShedLock (?��?줄러 중복 ?�행 방�?)
     implementation 'net.javacrumbs.shedlock:shedlock-spring:5.10.0'
     implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.10.0'
 
@@ -73,7 +69,7 @@ dependencies {
 
 
 
-    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
+    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
     // Lombok
@@ -94,3 +90,4 @@ dependencyManagement {
 tasks.named('test') {
     useJUnitPlatform()
 }
+

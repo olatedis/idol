@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
@@ -30,17 +30,13 @@ ext {
 
 dependencies {
     // Web
-    implementation 'org.springframework.boot:spring-boot-starter-web' // webmvc -> web 변�?
+    implementation 'org.springframework.boot:spring-boot-starter-web' // webmvc -> web 변�?
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
     // Database & Redis
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // JPA 추�?
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis' // reactive ?�거 (?�반 redis ?�용 권장)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // JPA 추�?
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis' // reactive ?�거 (?�반 redis ?�용 권장)
     runtimeOnly 'com.mysql:mysql-connector-j'
-
-    // Actuator & Prometheus (모니?�링)
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
 
     implementation 'org.springframework.kafka:spring-kafka'
 
@@ -48,10 +44,10 @@ dependencies {
 
 
 
-    // MSA (Eureka - ?�요 ??주석 ?�제)
+    // MSA (Eureka - ?�요 ??주석 ?�제)
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
-    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
+    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
     implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
 
     // Lombok
@@ -76,3 +72,4 @@ dependencyManagement {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
