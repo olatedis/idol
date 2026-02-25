@@ -1,5 +1,8 @@
 package com.bit.idol.userservice.config;
 
+// 더미 계정 비밀번호 자동 암호화.
+//  더미 계정 입력 후 자동 실행. 이후 작동하지 않음 = 삭제예정
+
 import com.bit.idol.userservice.entity.User;
 import com.bit.idol.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
