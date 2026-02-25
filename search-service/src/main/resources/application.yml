@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8090
 
 spring:
@@ -48,11 +48,7 @@ eureka:
   instance:
     prefer-ip-address: true
 
-# Swagger 설정 (Gateway 주소 명시)
-springdoc:
-  servers:
-    - url: http://localhost:8000
-      description: Gateway Server
+
 resilience4j:
   circuitbreaker:
     instances:

@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8000
   http2:
     enabled: true # HTTP/2 활성화
@@ -20,7 +20,6 @@ spring:
           '[/**]':
             allowedOrigins: 
               - "http://localhost:5173" # 프론트엔드 주소
-              - "http://localhost:8000" # Swagger UI (Gateway 자신)
             allowedMethods:
               - GET
               - POST
@@ -117,125 +116,11 @@ spring:
           predicates:
             - Path=/sse/notifications, /notify/**
 
-        # --- Swagger API Docs ---
-        - id: openapi-auth
-          uri: lb://AUTH-SERVICE
-          predicates:
-            - Path=/v3/api-docs/auth-service
-          filters:
-            - RewritePath=/v3/api-docs/auth-service, /v3/api-docs
-
-        - id: openapi-user
-          uri: lb://USER-SERVICE
-          predicates:
-            - Path=/v3/api-docs/user-service
-          filters:
-            - RewritePath=/v3/api-docs/user-service, /v3/api-docs
-
-        - id: openapi-vote
-          uri: lb://VOTING-SERVICE
-          predicates:
-            - Path=/v3/api-docs/vote-service
-          filters:
-            - RewritePath=/v3/api-docs/vote-service, /v3/api-docs
-
-        - id: openapi-chat
-          uri: lb://CHAT-SERVICE
-          predicates:
-            - Path=/v3/api-docs/chat-service
-          filters:
-            - RewritePath=/v3/api-docs/chat-service, /v3/api-docs
-            
-        - id: openapi-board
-          uri: lb://BOARD-SERVICE
-          predicates:
-            - Path=/v3/api-docs/board-service
-          filters:
-            - RewritePath=/v3/api-docs/board-service, /v3/api-docs
-
-        - id: openapi-search
-          uri: lb://SEARCH-SERVICE
-          predicates:
-            - Path=/v3/api-docs/search-service
-          filters:
-            - RewritePath=/v3/api-docs/search-service, /v3/api-docs
-
-        - id: openapi-concert
-          uri: lb://CONCERT-SERVICE
-          predicates:
-            - Path=/v3/api-docs/concert-service
-          filters:
-            - RewritePath=/v3/api-docs/concert-service, /v3/api-docs
-
-        - id: openapi-payment
-          uri: lb://PAYMENT-SERVICE
-          predicates:
-            - Path=/v3/api-docs/payment-service
-          filters:
-            - RewritePath=/v3/api-docs/payment-service, /v3/api-docs
-            
-        - id: openapi-ranking
-          uri: lb://RANKING-SERVICE
-          predicates:
-            - Path=/v3/api-docs/ranking-service
-          filters:
-            - RewritePath=/v3/api-docs/ranking-service, /v3/api-docs
-
-        - id: openapi-reserve
-          uri: lb://RESERVE-SERVICE
-          predicates:
-            - Path=/v3/api-docs/reserve-service
-          filters:
-            - RewritePath=/v3/api-docs/reserve-service, /v3/api-docs
-
-        - id: openapi-subscription
-          uri: lb://SUBSCRIPTION-SERVICE
-          predicates:
-            - Path=/v3/api-docs/subscription-service
-          filters:
-            - RewritePath=/v3/api-docs/subscription-service, /v3/api-docs
-            
-        - id: openapi-notify
-          uri: lb://NOTIFY-SERVICE
-          predicates:
-            - Path=/v3/api-docs/notify-service
-          filters:
-            - RewritePath=/v3/api-docs/notify-service, /v3/api-docs
-
       discovery:
         locator:
           enabled: true
           lower-case-service-id: true
 
-# Swagger UI 설정
-springdoc:
-  swagger-ui:
-    urls:
-      - name: Auth Service
-        url: /v3/api-docs/auth-service
-      - name: User Service
-        url: /v3/api-docs/user-service
-      - name: Chat Service
-        url: /v3/api-docs/chat-service
-      - name: Vote Service
-        url: /v3/api-docs/vote-service
-      - name: Board Service
-        url: /v3/api-docs/board-service
-      - name: Search Service
-        url: /v3/api-docs/search-service
-      - name: Concert Service
-        url: /v3/api-docs/concert-service
-      - name: Payment Service
-        url: /v3/api-docs/payment-service
-      - name: Ranking Service
-        url: /v3/api-docs/ranking-service
-      - name: Reserve Service
-        url: /v3/api-docs/reserve-service
-      - name: Subscription Service
-        url: /v3/api-docs/subscription-service
-      - name: Notify Service
-        url: /v3/api-docs/notify-service
-    path: /swagger-ui.html
 
 eureka:
   client:
@@ -263,10 +148,6 @@ jwt:
     - /board/posts/**
     - /concerts/**
     - /idols/**
-    - /v3/api-docs/**
-    - /swagger-ui/**
-    - /swagger-ui.html
-    - /webjars/**
 
 logging:
   level:

@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8082
   compression:
     enabled: true
@@ -88,11 +88,6 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
-# Swagger 설정
-springdoc:
-  servers:
-    - url: http://localhost:8000
-      description: Gateway Server
 
 eureka:
   client:
