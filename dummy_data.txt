@@ -1,0 +1,93 @@
+-- Agencies
+INSERT INTO agencies (name) VALUES ('스타엔터'), ('글로벌미디어');
+
+-- Users
+INSERT INTO users (username, password, nickname, realName, email, phone, address, imgUrl, role, provider, providerId, status, reportCount, createdAt) VALUES
+('admin1', 'admin1', 'admin1', '관리자', 'admin@example.com', '010-0000-0000', '서울', NULL, 'ADMIN', NULL, NULL, 'ACTIVE', 0, NOW()),
+('agency1', 'agency1', 'agency1', '에이전시1', 'agency1@example.com', '010-1111-1111', '서울', NULL, 'AGENCY', NULL, NULL, 'ACTIVE', 0, NOW()),
+('agency2', 'agency2', 'agency2', '에이전시2', 'agency2@example.com', '010-2222-2222', '서울', NULL, 'AGENCY', NULL, NULL, 'ACTIVE', 0, NOW()),
+('user1', 'user1', 'user1', '유저1', 'user1@example.com', '010-3333-3333', '서울', NULL, 'USER', NULL, NULL, 'ACTIVE', 0, NOW()),
+('user2', 'user2', 'user2', '유저2', 'user2@example.com', '010-4444-4444', '서울', NULL, 'USER', NULL, NULL, 'ACTIVE', 0, NOW()),
+('user3', 'user3', 'user3', '유저3', 'user3@example.com', '010-5555-5555', '서울', NULL, 'USER', NULL, NULL, 'ACTIVE', 0, NOW()),
+('user4', 'user4', 'user4', '유저4', 'user4@example.com', '010-6666-6666', '서울', NULL, 'USER', NULL, NULL, 'ACTIVE', 0, NOW()),
+('user5', 'user5', 'user5', '유저5', 'user5@example.com', '010-7777-7777', '서울', NULL, 'USER', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol1', 'idol1', 'idol1', '아이돌1', 'idol1@example.com', '010-8888-8888', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol2', 'idol2', 'idol2', '아이돌2', 'idol2@example.com', '010-9999-9999', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol3', 'idol3', 'idol3', '아이돌3', 'idol3@example.com', '010-1010-1010', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol4', 'idol4', 'idol4', '아이돌4', 'idol4@example.com', '010-1111-1111', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol5', 'idol5', 'idol5', '아이돌5', 'idol5@example.com', '010-1212-1212', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol6', 'idol6', 'idol6', '아이돌6', 'idol6@example.com', '010-1313-1313', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol7', 'idol7', 'idol7', '아이돌7', 'idol7@example.com', '010-1414-1414', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol8', 'idol8', 'idol8', '아이돌8', 'idol8@example.com', '010-1515-1515', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol9', 'idol9', 'idol9', '아이돌9', 'idol9@example.com', '010-1616-1616', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol10', 'idol10', 'idol10', '아이돌10', 'idol10@example.com', '010-1717-1717', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol11', 'idol11', 'idol11', '아이돌11', 'idol11@example.com', '010-1818-1818', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol12', 'idol12', 'idol12', '아이돌12', 'idol12@example.com', '010-1919-1919', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol13', 'idol13', 'idol13', '아이돌13', 'idol13@example.com', '010-2020-2020', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol14', 'idol14', 'idol14', '아이돌14', 'idol14@example.com', '010-2121-2121', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol15', 'idol15', 'idol15', '아이돌15', 'idol15@example.com', '010-2222-2222', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol16', 'idol16', 'idol16', '아이돌16', 'idol16@example.com', '010-2323-2323', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol17', 'idol17', 'idol17', '아이돌17', 'idol17@example.com', '010-2424-2424', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol18', 'idol18', 'idol18', '아이돌18', 'idol18@example.com', '010-2525-2525', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol19', 'idol19', 'idol19', '아이돌19', 'idol19@example.com', '010-2626-2626', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol20', 'idol20', 'idol20', '아이돌20', 'idol20@example.com', '010-2727-2727', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol21', 'idol21', 'idol21', '아이돌21', 'idol21@example.com', '010-2828-2828', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol22', 'idol22', 'idol22', '아이돌22', 'idol22@example.com', '010-2929-2929', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol23', 'idol23', 'idol23', '아이돌23', 'idol23@example.com', '010-3030-3030', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol24', 'idol24', 'idol24', '아이돌24', 'idol24@example.com', '010-3131-3131', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol25', 'idol25', 'idol25', '아이돌25', 'idol25@example.com', '010-3232-3232', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol26', 'idol26', 'idol26', '아이돌26', 'idol26@example.com', '010-3333-3333', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol27', 'idol27', 'idol27', '아이돌27', 'idol27@example.com', '010-3434-3434', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol28', 'idol28', 'idol28', '아이돌28', 'idol28@example.com', '010-3535-3535', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol29', 'idol29', 'idol29', '아이돌29', 'idol29@example.com', '010-3636-3636', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW()),
+('idol30', 'idol30', 'idol30', '아이돌30', 'idol30@example.com', '010-3737-3737', '서울', NULL, 'IDOL', NULL, NULL, 'ACTIVE', 0, NOW());
+
+-- Agency Accounts
+INSERT INTO agency_accounts (user_id, agency_id) VALUES
+(2, 1),
+(3, 2);
+
+-- Groups
+INSERT INTO idol_groups (name, agency_id) VALUES
+('블랙문', 1),
+('실버로즈', 1),
+('골드레빗', 2),
+('블루오션', 2),
+('핑크스타', 2);
+
+-- Idols
+INSERT INTO idols (user_id, agency_id, group_id, stageName, status) VALUES
+(9, 1, 1, '가나', 'ACTIVE'),
+(10, 1, 1, '다라', 'ACTIVE'),
+(11, 1, 2, '마바', 'ACTIVE'),
+(12, 1, 2, '사아', 'ACTIVE'),
+(13, 1, 2, '자차', 'ACTIVE'),
+(14, 1, 2, '카타', 'ACTIVE'),
+(15, 2, 3, '파하', 'ACTIVE'),
+(16, 2, 3, '가나', 'ACTIVE'),
+(17, 2, 3, '다라', 'ACTIVE'),
+(18, 2, 3, '마바', 'ACTIVE'),
+(19, 2, 3, '사아', 'ACTIVE'),
+(20, 2, 3, '자차', 'ACTIVE'),
+(21, 2, 4, '카타', 'ACTIVE'),
+(22, 2, 4, '파하', 'ACTIVE'),
+(23, 2, 4, '가나', 'ACTIVE'),
+(24, 2, 4, '다라', 'ACTIVE'),
+(25, 2, 4, '마바', 'ACTIVE'),
+(26, 2, 4, '사아', 'ACTIVE'),
+(27, 2, 4, '자차', 'ACTIVE'),
+(28, 2, 4, '카타', 'ACTIVE'),
+(29, 2, 5, '파하', 'ACTIVE'),
+(30, 2, 5, '가나', 'ACTIVE'),
+(31, 2, 5, '다라', 'ACTIVE'),
+(32, 2, 5, '마바', 'ACTIVE'),
+(33, 2, 5, '사아', 'ACTIVE'),
+(34, 2, 5, '자차', 'ACTIVE'),
+(35, 2, 5, '카타', 'ACTIVE'),
+(36, 2, 5, '파하', 'ACTIVE'),
+(37, 2, 5, '가나', 'ACTIVE'),
+(38, 2, 5, '다라', 'ACTIVE');
+
+-- Ban History
+INSERT INTO ban_history (userId, status, reason, createdAt) VALUES
+(4, 'SUSPENDED', '스팸 신고 누적', NOW());
