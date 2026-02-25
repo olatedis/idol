@@ -38,12 +38,11 @@ public class TossBillingKeyClient {
     public BillingKeyResponse issueBillingKey(String authKey, String customerKey) {
         String url = TOSS_API_BASE + "/billing/authorizations/issue";
 
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("authKey", authKey);
-        body.add("customerKey", customerKey);
+        String body = String.format("{\"authKey\":\"%s\",\"customerKey\":\"%s\"}", authKey, customerKey);
 
         HttpHeaders headers = createHeaders();
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> request = new HttpEntity<>(body, headers);
 
         try {
             BillingKeyResponse response = restTemplate.postForObject(url, request, BillingKeyResponse.class);

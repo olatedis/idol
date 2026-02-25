@@ -2,11 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../main/Header';
 import { confirmPayment, authorizeBillingKey } from '../../api/payment';
+import {useAuthStore} from "../../stores/authStore.ts";
 
 const PaymentComplete: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [status, setStatus] = useState<'processing' | 'success' | 'failed'>('processing');
+    const { user } = useAuthStore();
+    const userId = user.userId
 
     useEffect(() => {
         const qs = new URLSearchParams(location.search);
@@ -47,7 +50,7 @@ const PaymentComplete: React.FC = () => {
                 return;
             }
 
-            const userId = Number(localStorage.getItem('userId') || '1');
+            // const userId = Number(localStorage.getItem('auth-storage') || '1');
 
             confirmPayment({ paymentKey, orderId, amount }, userId)
                 .then(() => {
