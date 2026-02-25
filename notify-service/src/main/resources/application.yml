@@ -29,6 +29,10 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
+notify:
+  topics:
+    fanout: notify-fanout-topic
+
 eureka:
   client:
     service-url:

@@ -1,6 +1,8 @@
 import { Editor } from "@toast-ui/react-editor";
 import React, { useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { api } from "../../api/axios"; // ✅ axios 인스턴스 사용 (baseURL/토큰/리프레시 자동)
+import { useAuthStore } from "../../stores/authStore"; // ✅ 로그인 UI 체크용 (선택)
 
 type BoardKind = "official" | "fan";
 
@@ -11,8 +13,6 @@ type PostWriteRequest = {
     title: string;
     content: string;
 };
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 function resolveBoardType(type: BoardKind): string {
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
@@ -33,11 +33,16 @@ const GroupPostWritePage: React.FC = () => {
 
     const editorRef = useRef<Editor>(null);
 
-    // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
-    const accessToken = localStorage.getItem("accessToken");
+    const { accessToken } = useAuthStore();
 
     const onSubmit = async () => {
         setError("");
+
+        const gid = Number(groupId);
+        if (!Number.isFinite(gid)) {
+            setError("잘못된 접근입니다. (groupId 없음)");
+            return;
+        }
 
         if (!accessToken) {
             setError("로그인이 필요합니다.");
@@ -61,34 +66,19 @@ const GroupPostWritePage: React.FC = () => {
         const req: PostWriteRequest = {
             boardType,
             idolId: null,
-            groupId: Number(groupId),
+            groupId: gid,
             title: title.trim(),
             content: html,
         };
 
-        if (!API_BASE_URL) {
-            setError("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
-            return;
-        }
-
         setSubmitting(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify(req),
-            });
+            // 변경: fetch + API_BASE_URL + localStorage 토큰 제거
+            // api(axios)가 baseURL과 Authorization을 자동 처리
+            const res = await api.post("/board/posts", req);
 
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("글 작성 실패");
-
-            const json = (await res.json()) as any;
-            const newPostId = json?.postId;
+            const newPostId = (res.data as any)?.postId;
 
             if (typeof newPostId === "number") {
                 navigate(`../${newPostId}`);
@@ -96,7 +86,10 @@ const GroupPostWritePage: React.FC = () => {
                 navigate(`../`);
             }
         } catch (e: any) {
-            setError(e?.message || "글 작성 실패");
+            const status = e?.response?.status;
+            if (status === 401) setError("로그인이 필요합니다.");
+            else if (status === 403) setError("권한이 없습니다.");
+            else setError(e?.response?.data?.message || e?.message || "글 작성 실패");
         } finally {
             setSubmitting(false);
         }

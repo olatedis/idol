@@ -145,7 +145,6 @@ jwt:
     - /sse/notifications
     - /api/rankings/**
     - /search/**
-    - /board/posts/**
     - /concerts/**
     - /idols/**
     - /groups/**
