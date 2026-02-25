@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8081
   compression:
     enabled: true
@@ -61,11 +61,6 @@ grpc:
   server:
     port: 9091
 
-# Swagger 설정
-springdoc:
-  servers:
-    - url: http://localhost:8000
-      description: Gateway Server
 
 eureka:
   client:

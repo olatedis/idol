@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8089
   compression:
     enabled: true
@@ -92,11 +92,6 @@ grpc:
       address: static://localhost:9091
       negotiation-type: plaintext
 
-# Swagger 설정
-springdoc:
-  servers:
-    - url: http://localhost:8000
-      description: Gateway Server
 
 eureka:
   client:
