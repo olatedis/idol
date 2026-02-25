@@ -45,7 +45,7 @@ const GroupServicePage: React.FC = () => {
 
                 // Axios는 기본값으로 성공(2xx) 시 res.data에 JSON이 반환됨
                 const json = res.data;
-
+                console.log(json);
                 const subscribedGroupIds: number[] = Array.isArray(json)
                     ? (json as GroupSubscriptionDto[])
                         .map((x) => Number((x as any)?.groupId))

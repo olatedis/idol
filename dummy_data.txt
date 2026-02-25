@@ -130,3 +130,32 @@ INSERT INTO subscriptions (user_id, idol_id, status, idol_stage_name, started_at
 (8, 37, 'ACTIVE', '가나', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
 (8, 21, 'ACTIVE', '카타', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
 (8, 34, 'ACTIVE', '자차', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true);
+
+
+INSERT INTO group_subscriptions (
+    user_id,
+    group_id,
+    group_name,
+    status,
+    started_at,
+    expired_at,
+    auto_renew
+)
+SELECT
+    s.user_id,
+    g.id AS group_id,
+    g.name AS group_name,
+    'ACTIVE' AS status,
+    s.started_at,
+    NULL AS expired_at,
+    true AS auto_renew
+FROM subscriptions s
+JOIN idols i ON s.idol_id = i.user_id
+JOIN idol_groups g ON i.group_id = g.id
+WHERE s.status = 'ACTIVE'
+AND NOT EXISTS (
+    SELECT 1
+    FROM group_subscriptions gs
+    WHERE gs.user_id = s.user_id
+      AND gs.group_id = g.id
+);

@@ -8,7 +8,7 @@ import NoticeWritePage from "./pages/main/notice/NoticeWritePage.tsx";
 import NoticeEditPage from "./pages/main/notice/NoticeEditPage.tsx";
 import GroupServicePage from "./pages/3-1/GroupServicePage.tsx";
 import GroupBoardPage from "./pages/3-1/GroupBoardPage.tsx";
-import IdolPage from "./pages/main/IdolPage.tsx";
+import IdolPage from "./pages/2-1/IdolPage.tsx";
 import GroupPostWritePage from "./pages/3-1/GroupPostWritePage.tsx";
 import GroupPostDetailPage from "./pages/3-1/GroupPostDetailPage.tsx";
 import OAuthKakao from "./pages/auth/OAuthKakao.tsx";
