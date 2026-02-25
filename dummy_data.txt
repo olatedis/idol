@@ -132,30 +132,34 @@ INSERT INTO subscriptions (user_id, idol_id, status, idol_stage_name, started_at
 (8, 34, 'ACTIVE', '자차', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true);
 
 
-INSERT INTO group_subscriptions (
-    user_id,
-    group_id,
-    group_name,
-    status,
-    started_at,
-    expired_at,
-    auto_renew
-)
-SELECT
-    s.user_id,
-    g.id AS group_id,
-    g.name AS group_name,
-    'ACTIVE' AS status,
-    s.started_at,
-    NULL AS expired_at,
-    true AS auto_renew
-FROM subscriptions s
-JOIN idols i ON s.idol_id = i.user_id
-JOIN idol_groups g ON i.group_id = g.id
-WHERE s.status = 'ACTIVE'
-AND NOT EXISTS (
-    SELECT 1
-    FROM group_subscriptions gs
-    WHERE gs.user_id = s.user_id
-      AND gs.group_id = g.id
-);
+INSERT INTO group_subscriptions
+(user_id, group_id, group_name, status, started_at, expired_at, auto_renew)
+VALUES
+-- user1 (4)
+(4, 1, '블랙문', 'ACTIVE', NOW(), NULL, true),
+(4, 3, '골드레빗', 'ACTIVE', NOW(), NULL, true),
+(4, 4, '블루오션', 'ACTIVE', NOW(), NULL, true),
+
+-- user2 (5)
+(5, 1, '블랙문', 'ACTIVE', NOW(), NULL, true),
+(5, 3, '골드레빗', 'ACTIVE', NOW(), NULL, true),
+(5, 4, '블루오션', 'ACTIVE', NOW(), NULL, true),
+(5, 5, '핑크스타', 'ACTIVE', NOW(), NULL, true),
+
+-- user3 (6)
+(6, 2, '실버로즈', 'ACTIVE', NOW(), NULL, true),
+(6, 3, '골드레빗', 'ACTIVE', NOW(), NULL, true),
+(6, 4, '블루오션', 'ACTIVE', NOW(), NULL, true),
+(6, 5, '핑크스타', 'ACTIVE', NOW(), NULL, true),
+
+-- user4 (7)
+(7, 2, '실버로즈', 'ACTIVE', NOW(), NULL, true),
+(7, 3, '골드레빗', 'ACTIVE', NOW(), NULL, true),
+(7, 4, '블루오션', 'ACTIVE', NOW(), NULL, true),
+(7, 5, '핑크스타', 'ACTIVE', NOW(), NULL, true),
+
+-- user5 (8)
+(8, 2, '실버로즈', 'ACTIVE', NOW(), NULL, true),
+(8, 3, '골드레빗', 'ACTIVE', NOW(), NULL, true),
+(8, 4, '블루오션', 'ACTIVE', NOW(), NULL, true),
+(8, 5, '핑크스타', 'ACTIVE', NOW(), NULL, true);
