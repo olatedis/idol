@@ -45,7 +45,7 @@ const GroupServicePage: React.FC = () => {
 
                 // Axios는 기본값으로 성공(2xx) 시 res.data에 JSON이 반환됨
                 const json = res.data;
-                console.log(json);
+
                 const subscribedGroupIds: number[] = Array.isArray(json)
                     ? (json as GroupSubscriptionDto[])
                         .map((x) => Number((x as any)?.groupId))
@@ -87,7 +87,7 @@ const GroupServicePage: React.FC = () => {
         return (
             <div className="min-h-screen bg-white">
                 <Header />
-                <div className="max-w-6xl mx-auto px-4 py-6 text-sm text-gray-600">
+                <div className="max-w-6xl mx-auto px-4 py-6 text-sm text-gray-400">
                     확인 중...
                 </div>
             </div>
@@ -105,7 +105,6 @@ const GroupServicePage: React.FC = () => {
                         className="
                         flex justify-center gap-2 sm:gap-4
                         max-w-4xl mx-auto px-4
-                        mt-2
                         "
                     >
                         {tabs.map((t) => (
@@ -119,7 +118,7 @@ const GroupServicePage: React.FC = () => {
                                         "text-sm sm:text-base font-bold tracking-wide",
                                         "rounded-full shadow-sm",
                                         isActive
-                                            ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-indigo-200 shadow-md ring-2 ring-indigo-100 transform scale-105"
+                                            ? "bg-gradient-to-r from-idol to-idol-dark text-white shadow-idol-point shadow-md ring-2 ring-idol-bg transform scale-105"
                                             : "bg-white text-gray-500 border border-gray-200 hover:bg-gray-50 hover:text-gray-800 hover:shadow-md hover:-translate-y-0.5",
                                     ].join(" ")
                                 }
