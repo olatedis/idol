@@ -2,7 +2,7 @@
 INSERT INTO agencies (name) VALUES ('스타엔터'), ('글로벌미디어');
 
 -- Users
-INSERT INTO users (username, password, nickname, realName, email, phone, address, imgUrl, role, provider, providerId, status, reportCount, createdAt) VALUES
+INSERT INTO users (username, password, nickname, real_name, email, phone, address, img_url, role, provider, provider_id, status, report_count, created_at) VALUES
 ('admin1', 'admin1', 'admin1', '관리자', 'admin@example.com', '010-0000-0000', '서울', NULL, 'ADMIN', NULL, NULL, 'ACTIVE', 0, NOW()),
 ('agency1', 'agency1', 'agency1', '에이전시1', 'agency1@example.com', '010-1111-1111', '서울', NULL, 'AGENCY', NULL, NULL, 'ACTIVE', 0, NOW()),
 ('agency2', 'agency2', 'agency2', '에이전시2', 'agency2@example.com', '010-2222-2222', '서울', NULL, 'AGENCY', NULL, NULL, 'ACTIVE', 0, NOW()),
@@ -56,7 +56,7 @@ INSERT INTO idol_groups (name, agency_id) VALUES
 ('핑크스타', 2);
 
 -- Idols
-INSERT INTO idols (user_id, agency_id, group_id, stageName, status) VALUES
+INSERT INTO idols (user_id, agency_id, group_id, stage_name, status) VALUES
 (9, 1, 1, '가나', 'ACTIVE'),
 (10, 1, 1, '다라', 'ACTIVE'),
 (11, 1, 2, '마바', 'ACTIVE'),
@@ -89,5 +89,5 @@ INSERT INTO idols (user_id, agency_id, group_id, stageName, status) VALUES
 (38, 2, 5, '다라', 'ACTIVE');
 
 -- Ban History
-INSERT INTO ban_history (userId, status, reason, createdAt) VALUES
+INSERT INTO ban_history (user_id, status, reason, created_at) VALUES
 (4, 'SUSPENDED', '스팸 신고 누적', NOW());
