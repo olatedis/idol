@@ -19,6 +19,7 @@ import VotePage from "./pages/3-1/VotePage.tsx";
 import IdolBoardPage from "./pages/3-1/IdolBoardPage.tsx";
 import IdolPostWritePage from "./pages/3-1/IdolPostWritePage.tsx";
 import IdolPostDetailPage from "./pages/3-1/IdolPostDetailPage.tsx"; // 추가됨
+import ChatPage from "./pages/3-1/ChatPage.tsx";
 
 function App() {
     return (
@@ -59,6 +60,8 @@ function App() {
                     {/* 투표 페이지 */}
                     <Route path="vote" element={<VotePage />} />
 
+                    {/* 채팅 페이지 */}
+                    <Route path="chat" element={<ChatPage />} />
                 </Route>
 
                 {/* 아이돌 */}
