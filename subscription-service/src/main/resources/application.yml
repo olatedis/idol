@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8088
 
 spring:
@@ -41,4 +41,9 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+toss:
+  secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R
 
