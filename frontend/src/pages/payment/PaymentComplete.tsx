@@ -20,7 +20,7 @@ const PaymentComplete: React.FC = () => {
         const amount = Number(amountStr);
         const authKey = qs.get('authKey') || qs.get('auth_key') || '';
         // 이전 페이지에서 저장한 대기중 구독 정보를 사용 (sessionStorage)
-        let pending: { idolId?: number; plan?: string } | null = null;
+        let pending: { idolId?: number; plan?: string; customerKey?: string } | null = null;
         try {
             const raw = sessionStorage.getItem('pendingSubscription');
             if (raw) pending = JSON.parse(raw);
@@ -31,7 +31,8 @@ const PaymentComplete: React.FC = () => {
         if (type === 'billing') {
             // 빌링키 발급 처리
             const pendingIdolId = pending?.idolId;
-            if (!authKey || !pendingIdolId) {
+            const customerKey = pending?.customerKey;
+            if (!authKey || !pendingIdolId || !customerKey) {
                 setStatus('failed');
                 return;
             }
