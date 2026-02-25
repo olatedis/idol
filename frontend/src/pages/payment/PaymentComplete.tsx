@@ -37,7 +37,7 @@ const PaymentComplete: React.FC = () => {
                 return;
             }
 
-            authorizeBillingKey({ idolId: pendingIdolId, authKey, plan: 'MONTHLY' })
+            authorizeBillingKey({ idolId: pendingIdolId, authKey, plan: 'MONTHLY', customerKey })
                 .then(() => {
                     // 처리 후 세션청소
                     try { sessionStorage.removeItem('pendingSubscription'); } catch {}
