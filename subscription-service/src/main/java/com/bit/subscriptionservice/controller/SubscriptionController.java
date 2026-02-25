@@ -65,6 +65,12 @@ public class SubscriptionController {
         return ResponseEntity.ok(subscriptionService.getMySubscriptions(userId));
     }
 
+    // 아이돌 구독자 수 조회
+    @GetMapping("/count/{idolId}")
+    public ResponseEntity<Integer> getSubscriptionCount(@PathVariable int idolId) {
+        return ResponseEntity.ok(subscriptionService.getSubscriptionCount(idolId));
+    }
+
     // 내부용: 개인(아이돌) 구독 여부 확인(채팅 서비스용)
     @GetMapping("/internal/check")
     public ResponseEntity<Boolean> checkSubscription(

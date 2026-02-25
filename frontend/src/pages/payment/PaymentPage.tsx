@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../main/Header';
 import { createPaymentReady, getIdol, authorizeBillingKey } from '../../api/payment';
 import { loadTossPaymentsScript } from '../../utils/tossPayments';
@@ -10,14 +10,13 @@ const PRICE_MAP: Record<string, number> = {
 };
 
 const PaymentPage: React.FC = () => {
-    const { idolId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [idol, setIdol] = useState<any>(null);
 
-    const qs = new URLSearchParams(location.search);
-    const plan = (qs.get('plan') || 'MONTHLY') as 'MONTHLY' | 'ANNUAL';
+    const idolId = location.state?.idolId;
+    const plan = location.state?.plan || 'MONTHLY';
     const amount = PRICE_MAP[plan];
 
     useEffect(() => {
@@ -39,16 +38,36 @@ const PaymentPage: React.FC = () => {
 
             if (plan === 'MONTHLY') {
                 // 빌링키 발급 (정기 구독)
+                // 고객키 생성 (일관된 키 사용)
+                const customerKey = `customer_user_${idolId}`;
+                
+                // 이전 페이지에서 사용할 수 있도록 idolId, plan, customerKey를 세션에 저장
+                try {
+                    sessionStorage.setItem('pendingSubscription', JSON.stringify({ 
+                        idolId: Number(idolId), 
+                        plan: 'MONTHLY',
+                        customerKey: customerKey
+                    }));
+                } catch (e) {
+                    console.warn('sessionStorage not available', e);
+                }
+
                 toss.requestBillingAuth('카드', {
                     amount,
                     orderId: `billing_${Date.now()}`,
                     orderName: `${idol?.stageName || '아이돌'} 월간 구독`,
-                    customerKey: `customer_${Date.now()}`,
+                    customerKey: customerKey,
                     successUrl: `${window.location.origin}/payment/complete?type=billing`,
                     failUrl: `${window.location.origin}/payment/complete?fail=true`
                 });
             } else {
                 // 일반 결제 (연간)
+                // 이전 페이지에서 사용할 수 있도록 idolId와 plan을 세션에 저장
+                try {
+                    sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId: Number(idolId), plan: 'ANNUAL' }));
+                } catch (e) {
+                    console.warn('sessionStorage not available', e);
+                }
                 const userId = Number(localStorage.getItem('userId') || '1');
                 const ready = await createPaymentReady({ userId, amount, domain: 'SUBSCRIPTION', targetId: Number(idolId) });
 

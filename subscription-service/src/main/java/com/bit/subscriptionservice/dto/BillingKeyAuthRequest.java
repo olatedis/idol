@@ -22,4 +22,7 @@ public class BillingKeyAuthRequest {
     
     @NotBlank
     private String plan; // MONTHLY or ANNUAL
+    
+    @NotBlank
+    private String customerKey; // Toss에서 사용하는 고객 식별자
 }
