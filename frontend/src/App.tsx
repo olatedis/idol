@@ -55,6 +55,10 @@ function App() {
                     {/* board/write가 board/:postId에 먹히는 케이스 방지 */}
                     <Route path="idol/:idolId/board/write" element={<IdolPostWritePage />} />
                     <Route path="idol/:idolId/board/:postId" element={<IdolPostDetailPage />} />
+
+                    {/* 투표 페이지 */}
+                    <Route path="vote" element={<VotePage />} />
+
                 </Route>
 
                 {/* 아이돌 */}
@@ -67,9 +71,7 @@ function App() {
                 <Route path="/payment/:idolId" element={<PaymentPage />} />
                 <Route path="/payment/complete" element={<PaymentComplete />} />
 
-                {/* 투표 페이지 */}
-                <Route path="/vote" element={<VotePage />} />
-                <Route path="/vote/:groupId" element={<VotePage />} /> {/* 그룹 전용 투표 */}
+
             </Routes>
         </BrowserRouter>
     );

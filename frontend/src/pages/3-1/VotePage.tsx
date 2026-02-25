@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-import Header from "../main/Header";
 import { api } from "../../api/axios";
 import { useAuthStore } from "../../stores/authStore";
 import { useParams } from "react-router-dom";
@@ -376,8 +375,6 @@ const VotePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-            <Header />
-
             <main className="pt-[100px] px-6 pb-12 max-w-7xl mx-auto relative z-10">
                 {/* 탭 제목 영역 (그룹/전체 명시) */}
                 <div className="mb-8">
