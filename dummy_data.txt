@@ -91,3 +91,42 @@ INSERT INTO idols (user_id, agency_id, group_id, stage_name, status) VALUES
 -- Ban History
 INSERT INTO ban_history (user_id, status, reason, created_at) VALUES
 (4, 'SUSPENDED', '스팸 신고 누적', NOW());
+
+
+-- Subscriptions
+INSERT INTO subscriptions (user_id, idol_id, status, idol_stage_name, started_at, expired_at, plan, next_renewal_at, auto_renew) VALUES
+-- user1 (id 4): 3 subscriptions
+(4, 9, 'ACTIVE', '가나', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(4, 15, 'ACTIVE', '파하', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(4, 22, 'ACTIVE', '파하', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+-- user2 (id 5): 5 subscriptions
+(5, 10, 'ACTIVE', '다라', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(5, 16, 'ACTIVE', '가나', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(5, 23, 'ACTIVE', '가나', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(5, 27, 'ACTIVE', '자차', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(5, 30, 'ACTIVE', '다라', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+-- user3 (id 6): 7 subscriptions
+(6, 11, 'ACTIVE', '마바', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(6, 17, 'ACTIVE', '다라', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(6, 24, 'ACTIVE', '다라', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(6, 28, 'ACTIVE', '카타', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(6, 31, 'ACTIVE', '다라', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(6, 35, 'ACTIVE', '카타', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(6, 38, 'ACTIVE', '다라', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+-- user4 (id 7): 8 subscriptions
+(7, 12, 'ACTIVE', '사아', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(7, 18, 'ACTIVE', '마바', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(7, 25, 'ACTIVE', '마바', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(7, 29, 'ACTIVE', '파하', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(7, 32, 'ACTIVE', '마바', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(7, 36, 'ACTIVE', '파하', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(7, 13, 'ACTIVE', '자차', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(7, 19, 'ACTIVE', '사아', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+-- user5 (id 8): 7 subscriptions
+(8, 14, 'ACTIVE', '카타', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(8, 20, 'ACTIVE', '자차', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(8, 26, 'ACTIVE', '사아', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(8, 33, 'ACTIVE', '사아', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(8, 37, 'ACTIVE', '가나', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true),
+(8, 21, 'ACTIVE', '카타', NOW(), NULL, 'ANNUAL', DATE_ADD(NOW(), INTERVAL 12 MONTH), true),
+(8, 34, 'ACTIVE', '자차', NOW(), NULL, 'MONTHLY', DATE_ADD(NOW(), INTERVAL 1 MONTH), true);
