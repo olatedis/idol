@@ -361,5 +361,9 @@ public class SubscriptionService {
         );
     }
 
+    // 아이돌 구독자 수 조회
+    public int getSubscriptionCount(int idolId) {
+        return subscriptionRepository.countByIdolIdAndStatus(idolId, SubscriptionStatus.ACTIVE);
+    }
 
 }

@@ -50,4 +50,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Inte
             int userId,
             SubscriptionStatus status
     );
+
+    int countByIdolIdAndStatus(int idolId, SubscriptionStatus subscriptionStatus);
 }
