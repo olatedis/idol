@@ -7,11 +7,14 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import java.io.Serializable;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatRoomListDto {
+public class ChatRoomListDto implements Serializable {
+    private static final long serialVersionUID = 1L;
     private Long idolId;
     private String idolName;
     private String thumbnailUrl; // 아이돌 프로필 이미지

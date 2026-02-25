@@ -30,9 +30,8 @@ public class SubscriptionController {
     public ResponseEntity<SubscriptionDto> subscribe(
             @RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
-            @Valid @RequestBody SubscriptionCreateRequest request
-    ) {
-        if (Role.valueOf(role) != Role.USER) {
+            @Valid @RequestBody SubscriptionCreateRequest request) {
+        if (Role.valueOf(role) == Role.AGENCY) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -45,9 +44,8 @@ public class SubscriptionController {
     public ResponseEntity<Void> cancel(
             @RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
-            @Valid @RequestBody SubscriptionCancelRequest request
-    ) {
-        if (Role.valueOf(role) != Role.USER) {
+            @Valid @RequestBody SubscriptionCancelRequest request) {
+        if (Role.valueOf(role) == Role.AGENCY) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -59,9 +57,8 @@ public class SubscriptionController {
     @GetMapping("/me")
     public ResponseEntity<List<SubscriptionDto>> getMySubscriptions(
             @RequestHeader("X-User-Id") int userId,
-            @RequestHeader("X-Role") String role
-    ) {
-        if (Role.valueOf(role) != Role.USER) {
+            @RequestHeader("X-Role") String role) {
+        if (Role.valueOf(role) == Role.AGENCY) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -72,8 +69,7 @@ public class SubscriptionController {
     @GetMapping("/internal/check")
     public ResponseEntity<Boolean> checkSubscription(
             @RequestHeader("X-User-Id") int userId,
-            @RequestParam int idolId
-    ) {
+            @RequestParam int idolId) {
         return ResponseEntity.ok(subscriptionService.isSubscribed(userId, idolId));
     }
 
@@ -82,9 +78,8 @@ public class SubscriptionController {
     public ResponseEntity<GroupSubscriptionDto> subscribeGroup(
             @RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
-            @Valid @RequestBody GroupSubscriptionCreateRequest request
-    ) {
-        if (Role.valueOf(role) != Role.USER) {
+            @Valid @RequestBody GroupSubscriptionCreateRequest request) {
+        if (Role.valueOf(role) == Role.AGENCY) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -97,9 +92,8 @@ public class SubscriptionController {
     public ResponseEntity<Void> cancelGroup(
             @RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
-            @Valid @RequestBody GroupSubscriptionCancelRequest request
-    ) {
-        if (Role.valueOf(role) != Role.USER) {
+            @Valid @RequestBody GroupSubscriptionCancelRequest request) {
+        if (Role.valueOf(role) == Role.AGENCY) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -111,9 +105,8 @@ public class SubscriptionController {
     @GetMapping("/groups/me")
     public ResponseEntity<List<GroupSubscriptionDto>> getMyGroupSubscriptions(
             @RequestHeader("X-User-Id") int userId,
-            @RequestHeader("X-Role") String role
-    ) {
-        if (Role.valueOf(role) != Role.USER) {
+            @RequestHeader("X-Role") String role) {
+        if (Role.valueOf(role) == Role.AGENCY) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -131,9 +124,8 @@ public class SubscriptionController {
     public ResponseEntity<BillingKeyAuthResponse> authorizeBillingKey(
             @RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
-            @Valid @RequestBody BillingKeyAuthRequest request
-    ) {
-        if (Role.valueOf(role) != Role.USER) {
+            @Valid @RequestBody BillingKeyAuthRequest request) {
+        if (Role.valueOf(role) == Role.AGENCY) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -143,10 +135,9 @@ public class SubscriptionController {
                     request.getAuthKey(),
                     userId,
                     request.getIdolId(),
-                    customerKey
-            );
+                    customerKey);
 
-            log.info("빌링키 발급 성공: userId={}, idolId={}, plan={}", 
+            log.info("빌링키 발급 성공: userId={}, idolId={}, plan={}",
                     userId, request.getIdolId(), request.getPlan());
 
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -155,10 +146,9 @@ public class SubscriptionController {
                             billingKey.getCardNumber(),
                             billingKey.getCardIssuer(),
                             billingKey.getCardType(),
-                            "빌링키가 등록되었습니다. 이제 자동 구독이 활성화됩니다."
-                    ));
+                            "빌링키가 등록되었습니다. 이제 자동 구독이 활성화됩니다."));
         } catch (Exception e) {
-            log.error("빌링키 발급 실패: userId={}, idolId={}, error={}", 
+            log.error("빌링키 발급 실패: userId={}, idolId={}, error={}",
                     userId, request.getIdolId(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
                     .body(new BillingKeyAuthResponse(
@@ -166,8 +156,7 @@ public class SubscriptionController {
                             null,
                             null,
                             null,
-                            "빌링키 발급 실패: " + e.getMessage()
-                    ));
+                            "빌링키 발급 실패: " + e.getMessage()));
         }
     }
 
@@ -179,9 +168,8 @@ public class SubscriptionController {
     public ResponseEntity<BillingKeyCheckResponse> checkBillingKey(
             @RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
-            @PathVariable int idolId
-    ) {
-        if (Role.valueOf(role) != Role.USER) {
+            @PathVariable int idolId) {
+        if (Role.valueOf(role) == Role.AGENCY) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -197,9 +185,8 @@ public class SubscriptionController {
     public ResponseEntity<Void> deleteBillingKey(
             @RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role,
-            @PathVariable int idolId
-    ) {
-        if (Role.valueOf(role) != Role.USER) {
+            @PathVariable int idolId) {
+        if (Role.valueOf(role) == Role.AGENCY) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -208,7 +195,7 @@ public class SubscriptionController {
             log.info("빌링키 삭제 성공: userId={}, idolId={}", userId, idolId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            log.error("빌링키 삭제 실패: userId={}, idolId={}, error={}", 
+            log.error("빌링키 삭제 실패: userId={}, idolId={}, error={}",
                     userId, idolId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }

@@ -48,7 +48,7 @@ spring:
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
-            - Path=/users/**, /reports/**, /internal/**, /agencies/**, /admin/users/**, /idols/**
+            - Path=/users/**, /reports/**, /internal/**, /agencies/**, /admin/users/**, /idols/**, /groups/**
 
         # --- Community Services ---
         - id: chat-service
@@ -148,6 +148,7 @@ jwt:
     - /board/posts/**
     - /concerts/**
     - /idols/**
+    - /groups/**
 
 logging:
   level:
