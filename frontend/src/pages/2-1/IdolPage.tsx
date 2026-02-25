@@ -7,21 +7,20 @@ import SignupModal from "../../components/auth/SignupModal";
 
 const CARD_WIDTH = 176;
 
-interface IdolDto {
-    idolId: number;
-    userId: number;
-    username: string;
-    stageName: string;
-    profileImage: string;
+interface GroupDto {
+    groupId: number;
+    name: string;
+    groupImage: string;
     agencyId: number;
     agencyName: string;
-    status: "ACTIVE" | string;
+    members?: any[];
 }
 
 interface GroupSubscriptionDto {
     subscriptionId: number;
     userId: number;
     groupId: number;
+    groupName: string;
     status: string;
     startedAt: string;
     expiredAt: string;
@@ -31,50 +30,50 @@ interface GroupSubscriptionDto {
 const IdolPage: React.FC = () => {
     const navigate = useNavigate();
     const scrollRef = useRef<HTMLDivElement>(null);
-    
+
     // user뿐만 아니라 accessToken도 확인하여 로그인 상태 판단 (Hydration 이슈 방지)
     const { user, accessToken } = useAuthStore();
     const isLoggedIn = !!user || !!accessToken;
 
-    const [allIdols, setAllIdols] = useState<IdolDto[]>([]);
-    const [subscribedIdols, setSubscribedIdols] = useState<IdolDto[]>([]);
+    const [allGroups, setAllGroups] = useState<GroupDto[]>([]);
+    const [subscribedGroups, setSubscribedGroups] = useState<GroupDto[]>([]);
     const [showLeft, setShowLeft] = useState(false);
     const [showRight, setShowRight] = useState(false);
-    
+
     // 모달 상태
     const [isSignupOpen, setIsSignupOpen] = useState(false);
 
-    // 전체 아이돌 조회
-    const fetchAllIdols = async () => {
+    // 전체 그룹 조회
+    const fetchAllGroups = async () => {
         try {
-            const { data } = await api.get("/idols");
-            setAllIdols(data);
+            const { data } = await api.get<GroupDto[]>("/groups");
+            setAllGroups(data);
         } catch (error) {
-            console.error("전체 아이돌 조회 실패:", error);
+            console.error("전체 그룹 조회 실패:", error);
         }
     };
 
-    // 구독 목록 조회 → idol 상세 조회
-    const fetchSubscriptions = async () => {
+    // 구독 목록 조회 → 그룹 상세 조회
+    const fetchGroupSubscriptions = async () => {
         if (!isLoggedIn) return;
 
         try {
-            const { data: subs } = await api.get<GroupSubscriptionDto[]>("/subscriptions/me");
+            const { data: subs } = await api.get<GroupSubscriptionDto[]>("/subscriptions/groups/me");
 
-            const idolPromises = subs.map(sub =>
-                api.get(`/idols/${sub.groupId}`).then(res => res.data)
+            const groupPromises = subs.map(sub =>
+                api.get(`/groups/${sub.groupId}`).then(res => res.data)
             );
 
-            const idolResults = await Promise.all(idolPromises);
-            setSubscribedIdols(idolResults);
+            const groupResults = await Promise.all(groupPromises);
+            setSubscribedGroups(groupResults);
         } catch (error) {
             console.error("구독 목록 조회 실패:", error);
         }
     };
 
     useEffect(() => {
-        fetchAllIdols();
-        fetchSubscriptions();
+        fetchAllGroups();
+        fetchGroupSubscriptions();
     }, [isLoggedIn]);
 
     // 캐러셀 버튼 제어
@@ -94,27 +93,22 @@ const IdolPage: React.FC = () => {
         scrollRef.current?.scrollBy({ left: CARD_WIDTH, behavior: "smooth" });
     };
 
-    const handleClick = (idol: IdolDto) => {
-        if (idol.status !== "ACTIVE") return;
-        navigate(`/group/${idol.idolId}`);
+    const handleClick = (group: GroupDto) => {
+        navigate(`/group/${group.groupId}`);
     };
 
-    const IdolCard = ({ idol }: { idol: IdolDto }) => {
-        const isInactive = idol.status !== "ACTIVE";
-
+    const GroupCard = ({ group }: { group: GroupDto }) => {
         return (
             <div
-                onClick={() => handleClick(idol)}
-                className={`flex-shrink-0 flex flex-col items-center
-                    ${isInactive ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+                onClick={() => handleClick(group)}
+                className="flex-shrink-0 flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
             >
                 <img
-                    src={idol.profileImage}
-                    alt={idol.stageName}
-                    className={`w-40 h-40 rounded-full border-2 border-idol-point object-cover
-                        ${isInactive ? "grayscale" : ""}`}
+                    src={group.groupImage || "https://api.dicebear.com/7.x/identicon/svg?seed=" + group.groupId}
+                    alt={group.name}
+                    className="w-40 h-40 rounded-full border-2 border-idol-point object-cover shadow-md"
                 />
-                <p className="mt-4 text-sm">{idol.stageName}</p>
+                <p className="mt-4 text-sm font-medium text-gray-800">{group.name}</p>
             </div>
         );
     };
@@ -125,10 +119,10 @@ const IdolPage: React.FC = () => {
 
             <main className="pt-[80px] px-6 pb-12">
 
-                {/* 구독중인 아이돌 */}
+                {/* 구독중인 그룹 */}
                 <section className="my-8 relative">
                     <div className="bg-idol rounded-lg py-3 text-center text-white font-semibold mb-8">
-                        구독중인 아이돌
+                        구독중인 그룹
                     </div>
 
                     {isLoggedIn ? (
@@ -154,15 +148,15 @@ const IdolPage: React.FC = () => {
                             <div
                                 ref={scrollRef}
                                 onScroll={checkOverflow}
-                                className="flex gap-8 overflow-hidden"
+                                className="flex gap-8 overflow-hidden py-4"
                             >
-                                {subscribedIdols.length > 0 ? (
-                                    subscribedIdols.map(idol => (
-                                        <IdolCard key={idol.idolId} idol={idol} />
+                                {subscribedGroups.length > 0 ? (
+                                    subscribedGroups.map(group => (
+                                        <GroupCard key={group.groupId} group={group} />
                                     ))
                                 ) : (
                                     <div className="w-full text-center py-10 text-gray-500">
-                                        구독 중인 아이돌이 없습니다.
+                                        구독 중인 그룹이 없습니다.
                                     </div>
                                 )}
                             </div>
@@ -170,7 +164,7 @@ const IdolPage: React.FC = () => {
                     ) : (
                         // 로그인/회원가입 유도 UI
                         <div className="flex flex-col items-center justify-center py-12 bg-white/50 rounded-lg border border-idol-point/20">
-                            <p className="text-gray-600 mb-6 font-medium">로그인하고 내가 구독한 아이돌을 확인해보세요!</p>
+                            <p className="text-gray-600 mb-6 font-medium">로그인하고 내가 구독한 그룹을 확인해보세요!</p>
                             <div className="flex gap-4">
                                 <button
                                     onClick={() => navigate('/', { state: { scrollToLogin: true } })}
@@ -189,10 +183,10 @@ const IdolPage: React.FC = () => {
                     )}
                 </section>
 
-                {/* 전체 아이돌 */}
+                {/* 전체 그룹 */}
                 <section>
                     <div className="bg-idol rounded-lg text-white py-3 text-center font-semibold mb-8">
-                        전체 아이돌
+                        전체 그룹
                     </div>
 
                     <div className="
@@ -204,8 +198,8 @@ const IdolPage: React.FC = () => {
                         xl:grid-cols-6
                         gap-y-12 gap-x-8
                     ">
-                        {allIdols.map(idol => (
-                            <IdolCard key={idol.idolId} idol={idol} />
+                        {allGroups.map(group => (
+                            <GroupCard key={group.groupId} group={group} />
                         ))}
                     </div>
                 </section>
@@ -213,8 +207,8 @@ const IdolPage: React.FC = () => {
             </main>
 
             {/* 회원가입 모달 */}
-            <SignupModal 
-                isOpen={isSignupOpen} 
+            <SignupModal
+                isOpen={isSignupOpen}
                 onClose={() => setIsSignupOpen(false)}
                 onSwitchToLogin={() => {
                     setIsSignupOpen(false);

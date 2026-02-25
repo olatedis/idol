@@ -98,40 +98,42 @@ const GroupServicePage: React.FC = () => {
         <div className="min-h-screen bg-white">
             <Header />
 
-            {/* 세미 헤더 */}
-            <div className="sticky top-0 z-10 bg-white">
-                <nav
-                    className="
-                    grid grid-cols-4 gap-3
-                    w-full px-6
-                    mt-3
-                    "
-                >
-                    {tabs.map((t) => (
-                        <NavLink
-                            key={t.label}
-                            to={t.to}
-                            className={({ isActive }) =>
-                                [
-                                    "w-full text-center select-none",
-                                    "py-[clamp(4px,0.9vw,14px)]",
-                                    "text-[clamp(19px,1.2vw,16px)] font-semibold",
-                                    "rounded-xl border border-gray-200",
-                                    isActive
-                                        ? "bg-[#1FBFB8] text-white hover:bg-[#17AFA8]"
-                                        : "bg-white text-gray-800 hover:bg-gray-200",
-                                ].join(" ")
-                            }
-                        >
-                            {t.label}
-                        </NavLink>
-                    ))}
-                </nav>
-            </div>
+            <div className="pt-[80px]">
+                {/* 세미 헤더 */}
+                <div className="sticky top-[80px] z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow-[0_4px_30px_rgba(0,0,0,0.05)] pb-4 pt-2">
+                    <nav
+                        className="
+                        flex justify-center gap-2 sm:gap-4
+                        max-w-4xl mx-auto px-4
+                        mt-2
+                        "
+                    >
+                        {tabs.map((t) => (
+                            <NavLink
+                                key={t.label}
+                                to={t.to}
+                                className={({ isActive }) =>
+                                    [
+                                        "flex-1 max-w-[120px] text-center select-none transition-all duration-300 ease-out",
+                                        "py-2.5 sm:py-3",
+                                        "text-sm sm:text-base font-bold tracking-wide",
+                                        "rounded-full shadow-sm",
+                                        isActive
+                                            ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-indigo-200 shadow-md ring-2 ring-indigo-100 transform scale-105"
+                                            : "bg-white text-gray-500 border border-gray-200 hover:bg-gray-50 hover:text-gray-800 hover:shadow-md hover:-translate-y-0.5",
+                                    ].join(" ")
+                                }
+                            >
+                                {t.label}
+                            </NavLink>
+                        ))}
+                    </nav>
+                </div>
 
-            {/* Content */}
-            <div className="max-w-6xl mx-auto px-4 py-6">
-                <Outlet />
+                {/* Content */}
+                <div className="max-w-6xl mx-auto px-4 py-6">
+                    <Outlet />
+                </div>
             </div>
         </div>
     );
