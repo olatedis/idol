@@ -18,6 +18,8 @@ public class Group {
     @Column(nullable = false, unique = true)
     private String name;
 
+    private String groupImage; // 그룹 프로필 이미지 추가
+
     @ManyToOne(fetch = FetchType.LAZY) // 지연 로딩 적용
     @JoinColumn(name = "agency_id", nullable = false)
     private Agency agency;

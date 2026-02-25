@@ -17,6 +17,7 @@ public class GroupDto {
 
     private int groupId;
     private String name;
+    private String groupImage; // 그룹 이미지 필드 추가
     private int agencyId;
     private String agencyName;
     private List<IdolDto> members; // 그룹 멤버 목록
@@ -25,6 +26,7 @@ public class GroupDto {
         return GroupDto.builder()
                 .groupId(group.getId())
                 .name(group.getName())
+                .groupImage(group.getGroupImage())
                 .agencyId(group.getAgency().getId())
                 .agencyName(group.getAgency().getName())
                 .members(members)
