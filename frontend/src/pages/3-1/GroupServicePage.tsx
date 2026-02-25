@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
 import Header from "../main/Header";
+import { useAuthStore } from "../../stores/authStore";
+import { api } from "../../api/axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -16,14 +18,11 @@ const GroupServicePage: React.FC = () => {
 
     useEffect(() => {
         const run = async () => {
-            // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
-            const accessToken = localStorage.getItem("accessToken");
+            // Zustand store에서 토큰을 가져옵니다.
+            const { accessToken } = useAuthStore.getState();
 
             if (!accessToken) {
                 alert("로그인이 필요합니다.");
-
-                // TODO: 로그인 페이지 라우트 생기면 아래로 교체
-                // navigate("/login");
 
                 navigate(-1);
                 return;
@@ -42,20 +41,10 @@ const GroupServicePage: React.FC = () => {
             }
 
             try {
-                const res = await fetch(`${API_BASE_URL}/subscriptions/groups/me`, {
-                    method: "GET",
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                });
+                const res = await api.get(`/subscriptions/groups/me`);
 
-                if (!res.ok) {
-                    alert("구독 정보를 확인할 수 없습니다.");
-                    navigate(-1);
-                    return;
-                }
-
-                const json = (await res.json()) as unknown;
+                // Axios는 기본값으로 성공(2xx) 시 res.data에 JSON이 반환됨
+                const json = res.data;
 
                 const subscribedGroupIds: number[] = Array.isArray(json)
                     ? (json as GroupSubscriptionDto[])
