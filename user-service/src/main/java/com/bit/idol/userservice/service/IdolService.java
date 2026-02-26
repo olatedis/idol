@@ -70,6 +70,12 @@ public class IdolService {
         return IdolDto.fromEntity(idol);
     }
 
+    public IdolDto getIdolByUserId(int userId) {
+        Idol idol = idolRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Idol not found for user: " + userId));
+        return IdolDto.fromEntity(idol);
+    }
+
     public List<IdolDto> getAllIdols() {
         // N+1 문제 해결을 위해 Fetch Join 사용
         return idolRepository.findAllWithDetails().stream()
@@ -97,7 +103,7 @@ public class IdolService {
                     .profileImage(idol.getUser().getImgUrl())
                     .status(idol.getStatus().name())
                     .build();
-            
+
             String message = objectMapper.writeValueAsString(event);
             kafkaTemplate.send("idol-events", message);
         } catch (Exception e) {
