@@ -62,7 +62,7 @@ public class PostService {
         return toResponse(saved);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PostResponse selectOne(Long postId, Integer userId, Role role) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
