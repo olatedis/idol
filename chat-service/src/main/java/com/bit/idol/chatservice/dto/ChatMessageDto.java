@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Data
@@ -21,7 +22,8 @@ public class ChatMessageDto {
     private String type; // TEXT, IMAGE, VIDEO, VOICE, TYPING, PIN, UNPIN, DELETE, REACTION
     private String parentId; // 답장할 메시지 ID
     private Map<String, Integer> reactions; // 반응 (좋아요 등)
-    
+    private LocalDateTime createdAt; // 발송 시간 추가
+
     // 조회 시점에 계산되는 필드
     private boolean isMe; // 내가 보낸 메시지인지 여부
 }

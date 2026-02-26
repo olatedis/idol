@@ -44,9 +44,6 @@ eureka:
   instance:
     prefer-ip-address: true
 
-toss:
-  secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R
-
 # Toss Payments 설정
 toss:
   secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R

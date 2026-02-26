@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Header from '../../main/Header';
+import Header from '../main/Header';
 import { getIdol } from '../../api/payment';
 
 const IdolSubscribe: React.FC = () => {

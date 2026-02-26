@@ -26,7 +26,9 @@ interface ChatMessage {
     senderNickname: string;
     content: string;
     type: string;
+    parentId?: string | null;
     createdAt?: string;
+    me?: boolean;
 }
 
 const ChatPage: React.FC = () => {
@@ -111,10 +113,11 @@ const ChatPage: React.FC = () => {
         // 1. 기존 내역 및 온라인 상태 페치
         const fetchHistoryAndStatus = async () => {
             try {
-                // 병렬 요청
+                // 병렬 요청 (읽음 처리 포함)
                 const [histRes, statusRes] = await Promise.all([
                     api.get(`/chat/history/${selectedIdolId}`),
-                    api.get(`/chat/status/${selectedIdolId}`)
+                    api.get(`/chat/status/${selectedIdolId}`),
+                    api.post(`/chat/read/${selectedIdolId}`)
                 ]);
 
                 // 메시지 이력 세팅
@@ -124,6 +127,11 @@ const ChatPage: React.FC = () => {
 
                 // 온라인 상태 세팅
                 setIsIdolOnline(statusRes.data.online === true);
+
+                // 로컬 방 목록의 안 읽은 개수도 0으로 초기화
+                setChatRooms(prev => prev.map(room =>
+                    room.idolId === selectedIdolId ? { ...room, unreadCount: 0 } : room
+                ));
             } catch (err) {
                 console.error("채팅 내역/상태 불러오기 실패:", err);
             }
@@ -144,7 +152,17 @@ const ChatPage: React.FC = () => {
                 // 해당 아이돌 구독 채널
                 client.subscribe(`/sub/idol/${selectedIdolId}`, (message) => {
                     const parsed: ChatMessage = JSON.parse(message.body);
-                    setMessages((prev) => [...prev, parsed]);
+
+                    // 내가 보낸 메시지가 에코되어 돌아올 경우 렌더링 중복 방지 (Optimistic UI와 충돌 방지)
+                    if (String(parsed.senderId) === String(user.userId)) {
+                        return; // 이미 화면에 그렸으므로 무시
+                    }
+
+                    setMessages((prev) => {
+                        // 혹시 모를 중복 ID 제거 (동일한 메시지 ID가 이미 있으면 추가 안 함)
+                        if (parsed.id && prev.some(m => m.id === parsed.id)) return prev;
+                        return [...prev, parsed];
+                    });
                     setTimeout(scrollToBottom, 100);
                 });
 
@@ -168,9 +186,9 @@ const ChatPage: React.FC = () => {
 
         // 클린업: 언마운트 혹은 다른 방 선택 시 연결 해제
         return () => {
-            if (client.active) {
-                client.deactivate();
-            }
+            // React StrictMode의 빠른 마운트/언마운트 사이클에서
+            // client.active가 true가 되기 전에 cleanup이 불리는 것을 방지하기 위해 무조건 비활성화 호출
+            client.deactivate();
         };
     }, [selectedIdolId, user]);
 
@@ -190,8 +208,10 @@ const ChatPage: React.FC = () => {
                 body: JSON.stringify(payload)
             });
 
-            // 내 메시지 즉각 반영 (Optimistic UI - 버블 스타일은 내 메시지가 나에게 에코되지 않음)
+            // 내 메시지 즉각 반영 (Optimistic UI)
+            const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             setMessages(prev => [...prev, {
+                id: tempId, // 고유 임시 ID 부여 (React List Key 에러 방지)
                 idolId: selectedIdolId,
                 senderId: user.userId,
                 senderRole: user.role,
@@ -331,9 +351,12 @@ const ChatPage: React.FC = () => {
 
                 {/* 메시지 렌더링 */}
                 {messages.map((msg, idx) => {
-                    const isMine = msg.senderId === user?.userId;
+                    // 서버가 던진 me: true 값을 최우선으로, 없으면 아이디 비교
+                    const isMine = msg.me === true || String(msg.senderId) === String(user?.userId);
+                    const msgKey = msg.id ? msg.id : `msg-${idx}-${msg.createdAt || Date.now()}`;
+
                     return (
-                        <div key={msg.id || idx} className={`flex ${isMine ? 'justify-end' : 'justify-start'} shrink-0 transform transition-all`}>
+                        <div key={msgKey} className={`flex ${isMine ? 'justify-end' : 'justify-start'} shrink-0 transform transition-all`}>
                             {!isMine && (
                                 <div className="w-8 h-8 rounded-full bg-gray-200 mr-2 overflow-hidden shrink-0 border border-gray-300">
                                     {chatRooms.find(r => r.idolId === selectedIdolId)?.profileImage ? (
