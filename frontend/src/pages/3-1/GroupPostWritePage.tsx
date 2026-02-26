@@ -1,8 +1,8 @@
-import { Editor } from "@toast-ui/react-editor";
-import React, { useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { api } from "../../api/axios"; // ✅ axios 인스턴스 사용 (baseURL/토큰/리프레시 자동)
-import { useAuthStore } from "../../stores/authStore"; // ✅ 로그인 UI 체크용 (선택)
+import {Editor} from "@toast-ui/react-editor";
+import React, {useMemo, useRef, useState} from "react";
+import {useNavigate, useParams, useSearchParams} from "react-router-dom";
+import {api} from "../../api/axios";
+import {useAuthStore} from "../../stores/authStore";
 
 type BoardKind = "official" | "fan";
 
@@ -19,7 +19,7 @@ function resolveBoardType(type: BoardKind): string {
 }
 
 const GroupPostWritePage: React.FC = () => {
-    const { groupId } = useParams();
+    const {groupId} = useParams();
     const [sp] = useSearchParams();
     const navigate = useNavigate();
 
@@ -33,19 +33,18 @@ const GroupPostWritePage: React.FC = () => {
 
     const editorRef = useRef<Editor>(null);
 
-    const { accessToken } = useAuthStore();
+    const {accessToken} = useAuthStore();
 
     const onSubmit = async () => {
         setError("");
 
-        const gid = Number(groupId);
-        if (!Number.isFinite(gid)) {
-            setError("잘못된 접근입니다. (groupId 없음)");
+        if (!accessToken) {
+            setError("로그인이 필요합니다.");
             return;
         }
 
-        if (!accessToken) {
-            setError("로그인이 필요합니다.");
+        if (!groupId) {
+            setError("잘못된 접근입니다. (groupId 없음)");
             return;
         }
 
@@ -66,7 +65,7 @@ const GroupPostWritePage: React.FC = () => {
         const req: PostWriteRequest = {
             boardType,
             idolId: null,
-            groupId: gid,
+            groupId: Number(groupId),
             title: title.trim(),
             content: html,
         };
@@ -78,12 +77,13 @@ const GroupPostWritePage: React.FC = () => {
             // api(axios)가 baseURL과 Authorization을 자동 처리
             const res = await api.post("/board/posts", req);
 
-            const newPostId = (res.data as any)?.postId;
+            const json = res.data as any;
+            const newPostId = json?.postId;
 
             if (typeof newPostId === "number") {
-                navigate(`../${newPostId}`);
+                navigate(`/group/${groupId}/board/${newPostId}`);
             } else {
-                navigate(`../`);
+                navigate(`/group/${groupId}/board`);
             }
         } catch (e: any) {
             const status = e?.response?.status;

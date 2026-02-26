@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import React, {useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate, useParams, useSearchParams} from "react-router-dom";
+import {useAuthStore} from "../../stores/authStore";
+import {api} from "../../api/axios";
 
 type BoardKind = "official" | "fan" | "notice";
 
@@ -20,8 +22,6 @@ type PostListResponse = {
     updatedAt: string;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 function resolveBoardType(type: BoardKind): string {
     if (type === "notice") return "ADMIN_NOTICE";
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
@@ -30,9 +30,11 @@ function resolveBoardType(type: BoardKind): string {
 const PAGE_SIZE = 20;
 
 const GroupBoardPage: React.FC = () => {
-    const { groupId } = useParams();
+    const {groupId} = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
+
+    const {accessToken} = useAuthStore();
 
     // URL 상태 (필터/정렬/검색만 유지)
     const board = (sp.get("type") as BoardKind) || "official";
@@ -52,21 +54,16 @@ const GroupBoardPage: React.FC = () => {
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-    // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
-    const accessToken = localStorage.getItem("accessToken");
-
     // 필터 버튼
     const leftFilters = useMemo(() => {
         return [
-            { label: "그룹 공식", type: "official" as BoardKind },
-            { label: "그룹 팬", type: "fan" as BoardKind }, // [CHANGED] 팬 게시판 통합(GROUP_FAN)
-            { label: "공지", type: "notice" as BoardKind },
+            {label: "그룹 공식", type: "official" as BoardKind},
+            {label: "그룹 팬", type: "fan" as BoardKind},
+            {label: "공지", type: "notice" as BoardKind},
         ];
     }, []);
 
-    const isActiveFilter = (f: { type: BoardKind }) => {
-        return board === f.type;
-    };
+    const isActiveFilter = (f: { type: BoardKind }) => board === f.type;
 
     const resetInfinite = () => {
         setPosts([]);
@@ -102,69 +99,51 @@ const GroupBoardPage: React.FC = () => {
 
     // 무한스크롤용 번호 계산
     const rowNo = (idx: number) => {
-        if (typeof totalElements === "number") {
-            return totalElements - idx;
-        }
+        if (typeof totalElements === "number") return totalElements - idx;
         return posts.length - idx;
     };
 
-    // page 단위 fetch (append)
-    const fetchPage = async (nextPage: number, signal?: AbortSignal) => {
+    const fetchPage = async (nextPage: number) => {
         const boardType = resolveBoardType(board);
 
-        if (!API_BASE_URL) return;
+        const params: any = {
+            boardType,
+            page: nextPage,
+            size: PAGE_SIZE,
+            sort: sort === "top" ? "likeCount,desc" : "createdAt,desc",
+        };
 
-        const params = new URLSearchParams();
-        params.set("boardType", boardType);
-        params.set("page", String(nextPage));
-        params.set("size", String(PAGE_SIZE));
-
-        if (sort === "top") params.set("sort", "likeCount,desc");
-        else params.set("sort", "createdAt,desc");
-
-        if (boardType.startsWith("GROUP_") && groupId) params.set("groupId", groupId);
+        if (boardType.startsWith("GROUP_") && groupId) params.groupId = groupId;
 
         // TODO: search-service 연동 시 처리
-        // if (q) params.set("q", q);
+        // if (q) params.q = q;
 
-        const url = `${API_BASE_URL}/board/posts?${params.toString()}`;
-
-        const res = await fetch(url, { signal });
-        if (!res.ok) throw new Error("게시글 조회 실패");
-
-        const data = await res.json();
+        const res = await api.get("/board/posts", {params});
+        const data = res.data as any;
         const content = (data.content ?? []) as PostListResponse[];
 
-        if (nextPage === 0) {
-            setPosts(content);
-        } else {
-            setPosts((prev) => [...prev, ...content]);
-        }
+        if (nextPage === 0) setPosts(content);
+        else setPosts((prev) => [...prev, ...content]);
 
-        if (typeof data.totalElements === "number") {
-            setTotalElements(data.totalElements);
-        }
+        if (typeof data.totalElements === "number") setTotalElements(data.totalElements);
 
         const last = Boolean(data.last);
         setHasMore(!last && content.length > 0);
     };
 
-    // 첫 페이지 로드(필터/정렬/검색 변경 시 0페이지부터 다시)
+    // 첫 페이지 로드
     useEffect(() => {
-        const controller = new AbortController();
-
         const run = async () => {
             setError("");
-
             try {
                 setLoading(true);
                 setLoadingMore(false);
 
                 resetInfinite();
-                await fetchPage(0, controller.signal);
+                await fetchPage(0);
             } catch (e: any) {
-                if (e?.name === "AbortError") return;
-                setError(e?.message || "게시글 조회 실패");
+                const msg = e?.response?.data?.message || e?.message || "게시글 조회 실패";
+                setError(msg);
                 setPosts([]);
                 setHasMore(false);
             } finally {
@@ -173,24 +152,22 @@ const GroupBoardPage: React.FC = () => {
         };
 
         run();
-        return () => controller.abort();
-    }, [API_BASE_URL, board, sort, groupId, q]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [board, sort, groupId, q]);
 
     // page가 증가하면 다음 페이지 append 로드
     useEffect(() => {
         if (page === 0) return;
         if (!hasMore) return;
 
-        const controller = new AbortController();
-
         const run = async () => {
             setError("");
             try {
                 setLoadingMore(true);
-                await fetchPage(page, controller.signal);
+                await fetchPage(page);
             } catch (e: any) {
-                if (e?.name === "AbortError") return;
-                setError(e?.message || "추가 로딩 실패");
+                const msg = e?.response?.data?.message || e?.message || "추가 로딩 실패";
+                setError(msg);
                 setHasMore(false);
             } finally {
                 setLoadingMore(false);
@@ -198,7 +175,7 @@ const GroupBoardPage: React.FC = () => {
         };
 
         run();
-        return () => controller.abort();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, hasMore]);
 
     useEffect(() => {
@@ -215,24 +192,18 @@ const GroupBoardPage: React.FC = () => {
 
                 setPage((prev) => prev + 1);
             },
-            { root: null, rootMargin: "200px", threshold: 0 }
+            {root: null, rootMargin: "200px", threshold: 0}
         );
 
         io.observe(el);
         return () => io.disconnect();
     }, [hasMore, loading, loadingMore]);
 
-    const scrollTop = () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    };
+    const scrollTop = () => window.scrollTo({top: 0, behavior: "smooth"});
 
-    // 토큰 없으면 이동 차단
     const requireLoginOrStop = () => {
         if (accessToken) return true;
-
         alert("로그인이 필요합니다.");
-        // TODO: 로그인 페이지로 이동
-        // navigate("/login");
         return false;
     };
 
@@ -243,7 +214,6 @@ const GroupBoardPage: React.FC = () => {
 
     const onClickWrite = () => {
         if (!requireLoginOrStop()) return;
-
         navigate(`./write?type=${board}`);
     };
 
@@ -297,8 +267,10 @@ const GroupBoardPage: React.FC = () => {
 
             {/* 검색창 */}
             <div className="flex justify-center">
-                <div className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
-                    <select defaultValue="title" className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
+                <div
+                    className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
+                    <select defaultValue="title"
+                            className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
                         <option value="title">제목</option>
                         <option value="title_content">제목+내용</option>
                         <option value="content">내용</option>
@@ -328,7 +300,8 @@ const GroupBoardPage: React.FC = () => {
 
             {/* 게시글 리스트 */}
             <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                <div className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                <div
+                    className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
                     <div className="text-left">번호</div>
                     <div className="text-left">제목</div>
                     <div className="text-left">작성자</div>
@@ -337,7 +310,9 @@ const GroupBoardPage: React.FC = () => {
                     <div className="text-right">좋아요</div>
                 </div>
 
-                {!loading && posts.length === 0 && <div className="px-4 py-6 text-sm text-gray-600">게시글이 없습니다.</div>}
+                {!loading && posts.length === 0 && (
+                    <div className="px-4 py-6 text-sm text-gray-600">게시글이 없습니다.</div>
+                )}
 
                 {!loading &&
                     posts.map((p, idx) => (
@@ -372,7 +347,7 @@ const GroupBoardPage: React.FC = () => {
             </div>
 
             {/* 무한스크롤 sentinel */}
-            <div ref={sentinelRef} className="h-10" />
+            <div ref={sentinelRef} className="h-10"/>
 
             {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
             {!loading && !loadingMore && posts.length > 0 && !hasMore && (

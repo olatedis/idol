@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, {useEffect, useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
+import {useAuthStore} from "../../stores/authStore";
+import {api} from "../../api/axios";
 
 type CommentResponse = {
     commentId: number;
@@ -41,11 +43,11 @@ type PostReactionResponse = {
     myReaction: string;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 const GroupPostDetailPage: React.FC = () => {
-    const { postId } = useParams();
+    const {postId} = useParams();
     const navigate = useNavigate();
+
+    const {accessToken} = useAuthStore();
 
     const [data, setData] = useState<PostResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -56,34 +58,12 @@ const GroupPostDetailPage: React.FC = () => {
 
     const [reacting, setReacting] = useState(false);
 
-    // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
-    const accessToken = localStorage.getItem("accessToken");
+    const fetchDetail = async () => {
+        if (!postId) throw new Error("postId가 없습니다.");
+        if (!accessToken) throw new Error("로그인이 필요합니다.");
 
-    const fetchDetail = async (signal?: AbortSignal) => {
-        if (!API_BASE_URL) {
-            throw new Error("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
-        }
-        if (!postId) {
-            throw new Error("postId가 없습니다.");
-        }
-        if (!accessToken) {
-            // 상세 GET은 토큰 필수 정책
-            throw new Error("로그인이 필요합니다.");
-        }
-
-        const res = await fetch(`${API_BASE_URL}/board/posts/${postId}`, {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-            },
-            signal,
-        });
-
-        if (res.status === 401) throw new Error("로그인이 필요합니다.");
-        if (res.status === 403) throw new Error("권한이 없습니다. (구독 필요 또는 접근 불가)");
-        if (!res.ok) throw new Error("게시글 상세 조회 실패");
-
-        const json = (await res.json()) as PostResponse;
+        const res = await api.get(`/board/posts/${postId}`);
+        const json = res.data as PostResponse;
 
         return {
             ...json,
@@ -93,8 +73,6 @@ const GroupPostDetailPage: React.FC = () => {
     };
 
     useEffect(() => {
-        const controller = new AbortController();
-
         const run = async () => {
             setError("");
 
@@ -112,11 +90,13 @@ const GroupPostDetailPage: React.FC = () => {
 
             try {
                 setLoading(true);
-                const detail = await fetchDetail(controller.signal);
+                const detail = await fetchDetail();
                 setData(detail);
             } catch (e: any) {
-                if (e?.name === "AbortError") return;
-                setError(e?.message || "게시글 상세 조회 실패");
+                const status = e?.response?.status;
+                if (status === 401) setError("로그인이 필요합니다.");
+                else if (status === 403) setError("권한이 없습니다. (구독 필요 또는 접근 불가)");
+                else setError(e?.response?.data?.message || e?.message || "게시글 상세 조회 실패");
                 setData(null);
             } finally {
                 setLoading(false);
@@ -124,12 +104,11 @@ const GroupPostDetailPage: React.FC = () => {
         };
 
         run();
-        return () => controller.abort();
-    }, [API_BASE_URL, postId, accessToken]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [postId, accessToken]);
 
     const onClickLike = async () => {
         if (!data) return;
-        if (!API_BASE_URL) return;
         if (!postId) return;
 
         if (!accessToken) {
@@ -138,24 +117,12 @@ const GroupPostDetailPage: React.FC = () => {
         }
 
         if (reacting) return;
-
         setReacting(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/like`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
+            const res = await api.post(`/board/posts/${postId}/like`);
+            const json = res.data as PostReactionResponse;
 
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("추천 처리 실패");
-
-            const json = (await res.json()) as PostReactionResponse;
-
-            // 서버 응답으로 동기화
             setData((prev) => {
                 if (!prev) return prev;
                 return {
@@ -166,7 +133,10 @@ const GroupPostDetailPage: React.FC = () => {
                 };
             });
         } catch (e: any) {
-            alert(e?.message || "추천 처리 실패");
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "추천 처리 실패");
         } finally {
             setReacting(false);
         }
@@ -174,7 +144,6 @@ const GroupPostDetailPage: React.FC = () => {
 
     const onClickDislike = async () => {
         if (!data) return;
-        if (!API_BASE_URL) return;
         if (!postId) return;
 
         if (!accessToken) {
@@ -183,24 +152,12 @@ const GroupPostDetailPage: React.FC = () => {
         }
 
         if (reacting) return;
-
         setReacting(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/dislike`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
+            const res = await api.post(`/board/posts/${postId}/dislike`);
+            const json = res.data as PostReactionResponse;
 
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("비추천 처리 실패");
-
-            const json = (await res.json()) as PostReactionResponse;
-
-            // 서버 응답으로 동기화
             setData((prev) => {
                 if (!prev) return prev;
                 return {
@@ -211,7 +168,10 @@ const GroupPostDetailPage: React.FC = () => {
                 };
             });
         } catch (e: any) {
-            alert(e?.message || "비추천 처리 실패");
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "비추천 처리 실패");
         } finally {
             setReacting(false);
         }
@@ -219,7 +179,6 @@ const GroupPostDetailPage: React.FC = () => {
 
     const onSubmitComment = async () => {
         if (!data) return;
-        if (!API_BASE_URL) return;
         if (!postId) return;
 
         if (!commentInput.trim()) return;
@@ -230,24 +189,12 @@ const GroupPostDetailPage: React.FC = () => {
         }
 
         if (submittingComment) return;
-
         setSubmittingComment(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/comments`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify({
-                    content: commentInput.trim(),
-                }),
+            await api.post(`/board/posts/${postId}/comments`, {
+                content: commentInput.trim(),
             });
-
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("댓글 작성 실패");
 
             setCommentInput("");
 
@@ -255,7 +202,10 @@ const GroupPostDetailPage: React.FC = () => {
             const detail = await fetchDetail();
             setData(detail);
         } catch (e: any) {
-            alert(e?.message || "댓글 작성 실패");
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "댓글 작성 실패");
         } finally {
             setSubmittingComment(false);
         }
@@ -285,7 +235,7 @@ const GroupPostDetailPage: React.FC = () => {
 
                 <div className="px-6 py-5 border-t border-gray-100">
                     {/* content는 HTML 저장이므로 렌더링 */}
-                    <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{ __html: data.content }} />
+                    <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{__html: data.content}}/>
 
                     <div className="mt-8 flex justify-center gap-10">
                         <button
