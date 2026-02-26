@@ -44,6 +44,11 @@ api.interceptors.response.use(
         const axiosError = error as AxiosError;
         const originalRequest = axiosError.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+        // 로그인이나 재발급 요청에서 발생한 401은 인터셉터 처리를 패스하고 바로 에러 던짐
+        if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/reissue')) {
+            return Promise.reject(error);
+        }
+
         if (axiosError.response?.status === 401 && originalRequest && !originalRequest._retry) {
             if (isRefreshing) {
                 return new Promise((resolve) => {
