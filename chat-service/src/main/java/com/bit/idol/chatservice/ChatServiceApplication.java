@@ -17,6 +17,6 @@ public class ChatServiceApplication {
 
     @PostConstruct
     public void init() {
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
     }
 }
