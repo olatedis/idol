@@ -7,6 +7,7 @@ import com.bit.concertservice.domain.dto.ConcertUpdateRequest;
 import com.bit.concertservice.domain.entity.Concert;
 import com.bit.concertservice.domain.entity.Seat;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,7 @@ import java.util.List;
 @AllArgsConstructor
 @RestController
 @RequestMapping("/concerts")
+@Slf4j
 public class ConcertController {
 
     private final ConcertQueryService concertQueryService;
@@ -78,6 +80,7 @@ public class ConcertController {
     @GetMapping
     public List<Concert> concerts(@RequestParam(name = "groupId", required = false) Integer groupId) {
         if (groupId == null) return concertQueryService.getConcerts();
+        log.info(String.valueOf(groupId));
         return concertQueryService.getConcertsByGroup(groupId);
     }
 

@@ -51,7 +51,7 @@ const ConcertPage: React.FC = () => {
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-    // TODO: replace with Zustand store when login flow is unified
+    // access token may be used for protected requests
     const accessToken = localStorage.getItem("accessToken");
 
     const resetInfinite = () => {
@@ -75,18 +75,35 @@ const ConcertPage: React.FC = () => {
         params.set("sort", "date,desc");
         if (groupId) params.set("groupId", groupId);
 
-        const url = `${API_BASE_URL}/concerts?${params.toString()}`;
+        // build query string
+        let url = `${API_BASE_URL}/concerts`;
+        const qs = params.toString();
+        if (qs) url += `?${qs}`;
         const res = await fetch(url, { signal });
         if (!res.ok) throw new Error("콘서트 목록 조회 실패");
 
         const data = await res.json();
-        const content = (data.content ?? []) as ConcertDto[];
+        let content: ConcertDto[] = [];
+        let last = true;
 
-        if (nextPage === 0) setConcerts(content);
-        else setConcerts((prev) => [...prev, ...content]);
+        if (Array.isArray(data)) {
+            // backend returned simple list
+            content = data as ConcertDto[];
+            last = true;
+        } else {
+            content = (data.content ?? []) as ConcertDto[];
+            last = Boolean(data.last);
+            if (typeof data.totalElements === "number") {
+                setTotalElements(data.totalElements);
+            }
+        }
 
-        if (typeof data.totalElements === "number") setTotalElements(data.totalElements);
-        const last = Boolean(data.last);
+        if (nextPage === 0) {
+            setConcerts(content);
+        } else {
+            setConcerts((prev) => [...prev, ...content]);
+        }
+
         setHasMore(!last && content.length > 0);
     };
 
