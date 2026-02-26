@@ -47,7 +47,7 @@ public class AuthController {
         if (code == null || code.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        
+
         Map<String, String> tokens = socialAuthService.loginKakao(code);
         log.info("카카오 로그인 성공");
         return ResponseEntity.ok(tokens);
@@ -73,7 +73,8 @@ public class AuthController {
     // --- 이메일 인증 API ---
 
     @PostMapping("/email/send")
-    public ResponseEntity<String> sendEmail(@RequestBody Map<String, String> request, HttpServletRequest servletRequest) {
+    public ResponseEntity<String> sendEmail(@RequestBody Map<String, String> request,
+            HttpServletRequest servletRequest) {
         String clientIp = getClientIp(servletRequest);
         Bucket bucket = rateLimiterService.resolveBucket(clientIp);
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
@@ -102,7 +103,8 @@ public class AuthController {
     // --- 비밀번호 재설정 API ---
 
     @PostMapping("/password/reset-request")
-    public ResponseEntity<String> requestPasswordReset(@RequestBody Map<String, String> request, HttpServletRequest servletRequest) {
+    public ResponseEntity<String> requestPasswordReset(@RequestBody Map<String, String> request,
+            HttpServletRequest servletRequest) {
         String clientIp = getClientIp(servletRequest);
         Bucket bucket = rateLimiterService.resolveBucket(clientIp);
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
@@ -132,7 +134,7 @@ public class AuthController {
         Map<String, String> resetRequest = new HashMap<>();
         resetRequest.put("email", email);
         resetRequest.put("newPassword", newPassword);
-        
+
         int userId = userFeignClient.resetPassword(resetRequest);
 
         redisTemplate.delete("RT:" + userId);
@@ -155,5 +157,12 @@ public class AuthController {
             ip = request.getRemoteAddr();
         }
         return ip;
+    }
+
+    // Refresh Token 오류 시 401 반환 처리
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
+        log.error("Auth Error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ex.getMessage());
     }
 }
