@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import Header from "../../main/Header";
+import { useAuthStore } from "../../stores/authStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 20;
@@ -23,6 +23,23 @@ type ConcertDto = {
 const ConcertPage: React.FC = () => {
     const { groupId } = useParams<{ groupId?: string }>();
     const navigate = useNavigate();
+
+    const { user } = useAuthStore();
+    const accessToken = useAuthStore.getState().accessToken;
+
+    // helper to format ISO date string as KST
+    const formatKST = (iso?: string) => {
+        if (!iso) return "";
+        const d = new Date(iso);
+        const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+        return kst.toLocaleString("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
 
     const [concerts, setConcerts] = useState<ConcertDto[]>([]);
     const [loading, setLoading] = useState(false);
@@ -167,8 +184,23 @@ const ConcertPage: React.FC = () => {
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center flex-wrap gap-2">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+            <main className="pt-[100px] px-6 pb-12 max-w-7xl mx-auto relative z-10">
+                {/* 탭 제목 영역 (그룹/전체) */}
+                <div className="mb-8">
+                    <h1 className="text-3xl font-black text-gray-800">콘서트 예매소</h1>
+                    <p className="text-gray-500 mt-2 font-medium">
+                        {groupId ? "우리 그룹의 콘서트를 확인하세요" : "모든 그룹의 등록된 콘서트를 확인하세요"}
+                    </p>
+                </div>
+
+                {/* 배경 장식 */}
+                <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+                <div className="absolute top-20 right-10 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+                <div className="absolute -bottom-8 left-40 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center flex-wrap gap-2">
                 <div className="text-lg font-semibold text-gray-900">콘서트 예매</div>
 
                 <div className="flex gap-2">
@@ -180,18 +212,20 @@ const ConcertPage: React.FC = () => {
                         ↑
                     </button>
 
-                    <button
-                        type="button"
-                        onClick={onClickCreate}
-                        className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8]"
-                    >
-                        콘서트 등록
-                    </button>
+                    {user?.role === 'AGENCY' && (
+                        <button
+                            type="button"
+                            onClick={onClickCreate}
+                            className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8]"
+                        >
+                            콘서트 등록
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
-            {error && <div className="text-sm text-red-600">{error}</div>}
+                {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
+                {error && <div className="text-sm text-red-600">{error}</div>}
 
             <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
                 <div className="grid grid-cols-[90px_1fr_160px_140px_120px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
@@ -218,7 +252,7 @@ const ConcertPage: React.FC = () => {
                                 <div className="text-sm font-semibold text-gray-900 truncate">{c.title}</div>
                             </div>
                             <div className="text-sm text-gray-700">{c.venue}</div>
-                            <div className="text-sm text-gray-600">{c.date}</div>
+                            <div className="text-sm text-gray-600">{formatKST(c.date)}</div>
                             <div className="text-sm text-gray-700 text-right tabular-nums">{c.remainingTickets}/{c.totalTickets}</div>
                             <div className="text-right">
                                 <button
@@ -232,11 +266,13 @@ const ConcertPage: React.FC = () => {
                     ))}
             </div>
 
-            <div ref={sentinelRef} className="h-10" />
-            {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
-            {!loading && !loadingMore && concerts.length > 0 && !hasMore && (
-                <div className="text-sm text-gray-500 text-center py-2">마지막 콘서트입니다.</div>
-            )}
+                    <div ref={sentinelRef} className="h-10" />
+                    {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
+                    {!loading && !loadingMore && concerts.length > 0 && !hasMore && (
+                        <div className="text-sm text-gray-500 text-center py-2">마지막 콘서트입니다.</div>
+                    )}
+                </div>
+            </main>
         </div>
     );
 };
