@@ -80,15 +80,16 @@ public class ChatService {
 
         // 1. Redis 캐시 조회
         Object cachedData = redisTemplate.opsForValue().get(cacheKey);
-        
+
         if (cachedData != null) {
-            groupMembers = objectMapper.convertValue(cachedData, new TypeReference<List<IdolDto>>() {});
+            groupMembers = objectMapper.convertValue(cachedData, new TypeReference<List<IdolDto>>() {
+            });
         } else {
             // 2. 없으면 Feign 호출 및 캐싱 (TTL 1시간)
             groupMembers = userFeignClient.getIdolsByGroup(groupId);
             redisTemplate.opsForValue().set(cacheKey, groupMembers, Duration.ofHours(1));
         }
-        
+
         // 3. 실시간 데이터 조합
         return buildChatRoomList(userId, groupMembers);
     }
@@ -109,7 +110,7 @@ public class ChatService {
         Set<Integer> finalSubscribedIdolIds = subscribedIdolIds;
         return idols.stream().map(idol -> {
             Long idolId = (long) idol.getIdolId();
-            
+
             // 마지막 메시지 조회 (Redis 캐시 활용)
             Map<String, Object> preview = getChatPreview(idolId);
             String lastMessage = "";
@@ -128,13 +129,13 @@ public class ChatService {
             if (finalSubscribedIdolIds.contains(idol.getIdolId())) {
                 String totalCountKey = "chat:room:" + idolId + ":total_count";
                 String readCountKey = "chat:room:" + idolId + ":user:" + userId + ":last_read_count";
-                
+
                 Object totalObj = redisTemplate.opsForValue().get(totalCountKey);
                 Object readObj = redisTemplate.opsForValue().get(readCountKey);
-                
+
                 int total = totalObj != null ? Integer.parseInt(totalObj.toString()) : 0;
                 int read = readObj != null ? Integer.parseInt(readObj.toString()) : 0;
-                
+
                 unreadCount = Math.max(0, total - read);
             }
 
@@ -155,7 +156,7 @@ public class ChatService {
         log.error("채팅방 목록 조회 실패 (User Service 장애): {}", t.getMessage());
         return Collections.emptyList();
     }
-    
+
     // 오버로딩된 Fallback (파라미터 다름)
     public List<ChatRoomListDto> getChatRoomListFallback(int userId, int groupId, Throwable t) {
         log.error("그룹 채팅방 목록 조회 실패 (User Service 장애): {}", t.getMessage());
@@ -166,7 +167,7 @@ public class ChatService {
     public void markAsRead(int userId, Long idolId) {
         String totalCountKey = "chat:room:" + idolId + ":total_count";
         String readCountKey = "chat:room:" + idolId + ":user:" + userId + ":last_read_count";
-        
+
         Object totalObj = redisTemplate.opsForValue().get(totalCountKey);
         if (totalObj != null) {
             // 30일 TTL 적용
@@ -206,9 +207,9 @@ public class ChatService {
                 .createdAt(LocalDateTime.now())
                 .status("PENDING") // Outbox Pattern
                 .build();
-        
+
         ChatMessage savedMessage = chatRepository.save(chatMessage);
-        
+
         messageDto.setId(savedMessage.getId());
 
         // 3. Redis 캐싱 (TTL 적용)
@@ -229,16 +230,21 @@ public class ChatService {
         String totalCountKey = "chat:room:" + messageDto.getIdolId() + ":total_count";
         redisTemplate.opsForValue().increment(totalCountKey);
         redisTemplate.expire(totalCountKey, Duration.ofDays(30)); // 30일 TTL
+
+        // 내가 보낸 메시지는 바로 읽음 처리 (안 읽은 메시지 버그 방지)
+        if ("USER".equals(messageDto.getSenderRole())) {
+            markAsRead(messageDto.getSenderId(), messageDto.getIdolId());
+        }
         // ----------------------------------------
 
         // 4. Kafka로 전송 (성공 시 SENT 업데이트)
         try {
             chatProducer.sendChatMessage(messageDto);
-            
+
             // 전송 성공 -> 상태 업데이트
             savedMessage.setStatus("SENT");
             chatRepository.save(savedMessage);
-            
+
             log.info("메시지 처리 완료: room={}, id={}", messageDto.getIdolId(), savedMessage.getId());
         } catch (Exception e) {
             log.error("Kafka 전송 실패 (재전송 대기): {}", e.getMessage());
@@ -259,25 +265,25 @@ public class ChatService {
     public Map<String, Object> getChatPreview(Long idolId) {
         String previewKey = "chat:preview:" + idolId;
         Object data = redisTemplate.opsForValue().get(previewKey);
-        
+
         if (data != null) {
             return (Map<String, Object>) data;
         }
-        
+
         Pageable pageable = PageRequest.of(0, 1);
         List<ChatMessage> messages = chatRepository.findByIdolIdOrderByIdDesc(idolId, pageable);
-        
+
         if (!messages.isEmpty()) {
             ChatMessage lastMsg = messages.get(0);
             Map<String, Object> preview = new HashMap<>();
             preview.put("content", lastMsg.getContent());
             preview.put("sender", lastMsg.getSenderNickname());
             preview.put("time", lastMsg.getCreatedAt().toString());
-            
+
             redisTemplate.opsForValue().set(previewKey, preview, Duration.ofDays(7)); // 조회 시에도 TTL 갱신
             return preview;
         }
-        
+
         return null;
     }
 
@@ -290,7 +296,7 @@ public class ChatService {
         String pinKey = "chat:pin:" + idolId;
         ChatMessageDto pinDto = convertToDto(message);
         redisTemplate.opsForValue().set(pinKey, pinDto); // 공지는 영구 저장 (TTL 없음)
-        
+
         pinDto.setType("PIN");
         chatProducer.sendChatMessage(pinDto);
 
@@ -300,20 +306,20 @@ public class ChatService {
     public void unpinMessage(Long idolId) {
         String pinKey = "chat:pin:" + idolId;
         redisTemplate.delete(pinKey);
-        
+
         ChatMessageDto unpinEvent = ChatMessageDto.builder()
                 .idolId(idolId)
                 .type("UNPIN")
                 .build();
         chatProducer.sendChatMessage(unpinEvent);
-        
+
         log.info("공지사항 해제 완료: room={}", idolId);
     }
 
     public ChatMessageDto getPinnedMessage(Long idolId) {
         String pinKey = "chat:pin:" + idolId;
         Object data = redisTemplate.opsForValue().get(pinKey);
-        
+
         if (data != null) {
             return objectMapper.convertValue(data, ChatMessageDto.class);
         }
@@ -356,7 +362,7 @@ public class ChatService {
                         .redirectUrl("/chat/room/" + messageDto.getIdolId())
                         .occurredAt(LocalDateTime.now())
                         .build();
-                
+
                 notificationProducer.send(event);
             }
 
@@ -365,7 +371,7 @@ public class ChatService {
                     if (parentMsg.getSenderId() != messageDto.getSenderId()) {
                         Map<String, String> args = new HashMap<>();
                         args.put("replierName", messageDto.getSenderNickname());
-                        
+
                         NotificationEventDto event = NotificationEventDto.builder()
                                 .eventId(UUID.randomUUID().toString())
                                 .type("REPLY_MESSAGE")
@@ -375,7 +381,7 @@ public class ChatService {
                                 .redirectUrl("/chat/room/" + messageDto.getIdolId())
                                 .occurredAt(LocalDateTime.now())
                                 .build();
-                        
+
                         notificationProducer.send(event);
                     }
                 });
@@ -394,7 +400,7 @@ public class ChatService {
             reactions = new HashMap<>();
         }
         reactions.put(reactionType, reactions.getOrDefault(reactionType, 0) + 1);
-        
+
         ChatMessage updatedMessage = ChatMessage.builder()
                 .id(message.getId())
                 .idolId(message.getIdolId())
@@ -416,9 +422,9 @@ public class ChatService {
                 .type("REACTION")
                 .reactions(reactions)
                 .build();
-        
+
         chatProducer.sendChatMessage(reactionEvent);
-        
+
         log.info("반응 추가 완료: msgId={}, type={}", messageId, reactionType);
     }
 
@@ -442,7 +448,7 @@ public class ChatService {
                 .reactions(message.getReactions())
                 .createdAt(message.getCreatedAt())
                 .build();
-        
+
         chatRepository.save(deletedMessage);
 
         ChatMessageDto deleteEvent = ChatMessageDto.builder()
@@ -450,9 +456,9 @@ public class ChatService {
                 .idolId(idolId)
                 .type("DELETE")
                 .build();
-        
+
         chatProducer.sendChatMessage(deleteEvent);
-        
+
         log.info("메시지 삭제 처리 완료: id={}", messageId);
     }
 
@@ -477,7 +483,7 @@ public class ChatService {
         if (lastId == null) {
             String cacheKey = "chat:room:" + idolId;
             List<Object> cachedMessages = redisTemplate.opsForList().range(cacheKey, 0, size - 1);
-            
+
             if (cachedMessages != null && !cachedMessages.isEmpty()) {
                 List<ChatMessageDto> redisDtos = cachedMessages.stream()
                         .map(obj -> objectMapper.convertValue(obj, ChatMessageDto.class))
@@ -499,18 +505,30 @@ public class ChatService {
                 // 페이징 조회 (lastId 이전)
                 dbMessages = chatRepository.findByIdolIdAndIdLessThanOrderByIdDesc(idolId, lastId, pageable);
             }
-            
+
             List<ChatMessageDto> dbDtos = dbMessages.stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
-            
+
             result.addAll(dbDtos);
         }
-        
-        // 3. isMe 필드 설정
-        result.forEach(dto -> dto.setMe(dto.getSenderId() == userId));
-        
-        return result;
+
+        // 3. isMe 필드 설정 및 중복 제거 (프론트엔드 React key 에러 방지용 최후 방어선)
+        Set<String> seenIds = new HashSet<>();
+        List<ChatMessageDto> deduplicatedResult = new ArrayList<>();
+
+        for (ChatMessageDto dto : result) {
+            if (dto.getId() != null && seenIds.contains(dto.getId())) {
+                continue; // 이미 추가된 메시지면 무시
+            }
+            if (dto.getId() != null) {
+                seenIds.add(dto.getId());
+            }
+            dto.setMe(dto.getSenderId() == userId);
+            deduplicatedResult.add(dto);
+        }
+
+        return deduplicatedResult;
     }
 
     private ChatMessageDto convertToDto(ChatMessage entity) {
