@@ -51,7 +51,7 @@ const ConcertPage: React.FC = () => {
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-    // TODO: replace with Zustand store when login flow is unified
+    // access token may be used for protected requests
     const accessToken = localStorage.getItem("accessToken");
 
     const resetInfinite = () => {
@@ -75,7 +75,10 @@ const ConcertPage: React.FC = () => {
         params.set("sort", "date,desc");
         if (groupId) params.set("groupId", groupId);
 
-        const url = `${API_BASE_URL}/concerts`;
+        // build query string
+        let url = `${API_BASE_URL}/concerts`;
+        const qs = params.toString();
+        if (qs) url += `?${qs}`;
         const res = await fetch(url, { signal });
         if (!res.ok) throw new Error("콘서트 목록 조회 실패");
 
