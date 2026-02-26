@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import Header from "../main/Header";
 import { useAuthStore } from "../../stores/authStore";
 import { api } from "../../api/axios";
@@ -13,6 +13,9 @@ type GroupSubscriptionDto = {
 const GroupServicePage: React.FC = () => {
     const navigate = useNavigate();
     const { groupId } = useParams();
+    const location = useLocation();
+
+    const isChatRoute = location.pathname.endsWith("/chat");
 
     const [guardChecking, setGuardChecking] = useState(true);
 
@@ -98,9 +101,9 @@ const GroupServicePage: React.FC = () => {
         <div className="min-h-screen bg-white">
             <Header />
 
-            <div className="pt-[80px]">
+            <div className={`pt-[80px] ${isChatRoute ? 'h-[100dvh] flex flex-col' : ''}`}>
                 {/* 세미 헤더 */}
-                <div className="sticky top-[80px] z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow-[0_4px_30px_rgba(0,0,0,0.05)] pb-4 pt-2">
+                <div className={`${isChatRoute ? 'bg-white/80 backdrop-blur-md border-b border-gray-200/50 pb-4 pt-2 shrink-0' : 'sticky top-[80px] z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow-[0_4px_30px_rgba(0,0,0,0.05)] pb-4 pt-2'}`}>
                     <nav
                         className="
                         flex justify-center gap-2 sm:gap-4
@@ -118,7 +121,7 @@ const GroupServicePage: React.FC = () => {
                                         "text-sm sm:text-base font-bold tracking-wide",
                                         "rounded-full shadow-sm",
                                         isActive
-                                            ? "bg-gradient-to-r from-idol to-idol-dark text-white shadow-idol-point shadow-md ring-2 ring-idol-bg transform scale-105"
+                                            ? "bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] text-white shadow-md shadow-[var(--color-idol-point)]/30 ring-2 ring-[var(--color-idol-bg)] transform scale-105"
                                             : "bg-white text-gray-500 border border-gray-200 hover:bg-gray-50 hover:text-gray-800 hover:shadow-md hover:-translate-y-0.5",
                                     ].join(" ")
                                 }
@@ -130,7 +133,7 @@ const GroupServicePage: React.FC = () => {
                 </div>
 
                 {/* Content */}
-                <div className="max-w-6xl mx-auto px-4 py-6">
+                <div className={`max-w-6xl mx-auto px-4 w-full ${isChatRoute ? 'flex-1 flex flex-col py-0' : 'py-6'}`}>
                     <Outlet />
                 </div>
             </div>

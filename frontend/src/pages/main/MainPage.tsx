@@ -1,5 +1,5 @@
-import React, {useState, useEffect} from "react";
-import {motion} from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import Header from "./Header";
 import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../api/axios";
@@ -24,10 +24,10 @@ const MainPage: React.FC = () => {
     }, [location.state]);
 
     const fadeUp = {
-        initial: {opacity: 0, y: -80},
-        whileInView: {opacity: 1, y: 0},
-        transition: {duration: 0.8},
-        viewport: {once: true},
+        initial: { opacity: 0, y: -80 },
+        whileInView: { opacity: 1, y: 0 },
+        transition: { duration: 0.8 },
+        viewport: { once: true },
     };
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -42,6 +42,7 @@ const MainPage: React.FC = () => {
             console.log("로그인 응답:", response.data);
 
             const { accessToken, refreshToken, user } = response.data;
+            let userObj = user;
 
             if (!user) {
                 console.error("유저 정보가 없습니다! 백엔드 응답을 확인하세요.");
@@ -49,12 +50,35 @@ const MainPage: React.FC = () => {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 });
                 login(userRes.data, accessToken, refreshToken);
+                userObj = userRes.data;
             } else {
                 login(user, accessToken, refreshToken);
+                userObj = user;
             }
 
             showSuccessToast("로그인되었습니다."); // 예쁜 알림으로 변경
-            navigate("/idol");
+
+            // 권한 체크: IDOL일 경우 해당 아이돌의 그룹 정보 조회 후 라우팅
+            if (userObj.role === "IDOL") {
+                try {
+                    const idolInfoRes = await api.get("/idols/me", {
+                        headers: { Authorization: `Bearer ${accessToken}` }
+                    });
+                    const groupId = idolInfoRes.data.groupId;
+
+                    if (groupId) {
+                        navigate(`/group/${groupId}`);
+                    } else {
+                        // 그룹이 없는 아이돌일 경우 기본화면으로 가거나 다른 안내 처리
+                        navigate("/idol");
+                    }
+                } catch (err) {
+                    console.error("아이돌 정보 조회 실패:", err);
+                    navigate("/idol");
+                }
+            } else {
+                navigate("/idol");
+            }
 
         } catch (error) {
             console.error(error);
@@ -78,7 +102,7 @@ const MainPage: React.FC = () => {
 
     return (
         <div className="h-screen overflow-hidden">
-            <Header/>
+            <Header />
 
             <main className="h-full scrollbar-hide overflow-y-scroll snap-y snap-mandatory  bg-idol-bg">
 
@@ -89,23 +113,23 @@ const MainPage: React.FC = () => {
                         className="w-[80%] h-[50%] bg-white rounded-full content-center mt-[20%]  z-20">
                         <p className="transform text-3xl font-semibold leading-relaxed text-center mix-blend-multiply">
                             좋아하는 아이돌에게
-                            <br/>
+                            <br />
                             직접 <span className="text-idol">마음</span>을 전해보세요.
                         </p>
 
                     </motion.div>
                     <motion.div
-                        initial={{opacity: 0, y: -80, skewY: 25}}
-                        whileInView={{opacity: 1, y: 0, skewY: 25}}
-                        transition={{duration: 0.5}}
-                        viewport={{once: true}}
+                        initial={{ opacity: 0, y: -80, skewY: 25 }}
+                        whileInView={{ opacity: 1, y: 0, skewY: 25 }}
+                        transition={{ duration: 0.5 }}
+                        viewport={{ once: true }}
                         className="transform  w-full bg-idol-point p-4 mix-blend-normal z-30"
                     ></motion.div>
                     <motion.div
-                        initial={{opacity: 0, y: -80, skewY: -15}}
-                        whileInView={{opacity: 1, y: 0, skewY: -15}}
-                        transition={{duration: 0.5}}
-                        viewport={{once: true}}
+                        initial={{ opacity: 0, y: -80, skewY: -15 }}
+                        whileInView={{ opacity: 1, y: 0, skewY: -15 }}
+                        transition={{ duration: 0.5 }}
+                        viewport={{ once: true }}
                         className="transform mb-[10%]  w-full bg-idol-point p-4 mix-blend-normal z-10"
                     ></motion.div>
                 </section>
@@ -116,10 +140,10 @@ const MainPage: React.FC = () => {
 
                         {/* Image */}
                         <motion.div
-                            initial={{opacity: 0, y: -80, rotate: -15}}
-                            whileInView={{opacity: 1, y: 0, rotate: -15}}
-                            transition={{duration: 0.8}}
-                            viewport={{once: true}}
+                            initial={{ opacity: 0, y: -80, rotate: -15 }}
+                            whileInView={{ opacity: 1, y: 0, rotate: -15 }}
+                            transition={{ duration: 0.8 }}
+                            viewport={{ once: true }}
                             className="w-1/2 h-72 max-w-[350px]  bg-idol-point z-20"
                         />
 
@@ -131,18 +155,18 @@ const MainPage: React.FC = () => {
                             <p className="text-xl font-semibold mb-4 z-20">채팅에 대한 설명</p>
                             <p className="text-sm text-gray-600 leading-relaxed z-20">
                                 설명 조금 더
-                                <br/>
+                                <br />
                                 하고싶은 설명이 있다면 여기에 더 쓸 수 있습니다.
-                                <br/>
+                                <br />
                                 조금 더 긴 버전
                             </p>
                         </motion.div>
                     </div>
                     <motion.div
-                        initial={{opacity: 0, y: -80, skewY: 10}}
-                        whileInView={{opacity: 1, y: 0, skewY: 10}}
-                        transition={{duration: 0.5}}
-                        viewport={{once: true}}
+                        initial={{ opacity: 0, y: -80, skewY: 10 }}
+                        whileInView={{ opacity: 1, y: 0, skewY: 10 }}
+                        transition={{ duration: 0.5 }}
+                        viewport={{ once: true }}
                         className="transform  w-full bg-idol-point p-4 mix-blend-normal z-10"
                     ></motion.div>
                 </section>
@@ -159,19 +183,19 @@ const MainPage: React.FC = () => {
                             <p className="text-xl font-semibold mb-4">게시판에 대한 설명</p>
                             <p className="text-sm text-gray-600 leading-relaxed">
                                 설명 조금 더
-                                <br/>
+                                <br />
                                 필요하면 여기에 더 적을 수 있습니다.
-                                <br/>
+                                <br />
                                 조금 더
                             </p>
                         </motion.div>
 
                         {/* Image */}
                         <motion.div
-                            initial={{opacity: 0, y: -80, rotate: 15}}
-                            whileInView={{opacity: 1, y: 0, rotate: 15}}
-                            transition={{duration: 0.8}}
-                            viewport={{once: true}}
+                            initial={{ opacity: 0, y: -80, rotate: 15 }}
+                            whileInView={{ opacity: 1, y: 0, rotate: 15 }}
+                            transition={{ duration: 0.8 }}
+                            viewport={{ once: true }}
                             className="w-1/2 h-72  max-w-[350px] bg-idol-point"
                         />
                     </div>
@@ -180,10 +204,10 @@ const MainPage: React.FC = () => {
                 {/* Slide 4 (Login) */}
                 <section id="login-section" className="h-screen snap-end flex flex-col items-center content-center">
                     <motion.div
-                        initial={{opacity: 0, y: -80, skewY: 15}}
-                        whileInView={{opacity: 1, y: 0, skewY: 15}}
-                        transition={{duration: 0.5}}
-                        viewport={{once: true}}
+                        initial={{ opacity: 0, y: -80, skewY: 15 }}
+                        whileInView={{ opacity: 1, y: 0, skewY: 15 }}
+                        transition={{ duration: 0.5 }}
+                        viewport={{ once: true }}
                         className="transform mt-[15%] w-full bg-idol-point p-4 mix-blend-normal z-30"
                     ></motion.div>
                     <div className="w-[80%] h-1/2  p-3 content-start bg-white rounded-full z-20">
@@ -197,19 +221,19 @@ const MainPage: React.FC = () => {
                             <div className="w-full justify-center items-center">
                                 <form onSubmit={handleLogin} className="flex flex-col items-center mt-6">
                                     <input type="text"
-                                           id="username"
-                                           name="username"
-                                           placeholder="아이디를 입력하세요."
-                                           onChange={(e) => setUsername(e.target.value)}
-                                           className="mx-[15%] w-[250px] mb-2 rounded-lg appearance-none border border-gray-300 py-2 px-4 bg-white placeholder-gray-400 text-base
+                                        id="username"
+                                        name="username"
+                                        placeholder="아이디를 입력하세요."
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        className="mx-[15%] w-[250px] mb-2 rounded-lg appearance-none border border-gray-300 py-2 px-4 bg-white placeholder-gray-400 text-base
                                                 focus:outline-none focus:ring-2 focus:ring-idol focus:border-transparent"/>
 
                                     <input type="password"
-                                           id="password"
-                                           name="password"
-                                           placeholder="비밀번호를 입력하세요."
-                                           onChange={(e) => setPassword(e.target.value)}
-                                           className="mx-[15%] w-[250px] rounded-lg appearance-none border border-gray-300 py-2 px-4 bg-white placeholder-gray-400 text-base
+                                        id="password"
+                                        name="password"
+                                        placeholder="비밀번호를 입력하세요."
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="mx-[15%] w-[250px] rounded-lg appearance-none border border-gray-300 py-2 px-4 bg-white placeholder-gray-400 text-base
                                                 focus:outline-none focus:ring-2 focus:ring-idol focus:border-transparent"/>
                                     <button
                                         type="submit"
@@ -232,10 +256,10 @@ const MainPage: React.FC = () => {
                     </div>
 
                     <motion.div
-                        initial={{opacity: 0, y: -80, skewY: -20}}
-                        whileInView={{opacity: 1, y: 0, skewY: -20}}
-                        transition={{duration: 0.5}}
-                        viewport={{once: true}}
+                        initial={{ opacity: 0, y: -80, skewY: -20 }}
+                        whileInView={{ opacity: 1, y: 0, skewY: -20 }}
+                        transition={{ duration: 0.5 }}
+                        viewport={{ once: true }}
                         className="transform  w-full bg-idol-point p-4 mix-blend-normal z-10"
                     ></motion.div>
                 </section>

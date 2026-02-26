@@ -94,6 +94,26 @@ public class ChatService {
         return buildChatRoomList(userId, groupMembers);
     }
 
+    // 구독 여부 검증 (REST API 보안용)
+    public void validateSubscription(int userId, Long idolId, String role) {
+        if ("IDOL".equals(role) || "ADMIN".equals(role) || "AGENCY".equals(role)) {
+            return; // 아이돌, 관리자, 소속사는 패스
+        }
+
+        try {
+            List<SubscriptionDto> mySubscriptions = subscriptionFeignClient.getMySubscriptions(userId);
+            boolean isSubscribed = mySubscriptions.stream()
+                    .anyMatch(sub -> sub.getIdolId() == idolId.intValue());
+
+            if (!isSubscribed) {
+                throw new RuntimeException("구독하지 않은 채팅방입니다.");
+            }
+        } catch (Exception e) {
+            log.error("구독 검증 실패 (userId={}, idolId={}): {}", userId, idolId, e.getMessage());
+            throw new RuntimeException("구독 정보를 확인할 수 없거나 구독하지 않았습니다.");
+        }
+    }
+
     // 공통 로직 분리
     private List<ChatRoomListDto> buildChatRoomList(int userId, List<IdolDto> idols) {
         // 내 구독 목록 조회 (Subscription Service)
@@ -147,6 +167,7 @@ public class ChatService {
                     .lastMessageTime(lastMessageTime)
                     .unreadCount(unreadCount)
                     .isSubscribed(finalSubscribedIdolIds.contains(idol.getIdolId()))
+                    .isOnline(isIdolOnline(idolId))
                     .build();
         }).collect(Collectors.toList());
     }
@@ -169,10 +190,10 @@ public class ChatService {
         String readCountKey = "chat:room:" + idolId + ":user:" + userId + ":last_read_count";
 
         Object totalObj = redisTemplate.opsForValue().get(totalCountKey);
-        if (totalObj != null) {
-            // 30일 TTL 적용
-            redisTemplate.opsForValue().set(readCountKey, totalObj, Duration.ofDays(30));
-        }
+        int total = totalObj != null ? Integer.parseInt(totalObj.toString()) : 0;
+
+        // 30일 TTL 적용하여 현재 totalCount 값을 last_read_count에 동기화
+        redisTemplate.opsForValue().set(readCountKey, String.valueOf(total), Duration.ofDays(30));
     }
 
     public void processMessage(ChatMessageDto messageDto) {
@@ -211,6 +232,7 @@ public class ChatService {
         ChatMessage savedMessage = chatRepository.save(chatMessage);
 
         messageDto.setId(savedMessage.getId());
+        messageDto.setCreatedAt(savedMessage.getCreatedAt()); // Redis 캐싱 전 생성 시간 세팅
 
         // 3. Redis 캐싱 (TTL 적용)
         String cacheKey = "chat:room:" + messageDto.getIdolId();
@@ -227,9 +249,12 @@ public class ChatService {
         redisTemplate.opsForValue().set(previewKey, previewData, Duration.ofDays(7)); // 7일 TTL
 
         // --- 3-2. 총 메시지 수 증가 (읽음 처리용) ---
-        String totalCountKey = "chat:room:" + messageDto.getIdolId() + ":total_count";
-        redisTemplate.opsForValue().increment(totalCountKey);
-        redisTemplate.expire(totalCountKey, Duration.ofDays(30)); // 30일 TTL
+        // 아이돌이 발송한 공지성 메시지만 글로벌 카운트를 증가시킵니다. (버블 스타일: 팬들의 메시지는 무시)
+        if ("IDOL".equals(messageDto.getSenderRole())) {
+            String totalCountKey = "chat:room:" + messageDto.getIdolId() + ":total_count";
+            redisTemplate.opsForValue().increment(totalCountKey);
+            redisTemplate.expire(totalCountKey, Duration.ofDays(30)); // 30일 TTL
+        }
 
         // 내가 보낸 메시지는 바로 읽음 처리 (안 읽은 메시지 버그 방지)
         if ("USER".equals(messageDto.getSenderRole())) {
@@ -328,14 +353,25 @@ public class ChatService {
 
     // --- 미디어 모아보기 ---
 
-    public List<ChatMessageDto> getChatMedia(int userId, Long idolId, String lastId, int size) {
+    public List<ChatMessageDto> getChatMedia(int userId, String role, Long idolId, String lastId, int size) {
         Pageable pageable = PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "id"));
         List<ChatMessage> messages;
 
-        if (lastId == null) {
-            messages = chatRepository.findMediaByIdolId(idolId, pageable);
+        boolean isIdolOrAdmin = "IDOL".equals(role) || "ADMIN".equals(role) || "AGENCY".equals(role);
+
+        if (isIdolOrAdmin) {
+            if (lastId == null) {
+                messages = chatRepository.findMediaByIdolId(idolId, pageable);
+            } else {
+                messages = chatRepository.findMediaByIdolIdAndIdLessThan(idolId, lastId, pageable);
+            }
         } else {
-            messages = chatRepository.findMediaByIdolIdAndIdLessThan(idolId, lastId, pageable);
+            // 그룹/아이돌 멤버별 커스텀 뷰 - 내가 보낸 미디어 + 아이돌 미디어만
+            if (lastId == null) {
+                messages = chatRepository.findUserMediaByIdolId(idolId, userId, pageable);
+            } else {
+                messages = chatRepository.findUserMediaByIdolIdAndIdLessThan(idolId, userId, lastId, pageable);
+            }
         }
 
         return messages.stream()
@@ -474,13 +510,25 @@ public class ChatService {
         } else {
             redisTemplate.delete(onlineKey);
         }
+
+        // 상태 변경 실시간 브로드캐스팅 (프론트엔드 실시간 반영용)
+        ChatMessageDto statusMessage = ChatMessageDto.builder()
+                .idolId(idolId)
+                .type("STATUS")
+                .content(isOnline ? "ON" : "OFF")
+                .build();
+
+        redisTemplate.convertAndSend("/sub/idol/" + idolId, statusMessage);
+        log.info("아이돌 접속 상태 브로드캐스트 전송: idolId={}, status={}", idolId, isOnline ? "ON" : "OFF");
     }
 
-    public List<ChatMessageDto> getChatHistory(int userId, Long idolId, String lastId, int size) {
+    public List<ChatMessageDto> getChatHistory(int userId, String role, Long idolId, String lastId, int size) {
         List<ChatMessageDto> result = new ArrayList<>();
 
-        // 1. Redis 캐시 조회 (최신 메시지인 경우만)
-        if (lastId == null) {
+        boolean isIdolOrAdmin = "IDOL".equals(role) || "ADMIN".equals(role) || "AGENCY".equals(role);
+
+        // 1. Redis 캐시 조회 (최신 메시지인 경우만, 스태프/아이돌만 캐시 활용)
+        if (lastId == null && isIdolOrAdmin) {
             String cacheKey = "chat:room:" + idolId;
             List<Object> cachedMessages = redisTemplate.opsForList().range(cacheKey, 0, size - 1);
 
@@ -498,12 +546,26 @@ public class ChatService {
             Pageable pageable = PageRequest.of(0, needMore);
             List<ChatMessage> dbMessages;
 
-            if (lastId == null) {
-                // Redis에 데이터가 아예 없거나 부족한 경우 (최신순)
-                dbMessages = chatRepository.findByIdolIdOrderByIdDesc(idolId, pageable);
+            String queryLastId = lastId;
+            // Redis에서 일부를 가져왔다면 그 다음부터 페이징
+            if (lastId == null && isIdolOrAdmin && !result.isEmpty()) {
+                queryLastId = result.get(result.size() - 1).getId();
+            }
+
+            if (isIdolOrAdmin) {
+                if (queryLastId == null) {
+                    dbMessages = chatRepository.findByIdolIdOrderByIdDesc(idolId, pageable);
+                } else {
+                    dbMessages = chatRepository.findByIdolIdAndIdLessThanOrderByIdDesc(idolId, queryLastId, pageable);
+                }
             } else {
-                // 페이징 조회 (lastId 이전)
-                dbMessages = chatRepository.findByIdolIdAndIdLessThanOrderByIdDesc(idolId, lastId, pageable);
+                // 팬(USER)의 경우: 내가 보낸 채팅 + 아이돌의 메시지만 필터링 (Bubble 1:N 구조)
+                if (queryLastId == null) {
+                    dbMessages = chatRepository.findUserMessagesByIdolIdOrderByIdDesc(idolId, userId, pageable);
+                } else {
+                    dbMessages = chatRepository.findUserMessagesByIdolIdAndIdLessThanOrderByIdDesc(idolId, userId,
+                            queryLastId, pageable);
+                }
             }
 
             List<ChatMessageDto> dbDtos = dbMessages.stream()
@@ -542,6 +604,7 @@ public class ChatService {
                 .type(entity.getType())
                 .parentId(entity.getParentId())
                 .reactions(entity.getReactions())
+                .createdAt(entity.getCreatedAt())
                 .build();
     }
 }

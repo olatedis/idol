@@ -59,10 +59,16 @@ public class ChatController {
         if ("USER".equals(role)) {
             @SuppressWarnings("unchecked")
             Set<Long> subscribedIdolIds = (Set<Long>) accessor.getSessionAttributes().get("subscribedIdolIds");
-            
+
             if (subscribedIdolIds == null || !subscribedIdolIds.contains(messageDto.getIdolId())) {
                 log.warn("권한 없는 채팅 시도 차단: userId={}, idolId={}", userId, messageDto.getIdolId());
                 throw new RuntimeException("구독하지 않은 채팅방입니다.");
+            }
+        } else if ("IDOL".equals(role)) {
+            Integer myIdolId = (Integer) accessor.getSessionAttributes().get("idolId");
+            if (myIdolId == null || !myIdolId.equals(messageDto.getIdolId().intValue())) {
+                log.warn("다른 아이돌 방에 채팅 시도 차단: myIdolId={}, targetIdolId={}", myIdolId, messageDto.getIdolId());
+                throw new RuntimeException("자신의 채팅방에서만 메시지를 보낼 수 있습니다.");
             }
         }
         // --------------------------------
@@ -72,7 +78,7 @@ public class ChatController {
         messageDto.setSenderNickname(nickname);
 
         log.info("메시지 수신: room={}, sender={}", messageDto.getIdolId(), nickname);
-        
+
         // 알림 로직은 ChatService로 이동됨
         chatService.processMessage(messageDto);
     }
@@ -80,11 +86,19 @@ public class ChatController {
     @MessageMapping("/chat/typing")
     public void typing(ChatMessageDto messageDto, SimpMessageHeaderAccessor accessor) {
         String role = (String) accessor.getSessionAttributes().get("role");
-        if (!"IDOL".equals(role)) return;
+        if (!"IDOL".equals(role))
+            return;
 
+        Integer myIdolId = (Integer) accessor.getSessionAttributes().get("idolId");
+        if (myIdolId == null || !myIdolId.equals(messageDto.getIdolId().intValue())) {
+            return; // 다른 방에서 타이핑하는 척하는 것 차단
+        }
+
+        messageDto.setSenderRole(role);
+        messageDto.setSenderId((Integer) accessor.getSessionAttributes().get("userId"));
         messageDto.setType("TYPING");
         redisTemplate.convertAndSend("/sub/idol/" + messageDto.getIdolId(), messageDto);
-        
+
         log.debug("작성 중 신호 전송: room={}", messageDto.getIdolId());
     }
 
@@ -100,8 +114,7 @@ public class ChatController {
     @ResponseBody
     public ResponseEntity<Void> markAsRead(
             @RequestHeader("X-User-Id") int userId,
-            @PathVariable("idolId") Long idolId
-    ) {
+            @PathVariable("idolId") Long idolId) {
         chatService.markAsRead(userId, idolId);
         return ResponseEntity.ok().build();
     }
@@ -110,11 +123,13 @@ public class ChatController {
     @ResponseBody
     public ResponseEntity<List<ChatMessageDto>> getChatHistory(
             @RequestHeader("X-User-Id") int userId, // userId 추가
+            @RequestHeader(value = "X-Role", defaultValue = "USER") String role, // role 추가
             @PathVariable("idolId") Long idolId,
             @RequestParam(value = "lastId", required = false) String lastId,
-            @RequestParam(value = "size", defaultValue = "20") int size
-    ) {
-        return ResponseEntity.ok(chatService.getChatHistory(userId, idolId, lastId, size));
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        // 구독 권한 검증 (REST API 보안)
+        chatService.validateSubscription(userId, idolId, role);
+        return ResponseEntity.ok(chatService.getChatHistory(userId, role, idolId, lastId, size));
     }
 
     // 채팅방 미리보기 (마지막 메시지) 조회 API
@@ -130,8 +145,7 @@ public class ChatController {
     @ResponseBody
     public ResponseEntity<Void> pinMessage(
             @RequestHeader("X-Role") String role,
-            @RequestBody Map<String, Object> request
-    ) {
+            @RequestBody Map<String, Object> request) {
         if (!"IDOL".equals(role) && !"ADMIN".equals(role) && !"AGENCY".equals(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
@@ -148,8 +162,7 @@ public class ChatController {
     @ResponseBody
     public ResponseEntity<Void> unpinMessage(
             @RequestHeader("X-Role") String role,
-            @RequestBody Map<String, Object> request
-    ) {
+            @RequestBody Map<String, Object> request) {
         if (!"IDOL".equals(role) && !"ADMIN".equals(role) && !"AGENCY".equals(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
@@ -172,11 +185,13 @@ public class ChatController {
     @ResponseBody
     public ResponseEntity<List<ChatMessageDto>> getChatMedia(
             @RequestHeader("X-User-Id") int userId, // userId 추가
+            @RequestHeader(value = "X-Role", defaultValue = "USER") String role, // role 추가
             @PathVariable("idolId") Long idolId,
             @RequestParam(value = "lastId", required = false) String lastId,
-            @RequestParam(value = "size", defaultValue = "20") int size
-    ) {
-        return ResponseEntity.ok(chatService.getChatMedia(userId, idolId, lastId, size));
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        // 구독 권한 검증 (REST API 보안)
+        chatService.validateSubscription(userId, idolId, role);
+        return ResponseEntity.ok(chatService.getChatMedia(userId, role, idolId, lastId, size));
     }
 
     // --------------------
@@ -193,14 +208,13 @@ public class ChatController {
     @ResponseBody
     public ResponseEntity<Void> deleteMessage(
             @RequestHeader("X-User-Id") int userId,
-            @RequestBody Map<String, Object> request
-    ) {
+            @RequestBody Map<String, Object> request) {
         String messageId = (String) request.get("messageId");
         Long idolId = Long.valueOf(request.get("idolId").toString());
 
         log.info("메시지 삭제 요청: msgId={}, userId={}", messageId, userId);
         chatService.deleteMessage(messageId, idolId, userId);
-        
+
         return ResponseEntity.ok().build();
     }
 
@@ -220,7 +234,7 @@ public class ChatController {
 
         log.info("반응 추가 요청: msgId={}, type={}", messageId, reactionType);
         chatService.addReaction(messageId, reactionType, idolId);
-        
+
         return ResponseEntity.ok().build();
     }
 
@@ -228,8 +242,7 @@ public class ChatController {
     @ResponseBody
     public ResponseEntity<Map<String, String>> translateMessage(
             @PathVariable("messageId") String messageId,
-            @RequestParam(value = "lang", defaultValue = "EN") String lang
-    ) {
+            @RequestParam(value = "lang", defaultValue = "EN") String lang) {
         String translatedText = translationService.translateMessage(messageId, lang);
         return ResponseEntity.ok(Map.of("text", translatedText, "lang", lang));
     }

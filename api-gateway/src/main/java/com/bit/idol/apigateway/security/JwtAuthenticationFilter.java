@@ -25,7 +25,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final JwtTokenProvider jwtTokenProvider;
     private final List<String> whiteListPath;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
-    
+
     public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, JwtProperties jwtProperties) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.whiteListPath = jwtProperties.getWhiteListPath();
@@ -35,22 +35,23 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
         HttpMethod httpMethod = exchange.getRequest().getMethod();
-        
+
         log.info("Incoming request: {} {}", httpMethod, path);
 
-        if (path.startsWith("/ws/")){
-            return  chain.filter(exchange);
-        }
-
-        if (HttpMethod.OPTIONS.equals(httpMethod)){
+        if (path.startsWith("/ws/")) {
             return chain.filter(exchange);
         }
 
+        if (HttpMethod.OPTIONS.equals(httpMethod)) {
+            return chain.filter(exchange);
+        }
+
+        boolean isWhitelisted = false;
         if (whiteListPath != null) {
             for (String w : whiteListPath) {
                 if (pathMatcher.match(w, path)) {
-                    log.info("Whitelisted path: {}", path);
-                    return chain.filter(exchange);
+                    isWhitelisted = true;
+                    break;
                 }
             }
         }
@@ -58,6 +59,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            if (isWhitelisted) {
+                log.info("Whitelisted path allowed without token: {}", path);
+                return chain.filter(exchange);
+            }
             log.warn("Missing or invalid Authorization header");
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
@@ -70,26 +75,30 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         try {
             claims = jwtTokenProvider.parseClaims(token);
         } catch (Exception e) {
+            if (isWhitelisted) {
+                log.info("Invalid token on whitelisted path, proceeding without headers: {}", path);
+                return chain.filter(exchange);
+            }
             log.error("Invalid token: {}", e.getMessage());
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
 
         String userId = claims.getSubject();
-        String username = claims.get("username",String.class);
-        String nickname = claims.get("nickname",String.class);
-        String role = claims.get("role",String.class);
-        
+        String username = claims.get("username", String.class);
+        String nickname = claims.get("nickname", String.class);
+        String role = claims.get("role", String.class);
+
         log.info("User authenticated: userId={}, username={}", userId, username);
 
         ServerHttpRequest.Builder builder = exchange.getRequest().mutate()
                 .header("X-User-Id", userId)
                 .header("X-Role", role);
-                
+
         if (username != null) {
             builder.header("X-Username", username);
         }
-        
+
         if (nickname != null) {
             // 한글 닉네임 인코딩 처리
             builder.header("X-Nickname", URLEncoder.encode(nickname, StandardCharsets.UTF_8));

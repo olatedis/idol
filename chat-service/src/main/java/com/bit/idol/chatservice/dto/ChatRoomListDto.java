@@ -22,4 +22,5 @@ public class ChatRoomListDto implements Serializable {
     private LocalDateTime lastMessageTime;
     private int unreadCount; // 안 읽은 메시지 수
     private boolean isSubscribed; // 구독 여부
+    private boolean isOnline; // 아이돌 접속 여부
 }
