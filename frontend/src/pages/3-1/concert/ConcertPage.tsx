@@ -83,13 +83,27 @@ const ConcertPage: React.FC = () => {
         if (!res.ok) throw new Error("콘서트 목록 조회 실패");
 
         const data = await res.json();
-        const content = (data.content ?? []) as ConcertDto[];
+        let content: ConcertDto[] = [];
+        let last = true;
 
-        if (nextPage === 0) setConcerts(content);
-        else setConcerts((prev) => [...prev, ...content]);
+        if (Array.isArray(data)) {
+            // backend returned simple list
+            content = data as ConcertDto[];
+            last = true;
+        } else {
+            content = (data.content ?? []) as ConcertDto[];
+            last = Boolean(data.last);
+            if (typeof data.totalElements === "number") {
+                setTotalElements(data.totalElements);
+            }
+        }
 
-        if (typeof data.totalElements === "number") setTotalElements(data.totalElements);
-        const last = Boolean(data.last);
+        if (nextPage === 0) {
+            setConcerts(content);
+        } else {
+            setConcerts((prev) => [...prev, ...content]);
+        }
+
         setHasMore(!last && content.length > 0);
     };
 
