@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { api } from "../../api/axios";
@@ -7,10 +7,8 @@ type CommentResponse = {
     commentId: number;
     authorId: number;
     authorNickname: string | null;
-
     content: string;
     isDeleted: boolean;
-
     createdAt: string;
     updatedAt: string;
 };
@@ -43,13 +41,11 @@ type PostReactionResponse = {
     myReaction: string;
 };
 
-const clamp0 = (n: number) => (Number.isFinite(n) ? Math.max(0, n) : 0);
-
 const GroupPostDetailPage: React.FC = () => {
     const { postId } = useParams();
     const navigate = useNavigate();
 
-    const { accessToken } = useAuthStore();
+    const { accessToken, user } = useAuthStore();
 
     const [data, setData] = useState<PostResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -59,6 +55,7 @@ const GroupPostDetailPage: React.FC = () => {
     const [submittingComment, setSubmittingComment] = useState(false);
 
     const [reacting, setReacting] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const fetchDetail = async () => {
         if (!postId) throw new Error("postId가 없습니다.");
@@ -74,18 +71,7 @@ const GroupPostDetailPage: React.FC = () => {
         };
     };
 
-    // 상세 진입 시 내 반응/카운트 동기화(목록 갔다 와도 민트색 유지)
-    const fetchReaction = async () => {
-        if (!postId) throw new Error("postId가 없습니다.");
-        if (!accessToken) throw new Error("로그인이 필요합니다.");
-
-        const res = await api.get(`/board/posts/${postId}/reaction`);
-        return res.data as PostReactionResponse;
-    };
-
     useEffect(() => {
-        let cancelled = false;
-
         const run = async () => {
             setError("");
 
@@ -94,7 +80,6 @@ const GroupPostDetailPage: React.FC = () => {
                 setData(null);
                 return;
             }
-
             if (!accessToken) {
                 setError("로그인이 필요합니다.");
                 setData(null);
@@ -103,29 +88,8 @@ const GroupPostDetailPage: React.FC = () => {
 
             try {
                 setLoading(true);
-
-                // 1) 상세 먼저 로드
                 const detail = await fetchDetail();
-                if (cancelled) return;
                 setData(detail);
-
-                // 2) reaction으로 myReaction/카운트 재동기화
-                try {
-                    const reaction = await fetchReaction();
-                    if (cancelled) return;
-
-                    setData((prev) => {
-                        if (!prev) return prev;
-                        return {
-                            ...prev,
-                            likeCount: clamp0(reaction.likeCount),
-                            dislikeCount: clamp0(reaction.dislikeCount),
-                            myReaction: reaction.myReaction || "NONE",
-                        };
-                    });
-                } catch {
-                    // reaction 동기화 실패해도 상세는 보여주도록 무시
-                }
             } catch (e: any) {
                 const status = e?.response?.status;
                 if (status === 401) setError("로그인이 필요합니다.");
@@ -133,17 +97,38 @@ const GroupPostDetailPage: React.FC = () => {
                 else setError(e?.response?.data?.message || e?.message || "게시글 상세 조회 실패");
                 setData(null);
             } finally {
-                if (!cancelled) setLoading(false);
+                setLoading(false);
             }
         };
 
         run();
-
-        return () => {
-            cancelled = true;
-        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [postId, accessToken]);
+
+    const canEditOrDelete = useMemo(() => {
+        if (!data || !user) return false;
+
+        const role = user.role;
+        const bt = data.boardType;
+
+        // ADMIN: 전부 가능
+        if (role === "ADMIN") return true;
+
+        // ADMIN_NOTICE: ADMIN만
+        if (bt === "ADMIN_NOTICE") return false;
+
+        // FAN: USER는 본인 글만
+        if ((bt === "IDOL_FAN" || bt === "GROUP_FAN") && role === "USER") {
+            return Number(data.authorId) === Number(user.userId);
+        }
+
+        // OFFICIAL: IDOL/AGENCY는 일단 버튼 보여주기(소속 검증은 백엔드에서)
+        if ((bt === "IDOL_OFFICIAL" || bt === "GROUP_OFFICIAL") && (role === "IDOL" || role === "AGENCY")) {
+            return true;
+        }
+
+        return false;
+    }, [data, user]);
 
     const onClickLike = async () => {
         if (!data) return;
@@ -165,8 +150,8 @@ const GroupPostDetailPage: React.FC = () => {
                 if (!prev) return prev;
                 return {
                     ...prev,
-                    likeCount: clamp0(json.likeCount),
-                    dislikeCount: clamp0(json.dislikeCount),
+                    likeCount: json.likeCount,
+                    dislikeCount: json.dislikeCount,
                     myReaction: json.myReaction || "NONE",
                 };
             });
@@ -200,8 +185,8 @@ const GroupPostDetailPage: React.FC = () => {
                 if (!prev) return prev;
                 return {
                     ...prev,
-                    likeCount: clamp0(json.likeCount),
-                    dislikeCount: clamp0(json.dislikeCount),
+                    likeCount: json.likeCount,
+                    dislikeCount: json.dislikeCount,
                     myReaction: json.myReaction || "NONE",
                 };
             });
@@ -236,25 +221,8 @@ const GroupPostDetailPage: React.FC = () => {
 
             setCommentInput("");
 
-            // 댓글 작성 후 "상세 재조회"로 완전 동기화
             const detail = await fetchDetail();
             setData(detail);
-
-            // 댓글 작성 후에도 reaction 한 번 동기화(선택)
-            try {
-                const reaction = await fetchReaction();
-                setData((prev) => {
-                    if (!prev) return prev;
-                    return {
-                        ...prev,
-                        likeCount: clamp0(reaction.likeCount),
-                        dislikeCount: clamp0(reaction.dislikeCount),
-                        myReaction: reaction.myReaction || "NONE",
-                    };
-                });
-            } catch {
-                // 무시
-            }
         } catch (e: any) {
             const status = e?.response?.status;
             if (status === 401) alert("로그인이 필요합니다.");
@@ -265,29 +233,71 @@ const GroupPostDetailPage: React.FC = () => {
         }
     };
 
+    const onClickEdit = () => {
+        if (!postId) return;
+        navigate(`./edit`);
+    };
+
+    const onClickDelete = async () => {
+        if (!postId) return;
+        if (deleting) return;
+
+        const ok = window.confirm("정말 삭제하시겠습니까?");
+        if (!ok) return;
+
+        setDeleting(true);
+        try {
+            await api.delete(`/board/posts/${postId}`);
+            alert("삭제되었습니다.");
+            navigate(`../`);
+        } catch (e: any) {
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "삭제 실패");
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     if (loading) return <div className="text-sm text-gray-600">불러오는 중...</div>;
     if (error) return <div className="text-sm text-red-600">{error}</div>;
     if (!data) return <div className="text-sm text-gray-600">데이터가 없습니다.</div>;
 
     const likeActive = data.myReaction === "LIKE";
     const dislikeActive = data.myReaction === "DISLIKE";
-
     const commentCount = Array.isArray(data.comments) ? data.comments.length : 0;
-
-    const safeLikeCount = clamp0(data.likeCount);
-    const safeDislikeCount = clamp0(data.dislikeCount);
-
-    const reactionBtnBase =
-        "w-16 h-16 rounded-full border flex flex-col items-center justify-center " +
-        "transition-all duration-150 " +
-        "hover:shadow-md hover:-translate-y-[1px] active:translate-y-0 active:scale-[0.98] " +
-        "disabled:opacity-60 disabled:cursor-not-allowed";
 
     return (
         <div className="space-y-4">
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 pt-6 pb-4">
-                    <div className="text-2xl font-semibold text-gray-900">{data.title}</div>
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="text-2xl font-semibold text-gray-900">{data.title}</div>
+
+                        {/* 수정/삭제 버튼 */}
+                        {canEditOrDelete && (
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={onClickEdit}
+                                    className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
+                             hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
+                                >
+                                    수정
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onClickDelete}
+                                    disabled={deleting}
+                                    className="px-4 py-2 rounded-full border border-red-200 text-sm font-semibold text-red-600
+                             hover:bg-red-50 hover:border-red-300 active:scale-[0.99] transition disabled:opacity-60"
+                                >
+                                    {deleting ? "삭제 중..." : "삭제"}
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
                         <span className="font-medium text-gray-800">{data.authorId}</span>
@@ -297,7 +307,6 @@ const GroupPostDetailPage: React.FC = () => {
                 </div>
 
                 <div className="px-6 py-5 border-t border-gray-100">
-                    {/* content는 HTML 저장이므로 렌더링 */}
                     <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{ __html: data.content }} />
 
                     <div className="mt-8 flex justify-center gap-10">
@@ -306,14 +315,16 @@ const GroupPostDetailPage: React.FC = () => {
                             onClick={onClickLike}
                             disabled={reacting}
                             className={[
-                                reactionBtnBase,
+                                "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition",
+                                "hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0",
+                                "disabled:opacity-60",
                                 likeActive
                                     ? "bg-[#1FBFB8] border-[#1FBFB8] text-white"
                                     : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
                             ].join(" ")}
                         >
                             <span className="text-xl">👍</span>
-                            <span className="text-sm mt-1">{safeLikeCount}</span>
+                            <span className="text-sm mt-1">{data.likeCount}</span>
                         </button>
 
                         <button
@@ -321,14 +332,16 @@ const GroupPostDetailPage: React.FC = () => {
                             onClick={onClickDislike}
                             disabled={reacting}
                             className={[
-                                reactionBtnBase,
+                                "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition",
+                                "hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0",
+                                "disabled:opacity-60",
                                 dislikeActive
                                     ? "bg-[#1FBFB8] border-[#1FBFB8] text-white"
                                     : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
                             ].join(" ")}
                         >
                             <span className="text-xl">👎</span>
-                            <span className="text-sm mt-1">{safeDislikeCount}</span>
+                            <span className="text-sm mt-1">{data.dislikeCount}</span>
                         </button>
                     </div>
 
@@ -336,12 +349,8 @@ const GroupPostDetailPage: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => navigate(-1)}
-                            className={[
-                                "px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold",
-                                "transition-all duration-150",
-                                "hover:bg-gray-50 hover:shadow-sm hover:-translate-y-[1px]",
-                                "active:translate-y-0 active:scale-[0.99]",
-                            ].join(" ")}
+                            className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
+                         hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
                         >
                             목록으로
                         </button>
@@ -349,6 +358,7 @@ const GroupPostDetailPage: React.FC = () => {
                 </div>
             </div>
 
+            {/* 댓글 */}
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100">
                     <div className="font-semibold text-gray-900">댓글 {commentCount}</div>
@@ -394,13 +404,8 @@ const GroupPostDetailPage: React.FC = () => {
                             type="button"
                             onClick={onSubmitComment}
                             disabled={submittingComment}
-                            className={[
-                                "px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold",
-                                "transition-all duration-150",
-                                "hover:bg-[#17AFA8] hover:shadow-md hover:-translate-y-[1px]",
-                                "active:translate-y-0 active:scale-[0.99]",
-                                "disabled:opacity-60 disabled:cursor-not-allowed",
-                            ].join(" ")}
+                            className="px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold
+                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
                         >
                             등록
                         </button>
