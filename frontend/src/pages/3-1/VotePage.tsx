@@ -374,8 +374,8 @@ const VotePage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-            <main className="pt-[100px] px-6 pb-12 max-w-7xl mx-auto relative z-10">
+        <div className="min-h-screen bg-gradient-to-br from-[var(--color-idol-bg)] via-white to-[var(--color-idol-bg)]/50 overflow-x-hidden">
+            <main className="pt-[80px] sm:pt-[100px] px-4 sm:px-6 pb-8 sm:pb-12 max-w-7xl mx-auto relative z-10 w-full overflow-hidden">
                 {/* 탭 제목 영역 (그룹/전체 명시) */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-black text-gray-800">
@@ -387,31 +387,31 @@ const VotePage: React.FC = () => {
                 </div>
 
                 {/* 배경 장식용 블러 원형 그래픽 */}
-                <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-                <div className="absolute top-20 right-10 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-                <div className="absolute -bottom-8 left-40 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+                <div className="absolute top-20 left-10 w-72 h-72 bg-[var(--color-idol-point)] rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+                <div className="absolute top-20 right-10 w-72 h-72 bg-[var(--color-idol-dark)] rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+                <div className="absolute -bottom-8 left-40 w-72 h-72 bg-[var(--color-idol)] rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
 
-                <div className="flex justify-between items-center mb-10 relative z-20">
-                    <div className="flex-1"></div>
-                    <div className="bg-white/70 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-white/50 inline-flex">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-8 sm:mb-10 relative z-20 gap-4">
+                    <div className="hidden md:block flex-1"></div>
+                    <div className="bg-white/70 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-white/50 flex w-full md:w-auto overflow-x-auto justify-start md:justify-center shrink-0 custom-scrollbar">
                         {(['OPEN', 'CLOSED', 'MY'] as const).map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`px-8 py-2.5 rounded-full text-sm font-bold transition-all duration-300
+                                className={`px-4 sm:px-8 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 whitespace-nowrapflex-1 md:flex-none text-center
                                     ${activeTab === tab
-                                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md transform scale-105'
-                                        : 'text-gray-500 hover:text-purple-600 hover:bg-white/50'}`}
+                                        ? 'bg-[var(--color-idol-dark)] text-white shadow-md transform scale-105'
+                                        : 'text-[var(--color-idol-point)] hover:text-[var(--color-idol-dark)] hover:bg-[var(--color-idol-bg)]'}`}
                             >
                                 {tab === 'OPEN' ? '진행 중' : tab === 'CLOSED' ? '종료됨' : '내 기록'}
                             </button>
                         ))}
                     </div>
-                    <div className="flex-1 text-right">
+                    <div className="flex-1 text-center md:text-right w-full md:w-auto">
                         {canCreateVote && (
                             <button
                                 onClick={() => setIsCreateModalOpen(true)}
-                                className="px-5 py-2.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl shadow-lg hover:shadow-pink-500/30 transition-all duration-300 text-sm font-bold hover:-translate-y-1"
+                                className="px-5 py-2.5 bg-[var(--color-idol-dark)] text-white rounded-xl shadow-lg shadow-[var(--color-idol-dark)]/30 hover:bg-[var(--color-idol)] transition-all duration-300 text-sm font-bold hover:-translate-y-1"
                             >
                                 ✨ 새 투표 만들기
                             </button>
@@ -425,21 +425,21 @@ const VotePage: React.FC = () => {
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-2xl shadow-xl p-8 max-w-4xl mx-auto"
+                            className="bg-white/80 backdrop-blur-xl border border-[var(--color-idol-bg)] rounded-2xl shadow-xl p-4 sm:p-8 max-w-4xl mx-auto"
                         >
-                            <h2 className="text-2xl font-black mb-8 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">내가 참여한 투표</h2>
+                            <h2 className="text-xl sm:text-2xl font-black mb-6 sm:mb-8 text-[var(--color-idol-dark)] text-center sm:text-left">내가 참여한 투표</h2>
                             {myVotes.length > 0 ? (
                                 <div className="space-y-4">
                                     {myVotes.map((record, idx) => (
                                         <motion.div
                                             whileHover={{ scale: 1.01, backgroundColor: "rgba(255, 255, 255, 0.9)" }}
                                             key={idx}
-                                            className="flex items-center justify-between p-5 bg-white/50 backdrop-blur-sm border border-gray-100 rounded-xl hover:border-purple-300 hover:shadow-md transition-all cursor-pointer group"
+                                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-5 bg-white/50 backdrop-blur-sm border border-gray-100 rounded-xl hover:border-[var(--color-idol-point)] hover:bg-[var(--color-idol-bg)]/20 hover:shadow-md transition-all cursor-pointer group gap-3 sm:gap-0"
                                             onClick={() => fetchVoteDetail(record.voteId)}
                                         >
-                                            <div>
-                                                <h3 className="font-bold text-gray-800 text-lg group-hover:text-purple-700 transition-colors">{record.voteTitle}</h3>
-                                                <p className="text-sm text-gray-500 mt-1">
+                                            <div className="w-full sm:w-auto">
+                                                <h3 className="font-bold text-gray-800 text-base sm:text-lg group-hover:text-[var(--color-idol-dark)] transition-colors">{record.voteTitle}</h3>
+                                                <p className="text-xs sm:text-sm text-gray-500 mt-1">
                                                     {(() => {
                                                         const date = new Date(record.votedAt + 'Z');
                                                         if (isNaN(date.getTime())) return record.votedAt;
@@ -447,9 +447,9 @@ const VotePage: React.FC = () => {
                                                     })()}
                                                 </p>
                                             </div>
-                                            <div className="text-right">
-                                                <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">투표한 후보</span>
-                                                <p className="font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 text-lg">{record.candidateName}</p>
+                                            <div className="text-left sm:text-right w-full sm:w-auto bg-gray-50/50 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none">
+                                                <span className="text-[10px] sm:text-xs text-[var(--color-idol-point)] font-semibold uppercase tracking-wider block sm:inline">투표한 후보: </span>
+                                                <span className="font-black text-[var(--color-idol-dark)] text-base sm:text-lg ml-1 sm:ml-0">{record.candidateName}</span>
                                             </div>
                                         </motion.div>
                                     ))}
@@ -474,16 +474,16 @@ const VotePage: React.FC = () => {
                                             transition={{ type: "spring", stiffness: 300, damping: 20 }}
                                             key={vote.id}
                                             onClick={() => fetchVoteDetail(vote.id)}
-                                            className="bg-white/70 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden cursor-pointer border border-white border-b-gray-200 border-r-gray-200 hover:shadow-purple-500/20 transition-all relative group"
+                                            className="bg-white/70 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden cursor-pointer border border-white border-b-[var(--color-idol-bg)] border-r-[var(--color-idol-bg)] hover:shadow-[var(--color-idol-point)]/20 transition-all relative group"
                                         >
                                             {/* Top decorative gradient bar */}
-                                            <div className="h-2 w-full bg-gradient-to-r from-purple-400 via-pink-500 to-red-500"></div>
+                                            <div className="h-2 w-full bg-gradient-to-r from-[var(--color-idol-point)] via-[var(--color-idol)] to-[var(--color-idol-dark)]"></div>
 
                                             <div className="p-7">
                                                 <div className="flex justify-between items-center mb-5">
                                                     <span className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wider
-                                                        ${vote.status === 'OPEN' ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-green-200' :
-                                                            vote.status === 'UPCOMING' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                                        ${vote.status === 'OPEN' ? 'bg-[var(--color-idol)] text-white shadow-[var(--color-idol)]/30' :
+                                                            vote.status === 'UPCOMING' ? 'bg-[var(--color-idol-point)] text-white' : 'bg-gray-100 text-gray-500'}`}>
                                                         {vote.status === 'OPEN' ? '🟢 진행중' : vote.status === 'UPCOMING' ? '⏳ 예정됨' : '⚫ 종료됨'}
                                                     </span>
                                                     <span className="text-gray-400 text-sm font-medium bg-gray-50 px-3 py-1 rounded-lg">~ {(() => {
@@ -492,7 +492,7 @@ const VotePage: React.FC = () => {
                                                         return d.toLocaleDateString('ko-KR');
                                                     })()}</span>
                                                 </div>
-                                                <h3 className="text-2xl font-black text-gray-800 mb-3 group-hover:text-purple-600 transition-colors line-clamp-2 leading-tight">{vote.title}</h3>
+                                                <h3 className="text-2xl font-black text-gray-800 mb-3 group-hover:text-[var(--color-idol-dark)] transition-colors line-clamp-2 leading-tight">{vote.title}</h3>
                                                 <p className="text-gray-500 line-clamp-2 leading-relaxed text-sm">{vote.description}</p>
                                             </div>
                                         </motion.div>
@@ -504,7 +504,7 @@ const VotePage: React.FC = () => {
                                 <div className="text-center mt-12">
                                     <button
                                         onClick={handleLoadMore}
-                                        className="px-8 py-3 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-full text-gray-600 font-bold hover:bg-white hover:shadow-lg hover:text-purple-600 transition-all duration-300"
+                                        className="px-8 py-3 bg-white/50 backdrop-blur-sm border border-[var(--color-idol-bg)] rounded-full text-[var(--color-idol-point)] font-bold hover:bg-white hover:shadow-lg hover:text-[var(--color-idol-dark)] transition-all duration-300"
                                     >
                                         최신 이벤트 더 보기 ↓
                                     </button>
@@ -544,16 +544,16 @@ const VotePage: React.FC = () => {
                             onClick={(e) => e.stopPropagation()}
                             className="bg-white/90 backdrop-blur-2xl border border-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col relative z-10"
                         >
-                            <div className="p-8 border-b border-gray-100 bg-white/50 flex justify-between items-start">
+                            <div className="p-5 sm:p-8 border-b border-gray-100 bg-white/50 flex justify-between items-start">
                                 <div>
-                                    <h2 className="text-3xl font-black text-gray-800 mb-2 leading-tight">{selectedVote.title}</h2>
-                                    <div className="flex gap-4 text-sm font-medium text-gray-500">
+                                    <h2 className="text-xl sm:text-3xl font-black text-gray-800 mb-2 leading-tight pr-4">{selectedVote.title}</h2>
+                                    <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-xs sm:text-sm font-medium text-gray-500">
                                         <span className="flex items-center gap-1">⏱ 시작: {(() => {
                                             const d = new Date(selectedVote.startDate + 'Z');
                                             if (isNaN(d.getTime())) return selectedVote.startDate;
                                             return d.toLocaleString('ko-KR');
                                         })()}</span>
-                                        <span className="text-gray-300">|</span>
+                                        <span className="hidden sm:inline text-gray-300">|</span>
                                         <span className="flex items-center gap-1">마감: {(() => {
                                             const d = new Date(selectedVote.endDate + 'Z');
                                             if (isNaN(d.getTime())) return selectedVote.endDate;
@@ -561,13 +561,13 @@ const VotePage: React.FC = () => {
                                         })()}</span>
                                     </div>
                                 </div>
-                                <button onClick={() => setSelectedVote(null)} className="p-2 bg-gray-100 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition">✕</button>
+                                <button onClick={() => setSelectedVote(null)} className="p-2 -mr-2 sm:-mr-0 bg-gray-100 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition shrink-0">✕</button>
                             </div>
 
-                            <div className="p-8 overflow-y-auto custom-scrollbar flex-1 bg-gradient-to-b from-transparent to-gray-50/50">
-                                <p className="text-gray-600 mb-8 text-lg leading-relaxed">{selectedVote.description}</p>
+                            <div className="p-5 sm:p-8 overflow-y-auto custom-scrollbar flex-1 bg-gradient-to-b from-transparent to-gray-50/50">
+                                <p className="text-gray-600 mb-6 sm:mb-8 text-sm sm:text-lg leading-relaxed">{selectedVote.description}</p>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                                     {selectedVote.candidates?.map((candidate) => {
                                         const isSelected = selectedCandidate === candidate.number;
                                         return (
@@ -577,9 +577,9 @@ const VotePage: React.FC = () => {
                                                 key={candidate.number}
                                                 onClick={() => !hasVoted && setSelectedCandidate(candidate.number)}
                                                 className={`relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300
-                                                    ${isSelected ? 'ring-4 ring-purple-500 shadow-xl shadow-purple-500/20 transform -translate-y-2' : 'border-2 border-gray-100 hover:border-purple-200'}
+                                                    ${isSelected ? 'ring-4 ring-[var(--color-idol)] shadow-xl shadow-[var(--color-idol)]/30 transform -translate-y-2' : 'border-2 border-[var(--color-idol-bg)] hover:border-[var(--color-idol-point)]'}
                                                     ${hasVoted && !isSelected ? 'opacity-50 grayscale select-none cursor-default' : ''}
-                                                    ${hasVoted && isSelected ? 'ring-4 ring-pink-500 shadow-xl shadow-pink-500/30' : ''}`}
+                                                    ${hasVoted && isSelected ? 'ring-4 ring-[var(--color-idol-dark)] shadow-xl shadow-[var(--color-idol-dark)]/30' : ''}`}
                                             >
                                                 <div className="relative h-48">
                                                     <img src={candidate.image || "https://placehold.co/300"} alt={candidate.name} className="w-full h-full object-cover" />
@@ -600,10 +600,10 @@ const VotePage: React.FC = () => {
                                                                 initial={{ width: 0 }}
                                                                 animate={{ width: `${Math.min(candidate.voteCount * 5, 100)}%` }}
                                                                 transition={{ duration: 1, ease: "easeOut" }}
-                                                                className={`h-full rounded-full ${isSelected ? 'bg-gradient-to-r from-purple-500 to-pink-500' : 'bg-gray-400'}`}
+                                                                className={`h-full rounded-full ${isSelected ? 'bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)]' : 'bg-[var(--color-idol-point)]/40'}`}
                                                             ></motion.div>
                                                         </div>
-                                                        <p className={`text-center font-bold text-sm ${isSelected ? 'text-purple-600' : 'text-gray-500'}`}>
+                                                        <p className={`text-center font-bold text-sm ${isSelected ? 'text-[var(--color-idol-dark)]' : 'text-gray-500'}`}>
                                                             {candidate.voteCount.toLocaleString()} 표
                                                         </p>
                                                     </div>
@@ -616,7 +616,7 @@ const VotePage: React.FC = () => {
                                                             initial={{ scale: 0, opacity: 0 }}
                                                             animate={{ scale: 1, opacity: 1, rotate: 360 }}
                                                             exit={{ scale: 0, opacity: 0 }}
-                                                            className="absolute top-3 right-3 bg-gradient-to-br from-pink-500 to-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg border-2 border-white"
+                                                            className="absolute top-3 right-3 bg-[var(--color-idol-dark)] text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg border-2 border-[var(--color-idol-bg)]"
                                                         >
                                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                                                         </motion.div>
@@ -628,20 +628,20 @@ const VotePage: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-white/80 border-t flex justify-end gap-4 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] relative z-20">
+                            <div className="p-4 sm:p-6 bg-white/80 border-t flex justify-end gap-3 sm:gap-4 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] relative z-20">
                                 {hasVoted ? (
                                     <button
                                         onClick={handleCancelVote}
                                         disabled={isSubmitting || isFetchingDetail}
-                                        className="px-8 py-3 bg-white text-red-500 border-2 border-red-100 rounded-xl hover:bg-red-50 hover:border-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold text-lg shadow-sm"
+                                        className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-white text-red-500 border-2 border-red-100 rounded-xl hover:bg-red-50 hover:border-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold text-base sm:text-lg shadow-sm"
                                     >
-                                        {isSubmitting ? '취소 처리 중...' : '✋ 투표 물리기'}
+                                        {isSubmitting ? '진행 중...' : '✋ 투표 물리기'}
                                     </button>
                                 ) : (
                                     <button
                                         onClick={handleVote}
                                         disabled={selectedCandidate === null || selectedVote.status === 'CLOSED' || isSubmitting || isFetchingDetail}
-                                        className="px-10 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/40 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 disabled:translate-y-0 font-black text-lg letter-spacing-wide flex items-center gap-2"
+                                        className="w-full sm:w-auto px-6 sm:px-10 py-3 bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] text-white rounded-xl hover:shadow-lg hover:shadow-[var(--color-idol-dark)]/40 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 disabled:translate-y-0 font-black text-base sm:text-lg letter-spacing-wide flex items-center justify-center gap-2"
                                     >
                                         {selectedVote.status === 'CLOSED' ? '종료된 투표' : isSubmitting ? (
                                             <>
@@ -672,24 +672,24 @@ const VotePage: React.FC = () => {
                             onClick={(e) => e.stopPropagation()}
                             className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
                         >
-                            <div className="p-8 border-b bg-gray-50/50 flex justify-between items-center">
+                            <div className="p-5 sm:p-8 border-b bg-[var(--color-idol-bg)]/20 flex justify-between items-center">
                                 <div>
-                                    <h2 className="text-2xl font-black text-gray-800 tracking-tight">새 투표 등록</h2>
-                                    <p className="text-sm font-medium text-purple-600 mt-1">
+                                    <h2 className="text-xl sm:text-2xl font-black text-[var(--color-idol-dark)] tracking-tight">새 투표 등록</h2>
+                                    <p className="text-xs sm:text-sm font-medium text-[var(--color-idol-point)] mt-1">
                                         {groupId ? '👑 특정 그룹 대상 투표' : '🌐 전체 유저 대상 투표'}
                                     </p>
                                 </div>
                                 <button onClick={() => setIsCreateModalOpen(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition">✕</button>
                             </div>
 
-                            <div className="p-8 space-y-6 overflow-y-auto">
+                            <div className="p-5 sm:p-8 space-y-4 sm:space-y-6 overflow-y-auto">
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">투표 주제</label>
                                     <input
                                         type="text"
                                         value={newVote.title}
                                         onChange={(e) => setNewVote({ ...newVote, title: e.target.value })}
-                                        className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all outline-none font-medium"
+                                        className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-idol-point)] focus:bg-white transition-all outline-none font-medium"
                                         placeholder="어떤 멋진 투표를 만드실 건가요?"
                                     />
                                 </div>
@@ -698,18 +698,18 @@ const VotePage: React.FC = () => {
                                     <textarea
                                         value={newVote.description}
                                         onChange={(e) => setNewVote({ ...newVote, description: e.target.value })}
-                                        className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all outline-none min-h-[120px] resize-y font-medium text-sm leading-relaxed"
+                                        className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-idol-point)] focus:bg-white transition-all outline-none min-h-[120px] resize-y font-medium text-sm leading-relaxed"
                                         placeholder="참여자들이 투표에 대해 알 수 있도록 상세히 적어주세요."
                                     />
                                 </div>
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                     <div>
                                         <label className="block text-sm font-bold text-gray-700 mb-2">시작일</label>
                                         <input
                                             type="datetime-local"
                                             value={newVote.startDate}
                                             onChange={(e) => setNewVote({ ...newVote, startDate: e.target.value })}
-                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium"
+                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-idol-point)] outline-none font-medium"
                                         />
                                     </div>
                                     <div>
@@ -718,7 +718,7 @@ const VotePage: React.FC = () => {
                                             type="datetime-local"
                                             value={newVote.endDate}
                                             onChange={(e) => setNewVote({ ...newVote, endDate: e.target.value })}
-                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium"
+                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-idol-point)] outline-none font-medium"
                                         />
                                     </div>
                                 </div>
@@ -730,19 +730,21 @@ const VotePage: React.FC = () => {
                                     </label>
                                     <div className="space-y-4">
                                         {newVote.candidates.map((candidate, idx) => (
-                                            <div key={idx} className="flex gap-4 items-center bg-gray-50 p-4 rounded-2xl border border-gray-100 group relative">
-                                                <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm shadow-inner shrink-0 z-10">
-                                                    {idx + 1}
+                                            <div key={idx} className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center bg-gray-50 p-4 rounded-2xl border border-gray-100 group relative">
+                                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                    <div className="w-8 h-8 rounded-full bg-[var(--color-idol-bg)] text-[var(--color-idol-dark)] flex items-center justify-center font-bold text-sm shadow-inner shrink-0 z-10 border border-[var(--color-idol-point)]/30">
+                                                        {idx + 1}
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={candidate.name}
+                                                        onChange={(e) => updateCandidate(idx, 'name', e.target.value)}
+                                                        className="flex-1 sm:w-auto px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[var(--color-idol-point)] outline-none font-medium text-sm sm:text-base"
+                                                        placeholder="후보자 이름"
+                                                    />
                                                 </div>
-                                                <input
-                                                    type="text"
-                                                    value={candidate.name}
-                                                    onChange={(e) => updateCandidate(idx, 'name', e.target.value)}
-                                                    className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none font-medium"
-                                                    placeholder="후보자 이름"
-                                                />
 
-                                                <div className="relative shrink-0">
+                                                <div className="relative shrink-0 w-full sm:w-auto">
                                                     <input
                                                         type="file"
                                                         accept="image/*"
@@ -753,9 +755,9 @@ const VotePage: React.FC = () => {
                                                         }}
                                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                                     />
-                                                    <button className={`px-4 py-2.5 border rounded-lg text-sm font-bold transition whitespace-nowrap flex items-center gap-2
+                                                    <button className={`w-full sm:w-auto px-4 py-2.5 border rounded-lg text-sm font-bold transition flex justify-center items-center gap-2
                                                         ${candidate.image ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'}`}>
-                                                        {candidate.image ? '🖼 변경됨' : '📷 이미지 찾기'}
+                                                        {candidate.image ? '🖼 이미지 변경' : '📷 이미지 첨부'}
                                                     </button>
                                                 </div>
 
@@ -775,23 +777,23 @@ const VotePage: React.FC = () => {
                                     </div>
                                     <button
                                         onClick={addCandidate}
-                                        className="mt-6 w-full py-4 border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 font-bold hover:bg-purple-50 hover:border-purple-300 hover:text-purple-600 transition flex flex-col items-center gap-1"
+                                        className="mt-6 w-full py-4 border-2 border-dashed border-[var(--color-idol-point)]/50 rounded-2xl text-[var(--color-idol-point)] font-bold hover:bg-[var(--color-idol-bg)] hover:border-[var(--color-idol-point)] hover:text-[var(--color-idol-dark)] transition flex flex-col items-center gap-1"
                                     >
                                         <span className="text-xl">+</span> Add More
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-gray-50 flex justify-end gap-3 border-t">
+                            <div className="p-4 sm:p-6 bg-gray-50 flex flex-col sm:flex-row justify-end gap-3 border-t">
                                 <button
                                     onClick={() => setIsCreateModalOpen(false)}
-                                    className="px-8 py-3 bg-white text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-100 transition font-bold"
+                                    className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-white text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-100 transition font-bold"
                                 >
                                     작성 취소
                                 </button>
                                 <button
                                     onClick={handleCreateVote}
-                                    className="px-10 py-3 bg-gray-800 text-white rounded-xl hover:bg-black transition shadow-lg font-black tracking-wide"
+                                    className="w-full sm:w-auto px-6 sm:px-10 py-3 bg-[var(--color-idol-dark)] text-white rounded-xl hover:bg-[var(--color-idol)] transition shadow-lg font-black tracking-wide"
                                 >
                                     투표 발행하기
                                 </button>
