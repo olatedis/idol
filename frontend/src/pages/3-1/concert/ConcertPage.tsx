@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "../../stores/authStore";
+import { useAuthStore } from "../../../stores/authStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 20;
@@ -25,7 +25,6 @@ const ConcertPage: React.FC = () => {
     const navigate = useNavigate();
 
     const { user } = useAuthStore();
-    const accessToken = useAuthStore.getState().accessToken;
 
     // helper to format ISO date string as KST
     const formatKST = (iso?: string) => {
@@ -163,10 +162,6 @@ const ConcertPage: React.FC = () => {
         if (accessToken) return true;
         alert("로그인이 필요합니다.");
         return false;
-    };
-
-    const onClickRow = (c: ConcertDto) => {
-        navigate(`./${c.concertId}`);
     };
 
     const onClickBook = (c: ConcertDto) => {

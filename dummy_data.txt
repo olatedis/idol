@@ -191,3 +191,45 @@ UPDATE group_subscriptions SET group_name = '에이클랏' WHERE group_id = 2;
 UPDATE group_subscriptions SET group_name = '스트로베리 킬러' WHERE group_id = 3;
 UPDATE group_subscriptions SET group_name = '루네스타' WHERE group_id = 4;
 UPDATE group_subscriptions SET group_name = '엘파인' WHERE group_id = 5;
+ 
+-- Test Concert + Seats for group_id = 5
+INSERT INTO concert (agency_id, group_id, title, description, venue, concert_date, start_time, ticket_sale_date, created_at, active)
+VALUES
+(2, 5, '엘파인 스페셜 콘서트 (테스트)', '더미 데이터용 콘서트입니다.', '엘파인 홀', '2026-04-01 10:00:00', '2026-04-01 10:00:00', NOW(), NOW(), true);
+
+-- Seats: VIP(1), R(1), A(1), S(30)
+INSERT INTO seat (seat_number, grade, price, concert_id)
+VALUES
+('VIP-1', 'VIP', 200000, LAST_INSERT_ID()),
+('R-1', 'R', 150000, LAST_INSERT_ID()),
+('A-1', 'A', 80000, LAST_INSERT_ID()),
+('S-1', 'S', 100000, LAST_INSERT_ID()),
+('S-2', 'S', 100000, LAST_INSERT_ID()),
+('S-3', 'S', 100000, LAST_INSERT_ID()),
+('S-4', 'S', 100000, LAST_INSERT_ID()),
+('S-5', 'S', 100000, LAST_INSERT_ID()),
+('S-6', 'S', 100000, LAST_INSERT_ID()),
+('S-7', 'S', 100000, LAST_INSERT_ID()),
+('S-8', 'S', 100000, LAST_INSERT_ID()),
+('S-9', 'S', 100000, LAST_INSERT_ID()),
+('S-10', 'S', 100000, LAST_INSERT_ID()),
+('S-11', 'S', 100000, LAST_INSERT_ID()),
+('S-12', 'S', 100000, LAST_INSERT_ID()),
+('S-13', 'S', 100000, LAST_INSERT_ID()),
+('S-14', 'S', 100000, LAST_INSERT_ID()),
+('S-15', 'S', 100000, LAST_INSERT_ID()),
+('S-16', 'S', 100000, LAST_INSERT_ID()),
+('S-17', 'S', 100000, LAST_INSERT_ID()),
+('S-18', 'S', 100000, LAST_INSERT_ID()),
+('S-19', 'S', 100000, LAST_INSERT_ID()),
+('S-20', 'S', 100000, LAST_INSERT_ID()),
+('S-21', 'S', 100000, LAST_INSERT_ID()),
+('S-22', 'S', 100000, LAST_INSERT_ID()),
+('S-23', 'S', 100000, LAST_INSERT_ID()),
+('S-24', 'S', 100000, LAST_INSERT_ID()),
+('S-25', 'S', 100000, LAST_INSERT_ID()),
+('S-26', 'S', 100000, LAST_INSERT_ID()),
+('S-27', 'S', 100000, LAST_INSERT_ID()),
+('S-28', 'S', 100000, LAST_INSERT_ID()),
+('S-29', 'S', 100000, LAST_INSERT_ID()),
+('S-30', 'S', 100000, LAST_INSERT_ID());
