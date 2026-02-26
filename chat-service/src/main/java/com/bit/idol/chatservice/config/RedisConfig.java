@@ -11,6 +11,8 @@ import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Configuration
 public class RedisConfig {
 
@@ -18,15 +20,14 @@ public class RedisConfig {
     @Bean
     public RedisMessageListenerContainer redisMessageListener(
             RedisConnectionFactory connectionFactory,
-            MessageListenerAdapter listenerAdapter
-    ) {
+            MessageListenerAdapter listenerAdapter) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        
+
         // /sub/idol/* 및 /queue/idol/* 패턴의 토픽 구독
         container.addMessageListener(listenerAdapter, new PatternTopic("/sub/idol/*"));
         container.addMessageListener(listenerAdapter, new PatternTopic("/queue/idol/*"));
-        
+
         return container;
     }
 
@@ -38,13 +39,14 @@ public class RedisConfig {
 
     // RedisTemplate 설정 (JSON 직렬화)
     @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory,
+            ObjectMapper objectMapper) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(connectionFactory);
-        
+
         redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
-        
+        redisTemplate.setValueSerializer(new Jackson2JsonRedisSerializer<>(objectMapper, Object.class));
+
         return redisTemplate;
     }
 }
