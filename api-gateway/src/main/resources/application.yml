@@ -59,7 +59,7 @@ spring:
         - id: board-service
           uri: lb://BOARD-SERVICE
           predicates:
-            - Path=/board/posts/**, /board/comments/**
+            - Path=/board/posts/**, /board/comments/**, /board/uploads/**, /uploads/**
 
         - id: search-service
           uri: lb://SEARCH-SERVICE
@@ -145,10 +145,10 @@ jwt:
     - /sse/notifications
     - /api/rankings/**
     - /search/**
-    - /board/posts/**
     - /concerts/**
     - /idols/**
     - /groups/**
+    - /uploads/**
 
 logging:
   level:

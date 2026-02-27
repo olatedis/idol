@@ -22,6 +22,7 @@ import IdolBoardPage from "./pages/3-1/IdolBoardPage.tsx";
 import IdolPostWritePage from "./pages/3-1/IdolPostWritePage.tsx";
 import IdolPostDetailPage from "./pages/3-1/IdolPostDetailPage.tsx"; // 추가됨
 import ChatPage from "./pages/3-1/ChatPage.tsx";
+import GroupPostEditPage from "./pages/3-1/GroupPostEditPage.tsx";
 
 function App() {
     return (
@@ -51,6 +52,7 @@ function App() {
                     {/* board/write가 board/:postId에 먹히는 케이스 방지 */}
                     <Route path="board/write" element={<GroupPostWritePage />} />
                     <Route path="board/:postId" element={<GroupPostDetailPage />} />
+                    <Route path="board/:postId/edit" element={<GroupPostEditPage />} />"
 
                     {/* 아이돌 공식 게시판 */}
                     <Route path="idol/:idolId/board" element={<IdolBoardPage />} />

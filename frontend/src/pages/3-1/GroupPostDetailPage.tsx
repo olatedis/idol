@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuthStore } from "../../stores/authStore";
+import { api } from "../../api/axios";
 
 type CommentResponse = {
     commentId: number;
     authorId: number;
     authorNickname: string | null;
-
     content: string;
     isDeleted: boolean;
-
     createdAt: string;
     updatedAt: string;
 };
@@ -41,11 +41,11 @@ type PostReactionResponse = {
     myReaction: string;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 const GroupPostDetailPage: React.FC = () => {
     const { postId } = useParams();
     const navigate = useNavigate();
+
+    const { accessToken, user } = useAuthStore();
 
     const [data, setData] = useState<PostResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -55,35 +55,14 @@ const GroupPostDetailPage: React.FC = () => {
     const [submittingComment, setSubmittingComment] = useState(false);
 
     const [reacting, setReacting] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
-    // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
-    const accessToken = localStorage.getItem("accessToken");
+    const fetchDetail = async () => {
+        if (!postId) throw new Error("postId가 없습니다.");
+        if (!accessToken) throw new Error("로그인이 필요합니다.");
 
-    const fetchDetail = async (signal?: AbortSignal) => {
-        if (!API_BASE_URL) {
-            throw new Error("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
-        }
-        if (!postId) {
-            throw new Error("postId가 없습니다.");
-        }
-        if (!accessToken) {
-            // 상세 GET은 토큰 필수 정책
-            throw new Error("로그인이 필요합니다.");
-        }
-
-        const res = await fetch(`${API_BASE_URL}/board/posts/${postId}`, {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-            },
-            signal,
-        });
-
-        if (res.status === 401) throw new Error("로그인이 필요합니다.");
-        if (res.status === 403) throw new Error("권한이 없습니다. (구독 필요 또는 접근 불가)");
-        if (!res.ok) throw new Error("게시글 상세 조회 실패");
-
-        const json = (await res.json()) as PostResponse;
+        const res = await api.get(`/board/posts/${postId}`);
+        const json = res.data as PostResponse;
 
         return {
             ...json,
@@ -93,8 +72,6 @@ const GroupPostDetailPage: React.FC = () => {
     };
 
     useEffect(() => {
-        const controller = new AbortController();
-
         const run = async () => {
             setError("");
 
@@ -103,7 +80,6 @@ const GroupPostDetailPage: React.FC = () => {
                 setData(null);
                 return;
             }
-
             if (!accessToken) {
                 setError("로그인이 필요합니다.");
                 setData(null);
@@ -112,11 +88,13 @@ const GroupPostDetailPage: React.FC = () => {
 
             try {
                 setLoading(true);
-                const detail = await fetchDetail(controller.signal);
+                const detail = await fetchDetail();
                 setData(detail);
             } catch (e: any) {
-                if (e?.name === "AbortError") return;
-                setError(e?.message || "게시글 상세 조회 실패");
+                const status = e?.response?.status;
+                if (status === 401) setError("로그인이 필요합니다.");
+                else if (status === 403) setError("권한이 없습니다. (구독 필요 또는 접근 불가)");
+                else setError(e?.response?.data?.message || e?.message || "게시글 상세 조회 실패");
                 setData(null);
             } finally {
                 setLoading(false);
@@ -124,12 +102,36 @@ const GroupPostDetailPage: React.FC = () => {
         };
 
         run();
-        return () => controller.abort();
-    }, [API_BASE_URL, postId, accessToken]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [postId, accessToken]);
+
+    const canEditOrDelete = useMemo(() => {
+        if (!data || !user) return false;
+
+        const role = user.role;
+        const bt = data.boardType;
+
+        // ADMIN: 전부 가능
+        if (role === "ADMIN") return true;
+
+        // ADMIN_NOTICE: ADMIN만
+        if (bt === "ADMIN_NOTICE") return false;
+
+        // FAN: USER는 본인 글만
+        if ((bt === "IDOL_FAN" || bt === "GROUP_FAN") && role === "USER") {
+            return Number(data.authorId) === Number(user.userId);
+        }
+
+        // OFFICIAL: IDOL/AGENCY는 일단 버튼 보여주기(소속 검증은 백엔드에서)
+        if ((bt === "IDOL_OFFICIAL" || bt === "GROUP_OFFICIAL") && (role === "IDOL" || role === "AGENCY")) {
+            return true;
+        }
+
+        return false;
+    }, [data, user]);
 
     const onClickLike = async () => {
         if (!data) return;
-        if (!API_BASE_URL) return;
         if (!postId) return;
 
         if (!accessToken) {
@@ -138,24 +140,12 @@ const GroupPostDetailPage: React.FC = () => {
         }
 
         if (reacting) return;
-
         setReacting(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/like`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
+            const res = await api.post(`/board/posts/${postId}/like`);
+            const json = res.data as PostReactionResponse;
 
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("추천 처리 실패");
-
-            const json = (await res.json()) as PostReactionResponse;
-
-            // 서버 응답으로 동기화
             setData((prev) => {
                 if (!prev) return prev;
                 return {
@@ -166,7 +156,10 @@ const GroupPostDetailPage: React.FC = () => {
                 };
             });
         } catch (e: any) {
-            alert(e?.message || "추천 처리 실패");
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "추천 처리 실패");
         } finally {
             setReacting(false);
         }
@@ -174,7 +167,6 @@ const GroupPostDetailPage: React.FC = () => {
 
     const onClickDislike = async () => {
         if (!data) return;
-        if (!API_BASE_URL) return;
         if (!postId) return;
 
         if (!accessToken) {
@@ -183,24 +175,12 @@ const GroupPostDetailPage: React.FC = () => {
         }
 
         if (reacting) return;
-
         setReacting(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/dislike`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
+            const res = await api.post(`/board/posts/${postId}/dislike`);
+            const json = res.data as PostReactionResponse;
 
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("비추천 처리 실패");
-
-            const json = (await res.json()) as PostReactionResponse;
-
-            // 서버 응답으로 동기화
             setData((prev) => {
                 if (!prev) return prev;
                 return {
@@ -211,7 +191,10 @@ const GroupPostDetailPage: React.FC = () => {
                 };
             });
         } catch (e: any) {
-            alert(e?.message || "비추천 처리 실패");
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "비추천 처리 실패");
         } finally {
             setReacting(false);
         }
@@ -219,7 +202,6 @@ const GroupPostDetailPage: React.FC = () => {
 
     const onSubmitComment = async () => {
         if (!data) return;
-        if (!API_BASE_URL) return;
         if (!postId) return;
 
         if (!commentInput.trim()) return;
@@ -230,34 +212,51 @@ const GroupPostDetailPage: React.FC = () => {
         }
 
         if (submittingComment) return;
-
         setSubmittingComment(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/comments`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify({
-                    content: commentInput.trim(),
-                }),
+            await api.post(`/board/posts/${postId}/comments`, {
+                content: commentInput.trim(),
             });
-
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("댓글 작성 실패");
 
             setCommentInput("");
 
-            // 댓글 작성 후 "상세 재조회"로 완전 동기화
             const detail = await fetchDetail();
             setData(detail);
         } catch (e: any) {
-            alert(e?.message || "댓글 작성 실패");
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "댓글 작성 실패");
         } finally {
             setSubmittingComment(false);
+        }
+    };
+
+    const onClickEdit = () => {
+        if (!postId) return;
+        navigate(`./edit`);
+    };
+
+    const onClickDelete = async () => {
+        if (!postId) return;
+        if (deleting) return;
+
+        const ok = window.confirm("정말 삭제하시겠습니까?");
+        if (!ok) return;
+
+        setDeleting(true);
+        try {
+            await api.delete(`/board/posts/${postId}`);
+            alert("삭제되었습니다.");
+            navigate(`../`);
+        } catch (e: any) {
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "삭제 실패");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -267,14 +266,38 @@ const GroupPostDetailPage: React.FC = () => {
 
     const likeActive = data.myReaction === "LIKE";
     const dislikeActive = data.myReaction === "DISLIKE";
-
     const commentCount = Array.isArray(data.comments) ? data.comments.length : 0;
 
     return (
         <div className="space-y-4">
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 pt-6 pb-4">
-                    <div className="text-2xl font-semibold text-gray-900">{data.title}</div>
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="text-2xl font-semibold text-gray-900">{data.title}</div>
+
+                        {/* 수정/삭제 버튼 */}
+                        {canEditOrDelete && (
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={onClickEdit}
+                                    className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
+                             hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
+                                >
+                                    수정
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onClickDelete}
+                                    disabled={deleting}
+                                    className="px-4 py-2 rounded-full border border-red-200 text-sm font-semibold text-red-600
+                             hover:bg-red-50 hover:border-red-300 active:scale-[0.99] transition disabled:opacity-60"
+                                >
+                                    {deleting ? "삭제 중..." : "삭제"}
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
                         <span className="font-medium text-gray-800">{data.authorId}</span>
@@ -284,7 +307,6 @@ const GroupPostDetailPage: React.FC = () => {
                 </div>
 
                 <div className="px-6 py-5 border-t border-gray-100">
-                    {/* content는 HTML 저장이므로 렌더링 */}
                     <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{ __html: data.content }} />
 
                     <div className="mt-8 flex justify-center gap-10">
@@ -293,7 +315,9 @@ const GroupPostDetailPage: React.FC = () => {
                             onClick={onClickLike}
                             disabled={reacting}
                             className={[
-                                "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition-colors disabled:opacity-60",
+                                "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition",
+                                "hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0",
+                                "disabled:opacity-60",
                                 likeActive
                                     ? "bg-[#1FBFB8] border-[#1FBFB8] text-white"
                                     : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
@@ -308,7 +332,9 @@ const GroupPostDetailPage: React.FC = () => {
                             onClick={onClickDislike}
                             disabled={reacting}
                             className={[
-                                "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition-colors disabled:opacity-60",
+                                "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition",
+                                "hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0",
+                                "disabled:opacity-60",
                                 dislikeActive
                                     ? "bg-[#1FBFB8] border-[#1FBFB8] text-white"
                                     : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
@@ -323,7 +349,8 @@ const GroupPostDetailPage: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => navigate(-1)}
-                            className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold hover:bg-gray-50"
+                            className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
+                         hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
                         >
                             목록으로
                         </button>
@@ -331,6 +358,7 @@ const GroupPostDetailPage: React.FC = () => {
                 </div>
             </div>
 
+            {/* 댓글 */}
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100">
                     <div className="font-semibold text-gray-900">댓글 {commentCount}</div>
@@ -376,7 +404,8 @@ const GroupPostDetailPage: React.FC = () => {
                             type="button"
                             onClick={onSubmitComment}
                             disabled={submittingComment}
-                            className="px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8] disabled:opacity-60"
+                            className="px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold
+                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
                         >
                             등록
                         </button>
