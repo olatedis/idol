@@ -27,9 +27,11 @@ interface ChatMessage {
     senderNickname: string;
     content: string;
     type: string;
+    thumbnailUrl?: string; // Added thumbnailUrl
     parentId?: string | null;
     createdAt?: string;
     me?: boolean;
+    reactions?: Record<string, number>;
 }
 
 const ChatPage: React.FC = () => {
@@ -48,11 +50,28 @@ const ChatPage: React.FC = () => {
     const [myIdolId, setMyIdolId] = useState<number | null>(null);
     const [isIdolTyping, setIsIdolTyping] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+
+    // 무한 스크롤 상태
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [isSending, setIsSending] = useState(false); // 도배 방지 락 상태
+
+    // 공지사항 등 추가 상태
+    const [pinnedMessage, setPinnedMessage] = useState<ChatMessage | null>(null);
+
+    // 검색 상태 관리
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchKeyword, setSearchKeyword] = useState("");
+    const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+
     const typingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastTypingTimeRef = React.useRef<number>(0);
 
     const stompClientRef = React.useRef<Client | null>(null);
     const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
+    const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+    const observerTargetRef = React.useRef<HTMLDivElement | null>(null);
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
     // 아이돌 로그인 시 내 idolId 가져오기
@@ -128,34 +147,37 @@ const ChatPage: React.FC = () => {
     // Phase 2: 채팅방(아이돌) 선택 시 STOMP 연결 및 기존 내역 로드
     useEffect(() => {
         if (!selectedIdolId || !user) {
-            // 방을 나갈 때 연결 종료
             if (stompClientRef.current && stompClientRef.current.active) {
                 stompClientRef.current.deactivate();
             }
             return;
         }
 
-        // 1. 기존 내역 및 온라인 상태 페치
-        const fetchHistoryAndStatus = async () => {
+        let isMounted = true;
+
+        const fetchInitialData = async () => {
             try {
-                // 병렬 요청 (읽음 처리 포함)
-                const [histRes, statusRes] = await Promise.all([
+                const [histRes, statusRes, pinRes] = await Promise.all([
                     api.get(`/chat/history/${selectedIdolId}`),
                     api.get(`/chat/status/${selectedIdolId}`),
+                    api.get(`/chat/pin/${selectedIdolId}`).catch(() => ({ data: null })),
                     api.post(`/chat/read/${selectedIdolId}`)
                 ]);
 
-                // 메시지 이력 세팅
+                if (!isMounted) return;
+
                 const history = Array.isArray(histRes.data) ? histRes.data.reverse() : [];
                 setMessages(history);
+                setHasMore(history.length === 20); // 기본 size가 20이라고 가정
+                setPinnedMessage(pinRes.data || null);
+
+                // 처음 로드 시에만 스크롤을 맨 아래로
                 setTimeout(scrollToBottom, 100);
 
-                // 온라인 상태 세팅
                 setIsIdolOnline(statusRes.data.online === true);
                 setIsIdolTyping(false);
                 if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
-                // 로컬 방 목록의 안 읽은 개수도 0으로 초기화
                 setChatRooms(prev => prev.map(room =>
                     room.idolId === selectedIdolId ? { ...room, unreadCount: 0 } : room
                 ));
@@ -164,7 +186,7 @@ const ChatPage: React.FC = () => {
             }
         };
 
-        fetchHistoryAndStatus();
+        fetchInitialData();
 
         // 2. STOMP 연결 설정
         const client = new Client({
@@ -178,6 +200,30 @@ const ChatPage: React.FC = () => {
 
                 const handleIncomingMessage = (message: any) => {
                     const parsed: ChatMessage = JSON.parse(message.body);
+
+                    // --- 이벤트 핸들링 시작 ---
+                    // 1. 메시지 삭제
+                    if (parsed.type === "DELETE") {
+                        setMessages((prev) => prev.map(m => m.id === parsed.id ? { ...m, content: "삭제된 메시지입니다.", type: "DELETED" } : m));
+                        return; // 메시지 배열에 새로 추가하지 않고 종료
+                    }
+
+                    // 2. 공지사항 고정/해제
+                    if (parsed.type === "PIN") {
+                        setPinnedMessage(parsed);
+                        return;
+                    }
+                    if (parsed.type === "UNPIN") {
+                        setPinnedMessage(null);
+                        return;
+                    }
+
+                    // 3. 메시지 반응(리액션) 업데이트
+                    if (parsed.type === "REACTION") {
+                        setMessages((prev) => prev.map(m => m.id === parsed.id ? { ...m, reactions: parsed.reactions } : m));
+                        return;
+                    }
+                    // --- 이벤트 핸들링 끝 ---
 
                     // 내가 보낸 메시지가 에코되어 돌아올 경우 렌더링 중복 방지 (Optimistic UI와 충돌 방지)
                     if (String(parsed.senderId) === String(user.userId)) {
@@ -210,6 +256,14 @@ const ChatPage: React.FC = () => {
                 // 공지성 및 아이돌 발송 메시지용 공용 채널
                 client.subscribe(`/sub/idol/${selectedIdolId}`, handleIncomingMessage);
 
+                // 에러 발생 및 도배 방지 시 서버 브로드캐스팅 수신
+                client.subscribe(`/queue/errors/${user.userId}`, (message: any) => {
+                    const errorPayload = JSON.parse(message.body);
+                    alert(`전송 제한: ${errorPayload.message}`);
+                    // Optimistic UI로 올라간 실패한 임시 메시지 즉각 롤백(제거)
+                    setMessages(prev => prev.filter(m => m.id === undefined || !String(m.id).startsWith("temp-")));
+                });
+
                 // IDOL 권한일 경우 팬들이 나에게 보내는 프라이빗 큐 채널 추가 구독
                 if (user.role === "IDOL") {
                     client.subscribe(`/queue/idol/${selectedIdolId}`, handleIncomingMessage);
@@ -229,15 +283,69 @@ const ChatPage: React.FC = () => {
 
         // 클린업: 언마운트 혹은 다른 방 선택 시 연결 해제
         return () => {
-            // React StrictMode의 빠른 마운트/언마운트 사이클에서
-            // client.active가 true가 되기 전에 cleanup이 불리는 것을 방지하기 위해 무조건 비활성화 호출
+            isMounted = false;
             client.deactivate();
         };
     }, [selectedIdolId, user]);
 
+    // 과거 메시지 불러오기 로직 (무한 스크롤)
+    const loadMoreHistory = useCallback(async () => {
+        if (isLoadingMore || !hasMore || !selectedIdolId || messages.length === 0) return;
+
+        try {
+            setIsLoadingMore(true);
+
+            // 현재 스크롤 유지용 값 저장
+            const container = scrollContainerRef.current;
+            const previousScrollHeight = container?.scrollHeight || 0;
+            const previousScrollTop = container?.scrollTop || 0;
+
+            const oldestMessageId = messages[0].id;
+            // API에 lastId 파라미터 전달
+            const res = await api.get(`/chat/history/${selectedIdolId}?lastId=${oldestMessageId}`);
+
+            const olderMessages = Array.isArray(res.data) ? res.data.reverse() : [];
+
+            if (olderMessages.length > 0) {
+                // 새 메시지 배열의 맨 앞에 옛날 메시지 추가
+                setMessages(prev => {
+                    const existingIds = new Set(prev.map(m => m.id));
+                    const uniqueOlderMessages = olderMessages.filter(m => !existingIds.has(m.id));
+                    return [...uniqueOlderMessages, ...prev];
+                });
+                setHasMore(olderMessages.length === 20); // 다시 페이징 분기검사
+
+                // 스크롤 위치 보정
+                // React 상태 업데이트 후 DOM에 렌더링될 때까지 기다림
+                requestAnimationFrame(() => {
+                    if (container) {
+                        const newScrollHeight = container.scrollHeight;
+                        // (새롭게 늘어난 전체 높이 - 이전에 로드됐던 전체 높이) 만큼 강제로 스크롤을 내려서
+                        // 유저가 보던 시점은 변하지 않게 만들어줌
+                        container.scrollTop = previousScrollTop + (newScrollHeight - previousScrollHeight);
+                    }
+                });
+            } else {
+                setHasMore(false);
+            }
+        } catch (err) {
+            console.error("과거 메시지 불러오기 실패:", err);
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [isLoadingMore, hasMore, selectedIdolId, messages]);
+
+    // IntersectionObserver 자동 스크롤 하단 감지 로직은 '이전 대화 더 보기' 수동 버튼 방식으로 교체되었습니다.
+
     // 메시지 전송 로직
     const handleSendMessage = () => {
-        if (!newMessage.trim() || !stompClientRef.current?.active || !selectedIdolId || !user) return;
+        if (!newMessage.trim() || !stompClientRef.current?.active || !selectedIdolId || !user || isSending || isUploading) return;
+
+        // 서버 부담 및 도배를 막기 위해 팬 계정은 3초 연속 전송 비활성화 락
+        if (user.role === 'USER') {
+            setIsSending(true);
+            setTimeout(() => setIsSending(false), 3000);
+        }
 
         const payload = {
             idolId: selectedIdolId,
@@ -274,7 +382,13 @@ const ChatPage: React.FC = () => {
     // 미디어 파일 업로드 핸들러
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !stompClientRef.current?.active || !selectedIdolId || !user) return;
+        if (!file || !stompClientRef.current?.active || !selectedIdolId || !user || isSending || isUploading) return;
+
+        // 서버 부담 및 도배를 막기 위해 팬 계정은 3초 연속 업로드 비활성화 락
+        if (user.role === 'USER') {
+            setIsSending(true);
+            setTimeout(() => setIsSending(false), 3000);
+        }
 
         try {
             setIsUploading(true);
@@ -285,11 +399,12 @@ const ChatPage: React.FC = () => {
                 headers: { "Content-Type": "multipart/form-data" }
             });
 
-            const uploadedData = uploadRes.data; // { url, type: "IMAGE" | "VIDEO" | "FILE" }
+            const uploadedData = uploadRes.data; // { url, thumbnailUrl, type }
 
             const payload = {
                 idolId: selectedIdolId,
                 content: uploadedData.url,
+                thumbnailUrl: uploadedData.thumbnailUrl,
                 type: uploadedData.type === "VIDEO" ? "VIDEO" : "IMAGE"
             };
 
@@ -307,6 +422,7 @@ const ChatPage: React.FC = () => {
                 senderRole: user.role,
                 senderNickname: user.nickname,
                 content: uploadedData.url,
+                thumbnailUrl: uploadedData.thumbnailUrl,
                 type: payload.type,
                 createdAt: new Date().toISOString()
             }]);
@@ -332,6 +448,23 @@ const ChatPage: React.FC = () => {
                 body: JSON.stringify({ idolId: selectedIdolId })
             });
             lastTypingTimeRef.current = now;
+        }
+    };
+
+    // 채팅 검색 API 연동
+    const handleSearch = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!searchKeyword.trim() || !selectedIdolId || !user) return;
+
+        try {
+            setIsSearching(true);
+            const res = await api.get(`/search/chat?idolId=${selectedIdolId}&keyword=${encodeURIComponent(searchKeyword)}&page=0&size=50`);
+            setSearchResults(res.data.content || []);
+        } catch (err) {
+            console.error("검색 중 오류 발생:", err);
+            alert("채팅 내역 검색에 실패했습니다.");
+        } finally {
+            setIsSearching(false);
         }
     };
 
@@ -447,6 +580,7 @@ const ChatPage: React.FC = () => {
                         if (selectedIdolId) {
                             api.post(`/chat/read/${selectedIdolId}`).catch(console.error);
                         }
+                        setIsSearchOpen(false); // 검색창 초기화
                         setSelectedIdolId(null);
                     }}
                     className="p-2 -ml-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors mr-3 active:scale-95"
@@ -477,16 +611,112 @@ const ChatPage: React.FC = () => {
                         </p>
                     </div>
                 </div>
+                {/* 검색 토글 버튼 */}
+                <button
+                    onClick={() => { setIsSearchOpen(!isSearchOpen); }}
+                    className={`p-2 ml-2 rounded-full transition-colors active:scale-95 ${isSearchOpen ? 'bg-[var(--color-idol)] text-white' : 'text-gray-500 hover:text-[var(--color-idol)] hover:bg-gray-100'}`}
+                    title="채팅 내역 검색"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </button>
             </div>
 
+            {/* 검색 사이드 패널 (Drawer) */}
+            {isSearchOpen && (
+                <div className="absolute top-[68px] right-0 sm:right-4 w-full sm:w-80 h-[calc(100%-140px)] bg-white/95 backdrop-blur-md shadow-2xl z-30 flex flex-col transform transition-transform rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="p-3 border-b bg-gray-50 flex items-center shrink-0">
+                        <form onSubmit={handleSearch} className="flex flex-1 items-center bg-white rounded-lg border px-3 py-1.5 focus-within:ring-1 focus-within:ring-[var(--color-idol)]">
+                            <input
+                                type="text"
+                                placeholder="채팅 내역 검색..."
+                                value={searchKeyword}
+                                onChange={(e) => setSearchKeyword(e.target.value)}
+                                className="flex-1 outline-none text-sm bg-transparent"
+                            />
+                            <button type="submit" disabled={isSearching} className="text-gray-400 hover:text-[var(--color-idol)] p-1">
+                                {isSearching ? (
+                                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                )}
+                            </button>
+                        </form>
+                        <button onClick={() => setIsSearchOpen(false)} className="ml-2 text-gray-400 p-1 hover:text-gray-800 rounded-lg hover:bg-gray-200">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar text-sm">
+                        {searchResults.length > 0 ? (
+                            searchResults.map((res: ChatMessage, idx) => (
+                                <div key={idx} className="bg-white border rounded-lg p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="font-bold text-[var(--color-idol-dark)] text-xs">{res.senderNickname || '알 수 없음'}</span>
+                                        <span className="text-[10px] text-gray-400">{res.createdAt ? new Date(res.createdAt).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                                    </div>
+                                    <p className="text-gray-700 leading-snug break-words" dangerouslySetInnerHTML={{ __html: res.content.replace(new RegExp(searchKeyword, 'gi'), match => `<mark class="bg-yellow-200 rounded px-0.5 text-[var(--color-idol-dark)] font-medium">${match}</mark>`) }}></p>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2 opacity-70 pb-10">
+                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span>{isSearching ? '검색 중...' : '검색 결과가 없습니다.'}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* 공지사항 (Pinned Message) 영역 */}
+            {pinnedMessage && (
+                <div className="bg-[var(--color-idol-bg)] border-b border-[var(--color-idol-point)]/20 px-5 py-3 flex items-start space-x-3 shadow-sm shrink-0 z-10 transition-all">
+                    <div className="mt-0.5 text-[var(--color-idol-point)] shrink-0 bg-white p-1 rounded-full shadow-sm">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-black tracking-wider text-[var(--color-idol-dark)] mb-0.5 uppercase">공지사항</div>
+                        <p className="text-sm text-gray-800 break-words line-clamp-2 leading-snug">{pinnedMessage.content}</p>
+                    </div>
+                </div>
+            )}
+
             {/* 채팅 내역 영역 */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[var(--color-idol-bg)]/40 flex flex-col">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-5 space-y-4 bg-[var(--color-idol-bg)]/40 flex flex-col custom-scrollbar">
                 {/* 시스템 알림 라벨 */}
                 <div className="flex justify-center my-2 shrink-0">
                     <span className="bg-[var(--color-idol-point)] text-white text-xs px-4 py-1.5 rounded-full shadow-sm opacity-90">
                         채팅방에 입장했습니다
                     </span>
                 </div>
+
+                {/* 수동 '이전 대화 더 보기' 버튼 영역 */}
+                {hasMore && (
+                    <div className="flex justify-center w-full pb-2 shrink-0">
+                        <button
+                            onClick={loadMoreHistory}
+                            disabled={isLoadingMore}
+                            className="bg-white/80 hover:bg-white text-[var(--color-idol)] text-xs font-semibold px-5 py-2 rounded-full shadow-sm border border-[var(--color-idol)]/20 transition-all hover:shadow-md disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none flex items-center space-x-2"
+                        >
+                            {isLoadingMore ? (
+                                <>
+                                    <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>불러오는 중...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path>
+                                    </svg>
+                                    <span>이전 대화 더 보기</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
 
                 {/* 메시지 렌더링 */}
                 {messages.map((msg, idx) => {
@@ -518,8 +748,9 @@ const ChatPage: React.FC = () => {
                                 {!isMine && <div className="text-xs text-gray-500 mb-1 font-semibold">{msg.senderNickname}</div>}
 
                                 {msg.type === 'IMAGE' ? (
-                                    <div className="mt-1 mb-1 relative overflow-hidden rounded-xl border border-black/5 bg-white/50">
-                                        <img src={msg.content} alt="Media" className="max-w-full max-h-64 object-contain" onLoad={scrollToBottom} />
+                                    <div className="mt-1 mb-1 relative overflow-hidden rounded-xl border border-black/5 bg-white/50 cursor-pointer" onClick={() => window.open(msg.content, "_blank")}>
+                                        {/* 원본이 아닌 썸네일 URL 렌더링 (없으면 원본) */}
+                                        <img src={msg.thumbnailUrl || msg.content} alt="Media" className="max-w-full max-h-64 object-contain transition-transform hover:scale-105" onLoad={scrollToBottom} />
                                     </div>
                                 ) : msg.type === 'VIDEO' ? (
                                     <div className="mt-1 mb-1 relative overflow-hidden rounded-xl border border-black/5 bg-black/50">
@@ -532,6 +763,18 @@ const ChatPage: React.FC = () => {
                                 {msg.createdAt && (
                                     <div className={`text-[10px] mt-1.5 ${isMine ? 'text-white/70 text-right' : 'text-gray-400 text-left'}`}>
                                         {new Date(msg.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                )}
+
+                                {/* 리액션 렌더링 */}
+                                {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                                    <div className={`flex flex-wrap gap-1 mt-1.5 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                                        {Object.entries(msg.reactions).map(([reaction, count]) => (
+                                            <span key={reaction} className={`inline-flex items-center space-x-1 rounded-full px-1.5 py-0.5 text-[10px] shadow-sm border ${isMine ? 'bg-white/20 border-white/30 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'}`}>
+                                                <span>{reaction === 'like' ? '❤️' : reaction === 'smile' ? '😄' : reaction === 'thumb' ? '👍' : reaction}</span>
+                                                <span className="font-bold">{count}</span>
+                                            </span>
+                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -574,11 +817,11 @@ const ChatPage: React.FC = () => {
                     </div>
                 )}
                 <div className="flex justify-center items-center h-full max-w-full m-0 p-0">
-                    <div className={`flex items-center rounded-full border p-1 px-3 w-full transition-all shadow-inner ${isOtherIdolRoom ? 'bg-gray-200 border-gray-300 opacity-70 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus-within:ring-2 focus-within:ring-[var(--color-idol-bg)] focus-within:border-[var(--color-idol-point)]'}`}>
+                    <div className={`flex items-center rounded-full border p-1 px-3 w-full transition-all shadow-inner ${(isOtherIdolRoom || isSending || isUploading) ? 'bg-gray-200 border-gray-300 opacity-70 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus-within:ring-2 focus-within:ring-[var(--color-idol-bg)] focus-within:border-[var(--color-idol-point)]'}`}>
                         {/* 더하기 버튼 (미디어 업로드 로직으로 변경됨) */}
                         <button
-                            className={`p-2 transition-colors active:scale-95 flex-shrink-0 ${isOtherIdolRoom ? 'text-gray-400 cursor-not-allowed' : 'text-gray-500 hover:text-[var(--color-idol-dark)]'}`}
-                            disabled={isOtherIdolRoom || isUploading}
+                            className={`p-2 transition-colors active:scale-95 flex-shrink-0 ${(isOtherIdolRoom || isSending || isUploading) ? 'text-gray-400 cursor-not-allowed' : 'text-gray-500 hover:text-[var(--color-idol-dark)]'}`}
+                            disabled={isOtherIdolRoom || isUploading || isSending}
                             onClick={() => fileInputRef.current?.click()}
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -591,24 +834,24 @@ const ChatPage: React.FC = () => {
                             style={{ display: "none" }}
                             accept="image/*,video/*"
                             onChange={handleFileUpload}
-                            disabled={isOtherIdolRoom || isUploading}
+                            disabled={isOtherIdolRoom || isUploading || isSending}
                         />
                         <input
                             type="text"
-                            placeholder={isOtherIdolRoom ? "자신의 채팅방에서만 메시지를 보낼 수 있습니다." : "메시지 전송"}
+                            placeholder={isOtherIdolRoom ? "자신의 채팅방에서만 메시지를 보낼 수 있습니다." : isSending ? "도배 방지: 3초 후 입력 가능합니다." : "메시지 전송"}
                             value={newMessage}
                             onChange={(e) => {
                                 setNewMessage(e.target.value);
                                 handleTyping();
                             }}
                             onKeyDown={handleKeyDown}
-                            disabled={isOtherIdolRoom}
-                            className={`flex-1 bg-transparent border-none focus:ring-0 px-3 py-3 text-[15px] outline-none ${isOtherIdolRoom ? 'text-gray-500 cursor-not-allowed' : 'text-gray-800'}`}
+                            disabled={isOtherIdolRoom || isSending || isUploading}
+                            className={`flex-1 bg-transparent border-none focus:ring-0 px-3 py-3 text-[15px] outline-none ${(isOtherIdolRoom || isSending || isUploading) ? 'text-gray-500 cursor-not-allowed' : 'text-gray-800'}`}
                         />
                         <button
                             onClick={handleSendMessage}
-                            disabled={!newMessage.trim() || isOtherIdolRoom}
-                            className={`ml-2 px-4 py-2 font-medium rounded-full flex items-center justify-center shadow-md transition-all sm:active:scale-95 min-w-14 ${isOtherIdolRoom ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] hover:from-[var(--color-idol-dark)] hover:to-[var(--color-idol-dark)] text-white disabled:opacity-50'}`}
+                            disabled={!newMessage.trim() || isOtherIdolRoom || isSending || isUploading}
+                            className={`ml-2 px-4 py-2 font-medium rounded-full flex items-center justify-center shadow-md transition-all sm:active:scale-95 min-w-14 ${(isOtherIdolRoom || isSending || isUploading) ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] hover:from-[var(--color-idol-dark)] hover:to-[var(--color-idol-dark)] text-white disabled:opacity-50'}`}
                         >
                             전송
                         </button>

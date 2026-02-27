@@ -21,13 +21,18 @@ const GroupServicePage: React.FC = () => {
 
     useEffect(() => {
         const run = async () => {
-            // Zustand store에서 토큰을 가져옵니다.
-            const { accessToken } = useAuthStore.getState();
+            // Zustand store에서 토큰과 유저 정보를 가져옵니다.
+            const { accessToken, user } = useAuthStore.getState();
 
             if (!accessToken) {
                 alert("로그인이 필요합니다.");
-
                 navigate(-1);
+                return;
+            }
+
+            // 아이돌 권한이거나 관리자인 경우 소속 그룹 구독 검증을 프리패스합니다.
+            if (user?.role === 'IDOL' || user?.role === 'ADMIN') {
+                setGuardChecking(false);
                 return;
             }
 

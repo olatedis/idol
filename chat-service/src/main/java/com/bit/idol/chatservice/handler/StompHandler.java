@@ -79,9 +79,11 @@ public class StompHandler implements ChannelInterceptor {
             try {
                 IdolDto idol = userFeignClient.getMyIdolInfo(user.getUserId());
                 if (idol != null) {
-                    chatService.setIdolOnline((long) idol.getIdolId(), true);
+                    String currentSessionId = accessor.getSessionId();
+                    chatService.setIdolOnline((long) idol.getIdolId(), true,
+                            currentSessionId != null ? currentSessionId : "");
                     accessor.getSessionAttributes().put("idolId", idol.getIdolId());
-                    log.info("아이돌 접속 ON: idolId={}", idol.getIdolId());
+                    log.info("아이돌 접속 ON: idolId={}, sessionId={}", idol.getIdolId(), currentSessionId);
                 }
             } catch (Exception e) {
                 log.error("아이돌 정보 조회 실패 (접속 상태 미반영): userId={}, error={}", user.getUserId(), e.getMessage());
@@ -173,8 +175,8 @@ public class StompHandler implements ChannelInterceptor {
         Integer idolId = (Integer) accessor.getSessionAttributes().get("idolId");
 
         if (userId != null && "IDOL".equals(role) && idolId != null) {
-            chatService.setIdolOnline((long) idolId, false);
-            log.info("아이돌 접속 OFF: idolId={}", idolId);
+            chatService.setIdolOnline((long) idolId, false, sessionId);
+            log.info("아이돌 접속 OFF: idolId={}, sessionId={}", idolId, sessionId);
         }
 
         log.info("웹소켓 연결 종료: sessionId={}", sessionId);

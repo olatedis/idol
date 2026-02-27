@@ -48,4 +48,7 @@ public interface ChatRepository extends MongoRepository<ChatMessage, String> {
     // --- Outbox Pattern (재전송 대상 조회) ---
     // status = 'PENDING' AND createdAt < ? (1분 전)
     List<ChatMessage> findByStatusAndCreatedAtBefore(String status, LocalDateTime time);
+
+    // 전체 읽음 수 초기화 대응 쿼리
+    long countByIdolIdAndSenderRole(Long idolId, String senderRole);
 }
