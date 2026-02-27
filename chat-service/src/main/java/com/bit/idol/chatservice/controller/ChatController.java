@@ -13,8 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,6 +36,7 @@ public class ChatController {
     private final TranslationService translationService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final UserFeignClient userFeignClient; // 추가됨
+    private final SimpMessageSendingOperations messagingTemplate;
 
     // --- 벤치마크 API (추가됨) ---
     @GetMapping("/benchmark/feign")
@@ -245,5 +248,20 @@ public class ChatController {
             @RequestParam(value = "lang", defaultValue = "EN") String lang) {
         String translatedText = translationService.translateMessage(messageId, lang);
         return ResponseEntity.ok(Map.of("text", translatedText, "lang", lang));
+    }
+
+    // --- 예외 처리 핸들러 (프론트엔드 에러 브로드캐스팅용) ---
+    @MessageExceptionHandler
+    public void handleException(RuntimeException ex, SimpMessageHeaderAccessor accessor) {
+        Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
+        if (userId != null) {
+            log.warn("STOMP 메시지 처리 중 예외 발생: userId={}, msg={}", userId, ex.getMessage());
+            Map<String, String> errorPayload = new HashMap<>();
+            errorPayload.put("type", "ERROR");
+            errorPayload.put("message", ex.getMessage());
+            messagingTemplate.convertAndSend("/queue/errors/" + userId, errorPayload);
+        } else {
+            log.warn("STOMP 메시지 처리 중 예외 발생 (userId 없음): msg={}", ex.getMessage());
+        }
     }
 }

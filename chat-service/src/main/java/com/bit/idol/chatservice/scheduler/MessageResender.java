@@ -27,7 +27,8 @@ public class MessageResender {
         LocalDateTime oneMinuteAgo = LocalDateTime.now().minusMinutes(1);
         List<ChatMessage> pendingMessages = chatRepository.findByStatusAndCreatedAtBefore("PENDING", oneMinuteAgo);
 
-        if (pendingMessages.isEmpty()) return;
+        if (pendingMessages.isEmpty())
+            return;
 
         log.info("재전송 대상 메시지 발견: {}건", pendingMessages.size());
 
@@ -39,7 +40,7 @@ public class MessageResender {
                 // 성공 시 상태 업데이트
                 message.setStatus("SENT");
                 chatRepository.save(message);
-                
+
                 log.info("메시지 재전송 성공: id={}", message.getId());
             } catch (Exception e) {
                 log.error("메시지 재전송 실패: id={}, error={}", message.getId(), e.getMessage());
@@ -57,6 +58,7 @@ public class MessageResender {
                 .senderRole(entity.getSenderRole())
                 .content(entity.getContent())
                 .type(entity.getType())
+                .thumbnailUrl(entity.getThumbnailUrl()) // 썸네일 경로 매핑 추가 (재전송 유실 방지)
                 .parentId(entity.getParentId())
                 .reactions(entity.getReactions())
                 .build();

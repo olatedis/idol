@@ -16,8 +16,8 @@ import java.util.Map;
 
 @Document(collection = "chat_messages")
 @CompoundIndexes({
-    @CompoundIndex(name = "idx_idol_id_desc", def = "{'idolId': 1, '_id': -1}"),
-    @CompoundIndex(name = "idx_status_created_at", def = "{'status': 1, 'createdAt': 1}") // 재전송 조회용 인덱스
+        @CompoundIndex(name = "idx_idol_id_desc", def = "{'idolId': 1, '_id': -1}"),
+        @CompoundIndex(name = "idx_status_created_at", def = "{'status': 1, 'createdAt': 1}") // 재전송 조회용 인덱스
 })
 @Getter
 @Setter // Setter 추가 (상태 변경용)
@@ -32,9 +32,10 @@ public class ChatMessage {
     private int senderId; // 보낸 사람 ID
     private String senderNickname;
     private String senderRole; // USER or IDOL
-    
+
     private String content; // 메시지 내용
     private String type; // TALK, IMAGE, SYSTEM, DELETED 등
+    private String thumbnailUrl; // 이미지 썸네일 URL
 
     // 답장 기능 (원본 메시지 ID)
     private String parentId;

@@ -139,6 +139,16 @@ public class ChatService {
             if (preview != null) {
                 lastMessage = (String) preview.get("content");
                 String timeStr = (String) preview.get("time");
+                String typeStr = (String) preview.get("type");
+
+                if (typeStr != null) {
+                    if ("IMAGE".equals(typeStr)) {
+                        lastMessage = "사진을 보냈습니다.";
+                    } else if ("VIDEO".equals(typeStr)) {
+                        lastMessage = "동영상을 보냈습니다.";
+                    }
+                }
+
                 if (timeStr != null) {
                     lastMessageTime = LocalDateTime.parse(timeStr);
                 }
@@ -153,8 +163,23 @@ public class ChatService {
                 Object totalObj = redisTemplate.opsForValue().get(totalCountKey);
                 Object readObj = redisTemplate.opsForValue().get(readCountKey);
 
-                int total = totalObj != null ? Integer.parseInt(totalObj.toString()) : 0;
-                int read = readObj != null ? Integer.parseInt(readObj.toString()) : 0;
+                int total;
+                if (totalObj != null) {
+                    total = Integer.parseInt(totalObj.toString());
+                } else {
+                    // Redis 캐시 만료 시 DB에서 아이돌이 보낸 총 메시지만카운트하여 복구
+                    total = (int) chatRepository.countByIdolIdAndSenderRole(idolId, "IDOL");
+                    redisTemplate.opsForValue().set(totalCountKey, String.valueOf(total), Duration.ofDays(30));
+                }
+
+                int read;
+                if (readObj != null) {
+                    read = Integer.parseInt(readObj.toString());
+                } else {
+                    // 신규 구독자이거나 읽음 캐시가 만료된 경우 (과거 메시지 안읽음 폭탄 방지)
+                    read = total;
+                    redisTemplate.opsForValue().set(readCountKey, String.valueOf(read), Duration.ofDays(30));
+                }
 
                 unreadCount = Math.max(0, total - read);
             }
@@ -224,6 +249,7 @@ public class ChatService {
                 .senderRole(messageDto.getSenderRole())
                 .content(messageDto.getContent())
                 .type(messageDto.getType())
+                .thumbnailUrl(messageDto.getThumbnailUrl()) // 썸네일 URL 매핑 추가
                 .parentId(messageDto.getParentId())
                 .createdAt(LocalDateTime.now())
                 .status("PENDING") // Outbox Pattern
@@ -246,6 +272,7 @@ public class ChatService {
         previewData.put("content", messageDto.getContent());
         previewData.put("sender", messageDto.getSenderNickname());
         previewData.put("time", LocalDateTime.now().toString());
+        previewData.put("type", messageDto.getType());
         redisTemplate.opsForValue().set(previewKey, previewData, Duration.ofDays(7)); // 7일 TTL
 
         // --- 3-2. 총 메시지 수 증가 (읽음 처리용) ---
@@ -304,6 +331,7 @@ public class ChatService {
             preview.put("content", lastMsg.getContent());
             preview.put("sender", lastMsg.getSenderNickname());
             preview.put("time", lastMsg.getCreatedAt().toString());
+            preview.put("type", lastMsg.getType());
 
             redisTemplate.opsForValue().set(previewKey, preview, Duration.ofDays(7)); // 조회 시에도 TTL 갱신
             return preview;
@@ -445,6 +473,7 @@ public class ChatService {
                 .senderRole(message.getSenderRole())
                 .content(message.getContent())
                 .type(message.getType())
+                .thumbnailUrl(message.getThumbnailUrl()) // 썸네일 매핑
                 .parentId(message.getParentId())
                 .reactions(reactions)
                 .createdAt(message.getCreatedAt())
@@ -499,27 +528,45 @@ public class ChatService {
     }
 
     public boolean isIdolOnline(Long idolId) {
-        String onlineKey = "idol:online:" + idolId;
-        return Boolean.TRUE.equals(redisTemplate.hasKey(onlineKey));
+        String onlineKey = "idol:online:sessions:" + idolId;
+        Long size = redisTemplate.opsForSet().size(onlineKey);
+        return size != null && size > 0;
     }
 
-    public void setIdolOnline(Long idolId, boolean isOnline) {
-        String onlineKey = "idol:online:" + idolId;
+    // 다중 탭/기기 환경을 고려한 접속 상태 집합 관리
+    public void setIdolOnline(Long idolId, boolean isOnline, String sessionId) {
+        String onlineKey = "idol:online:sessions:" + idolId;
+
+        Long previousCount = redisTemplate.opsForSet().size(onlineKey);
+        if (previousCount == null)
+            previousCount = 0L;
+
         if (isOnline) {
-            redisTemplate.opsForValue().set(onlineKey, "ON");
+            redisTemplate.opsForSet().add(onlineKey, sessionId);
         } else {
-            redisTemplate.delete(onlineKey);
+            redisTemplate.opsForSet().remove(onlineKey, sessionId);
         }
 
-        // 상태 변경 실시간 브로드캐스팅 (프론트엔드 실시간 반영용)
-        ChatMessageDto statusMessage = ChatMessageDto.builder()
-                .idolId(idolId)
-                .type("STATUS")
-                .content(isOnline ? "ON" : "OFF")
-                .build();
+        Long currentCount = redisTemplate.opsForSet().size(onlineKey);
+        if (currentCount == null)
+            currentCount = 0L;
 
-        redisTemplate.convertAndSend("/sub/idol/" + idolId, statusMessage);
-        log.info("아이돌 접속 상태 브로드캐스트 전송: idolId={}, status={}", idolId, isOnline ? "ON" : "OFF");
+        // 브로드캐스팅 최적화: 0 -> 1 (최초 접속) 이거나, 1 -> 0 (최종 종료) 일 때만 전파
+        boolean turnedOn = (previousCount == 0 && currentCount > 0);
+        boolean turnedOff = (previousCount > 0 && currentCount == 0);
+
+        if (turnedOn || turnedOff) {
+            // 상태 변경 실시간 브로드캐스팅 (프론트엔드 실시간 반영용)
+            ChatMessageDto statusMessage = ChatMessageDto.builder()
+                    .idolId(idolId)
+                    .type("STATUS")
+                    .content(turnedOn ? "ON" : "OFF")
+                    .build();
+
+            redisTemplate.convertAndSend("/sub/idol/" + idolId, statusMessage);
+            log.info("아이돌 접속 상태 브로드캐스트 전송: idolId={}, event={}", idolId,
+                    turnedOn ? "User Joined" : "All Users Disconnected");
+        }
     }
 
     public List<ChatMessageDto> getChatHistory(int userId, String role, Long idolId, String lastId, int size) {
