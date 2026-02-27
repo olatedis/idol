@@ -18,6 +18,8 @@ function resolveBoardType(type: BoardKind): string {
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const GroupPostWritePage: React.FC = () => {
     const {groupId} = useParams();
     const [sp] = useSearchParams();
@@ -141,6 +143,31 @@ const GroupPostWritePage: React.FC = () => {
                             previewStyle="vertical"
                             height="360px"
                             useCommandShortcut={true}
+                            hooks={{
+                                // 이미지 삽입 시 업로드 → URL 받아서 에디터에 삽입
+                                addImageBlobHook: async (blob: Blob, callback: (url: string, altText?: string) => void) => {
+                                    try {
+                                        const form = new FormData();
+                                        // 파일명이 없으면 Toast UI가 blob만 주므로 임의 파일명 부여
+                                        form.append("file", blob, "image.jpg");
+
+                                        const res = await api.post("/board/uploads/images", form, {
+                                            headers: { "Content-Type": "multipart/form-data" },
+                                        });
+
+                                        const urlPath = res.data?.url as string; // 예: /uploads/xxx.jpg
+                                        const fullUrl = urlPath?.startsWith("http")
+                                            ? urlPath
+                                            : `${API_BASE_URL}${urlPath}`;
+
+                                        callback(fullUrl, "image");
+                                    } catch (e: any) {
+                                        alert(e?.response?.data?.message || e?.message || "이미지 업로드 실패");
+                                    }
+
+                                    return false;
+                                },
+                            }}
                         />
                     </div>
                 </div>

@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 @Table(
         name = "posts",
         indexes = {
-                // ✅ [수정] DB 컬럼명(snake_case)로 인덱스 지정
                 @Index(name = "idx_posts_boardtype", columnList = "board_type"),
                 @Index(name = "idx_posts_idol", columnList = "idol_id"),
                 @Index(name = "idx_posts_group", columnList = "group_id"),
@@ -21,49 +20,49 @@ public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "post_id") // ✅ [수정] 컬럼명 명시 (안 해도 되는 경우 많지만 일관성 위해)
+    @Column(name = "post_id")
     private Long postId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "board_type", nullable = false, length = 30) // ✅ [수정] snake_case 매핑
+    @Column(name = "board_type", nullable = false, length = 30)
     private BoardType boardType;
 
-    @Column(name = "idol_id") // ✅ [수정]
+    @Column(name = "idol_id")
     private Long idolId; // IDOL_* 게시판에서만 사용
 
-    @Column(name = "group_id") // ✅ [수정]
+    @Column(name = "group_id")
     private Long groupId; // GROUP_* 게시판에서만 사용
 
-    @Column(name = "author_id", nullable = false) // ✅ [수정]
+    @Column(name = "author_id", nullable = false)
     private Integer authorId; // 작성자 userId
 
-    @Column(name = "title", nullable = false, length = 200) // ✅ [수정] 명시 (기존도 동작하지만 통일)
+    @Column(name = "title", nullable = false, length = 200)
     private String title;
 
-    @Column(name = "content", nullable = false) // ✅ [수정] 명시 (DB는 varchar(255))
+    @Lob
+    @Column(name = "content", nullable = false, columnDefinition = "LONGTEXT")
     private String content;
 
-    @Column(name = "view_count", nullable = false) // ✅ [수정]
+    @Column(name = "view_count", nullable = false)
     private Integer viewCount = 0;
 
-    @Column(name = "like_count", nullable = false) // ✅ [수정]
+    @Column(name = "like_count", nullable = false)
     private Integer likeCount = 0;
 
-    @Column(name = "dislike_count", nullable = false) // ✅ [수정]
+    @Column(name = "dislike_count", nullable = false)
     private Integer dislikeCount = 0;
 
-    @Column(name = "comment_count", nullable = false) // ✅ [수정]
+    @Column(name = "comment_count", nullable = false)
     private Integer commentCount = 0;
 
-    @Column(name = "created_at", nullable = false) // ✅ [수정]
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false) // ✅ [수정]
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @PrePersist
     public void onCreate() {
-        // ✅ createdAt/updatedAt이 DB NOT NULL이라 엔티티에서도 확실히 채움
         this.createdAt = LocalDateTime.now();
         this.updatedAt = this.createdAt;
 
