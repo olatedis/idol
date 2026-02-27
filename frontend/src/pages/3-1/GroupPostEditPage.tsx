@@ -41,6 +41,8 @@ const GroupPostEditPage: React.FC = () => {
     const [error, setError] = useState("");
 
     const [title, setTitle] = useState("");
+    const [contentHtml, setContentHtml] = useState("");
+    const [contentInjected, setContentInjected] = useState(false);
 
     useEffect(() => {
         const run = async () => {
@@ -63,12 +65,9 @@ const GroupPostEditPage: React.FC = () => {
                 const data = res.data as PostResponse;
 
                 setTitle(data.title ?? "");
+                setContentHtml(data.content ?? "");
+                setContentInjected(false);
 
-                // content는 HTML로 저장되어 있으니 setHTML로 채우는 게 안전합니다.
-                const inst = editorRef.current?.getInstance();
-                if (inst) {
-                    inst.setHTML(data.content ?? "");
-                }
             } catch (e: any) {
                 const status = e?.response?.status;
                 if (status === 401) setError("로그인이 필요합니다.");
@@ -80,8 +79,26 @@ const GroupPostEditPage: React.FC = () => {
         };
 
         run();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [postId, accessToken]);
+
+    // ✅ editor가 준비된 뒤 contentHtml을 1번 주입
+    useEffect(() => {
+        if (loading) return;
+        if (contentInjected) return;
+
+        const inst = editorRef.current?.getInstance();
+        if (!inst) return;
+
+        // Toast UI는 마운트 타이밍에 setHTML이 씹히는 경우가 있어 next tick에 한번 더 보장
+        setTimeout(() => {
+            const inst2 = editorRef.current?.getInstance();
+            if (!inst2) return;
+
+            inst2.setHTML(contentHtml || "");
+            setContentInjected(true);
+        }, 0);
+    }, [loading, contentHtml, contentInjected]);
+
 
     const onSubmit = async () => {
         setError("");
@@ -116,7 +133,7 @@ const GroupPostEditPage: React.FC = () => {
             await api.put(`/board/posts/${postId}`, req);
 
             alert("수정되었습니다.");
-            navigate(`../`); // ✅ 다시 상세보기(/:postId)로
+            navigate(`../`);
         } catch (e: any) {
             const status = e?.response?.status;
             if (status === 401) setError("로그인이 필요합니다.");
@@ -127,13 +144,8 @@ const GroupPostEditPage: React.FC = () => {
         }
     };
 
-    if (loading) {
-        return <div className="text-sm text-gray-600">불러오는 중...</div>;
-    }
-
-    if (error) {
-        return <div className="text-sm text-red-600">{error}</div>;
-    }
+    if (loading) return <div className="text-sm text-gray-600">불러오는 중...</div>;
+    if (error) return <div className="text-sm text-red-600">{error}</div>;
 
     return (
         <div className="space-y-4">
