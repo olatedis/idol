@@ -75,6 +75,20 @@ const ConcertPage: React.FC = () => {
         });
     };
 
+    // 콘서트가 종료되었는지 확인 (날짜 기반)
+    const isConcertEnded = (concertDate?: string): boolean => {
+        if (!concertDate) return false;
+        const concert = new Date(concertDate);
+        const now = new Date();
+        return concert < now;
+    };
+
+    const getConcertStatusForFilter = (concert: ConcertDto): 'OPEN' | 'CLOSED' => {
+        if (isConcertEnded(concert.concertDate)) {
+            return 'CLOSED';
+        }
+        return 'OPEN';
+    };
     const resetInfinite = () => {
         setConcerts([]);
         setPage(0);
@@ -123,15 +137,34 @@ const ConcertPage: React.FC = () => {
     };
 
     const fetchConcertSeats = async (concertId: number) => {
-        if (!API_BASE_URL) return;
+        if (!API_BASE_URL) {
+            console.error("API_BASE_URL이 설정되지 않았습니다.");
+            return;
+        }
         try {
             setSeatsLoading(true);
-            const res = await fetch(`${API_BASE_URL}/concerts/${concertId}/seats`);
-            if (!res.ok) throw new Error("좌석 조회 실패");
+            const url = `${API_BASE_URL}/concerts/${concertId}/seats`;
+            console.log("좌석 조회 요청:", url);
+            const res = await fetch(url);
+            console.log("좌석 조회 응답 상태:", res.status, res.statusText);
+            
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error("좌석 조회 실패 응답:", errorText);
+                throw new Error(`좌석 조회 실패 (${res.status})`);
+            }
+            
             const seats = await res.json();
-            setConcertSeats(seats);
+            console.log("좌석 데이터:", seats);
+            
+            if (Array.isArray(seats)) {
+                setConcertSeats(seats as SeatDto[]);
+            } else {
+                console.warn("좌석 데이터가 배열이 아닙니다:", seats);
+                setConcertSeats([]);
+            }
         } catch (e) {
-            console.error("좌석 조회 실패:", e);
+            console.error("좌석 조회 오류:", e);
             setConcertSeats([]);
         } finally {
             setSeatsLoading(false);
@@ -254,20 +287,20 @@ const ConcertPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <div className="min-h-screen bg-gradient-to-br from-[var(--color-idol-bg)] via-white to-[var(--color-idol-bg)]">
             <main className="pt-[100px] px-6 pb-12 max-w-7xl mx-auto relative z-10">
                 {/* 제목 영역 */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-black text-gray-800">콘서트 예매소</h1>
+                    <h1 className="text-3xl font-black text-gray-800">콘서트 예매</h1>
                     <p className="text-gray-500 mt-2 font-medium">
                         {groupId ? "우리 그룹의 콘서트를 확인하세요" : "모든 그룹의 콘서트를 확인하세요"}
                     </p>
                 </div>
 
                 {/* 배경 장식 */}
-                <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-                <div className="absolute top-20 right-10 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-                <div className="absolute -bottom-8 left-40 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+                <div className="absolute top-20 left-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" style={{ backgroundColor: 'var(--color-idol-dark)' }}></div>
+                <div className="absolute top-20 right-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" style={{ backgroundColor: 'var(--color-idol)' }}></div>
+                <div className="absolute -bottom-8 left-40 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000" style={{ backgroundColor: 'var(--color-idol-point)' }}></div>
 
                 <div className="space-y-4">
                     <div className="flex justify-between items-center flex-wrap gap-2">
@@ -282,7 +315,7 @@ const ConcertPage: React.FC = () => {
                             {user?.role === "AGENCY" && (
                                 <button
                                     onClick={onCreateConcert}
-                                    className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8]"
+                                    className="px-4 py-2 rounded-full bg-[var(--color-idol)] text-white text-sm font-semibold hover:opacity-90 transition"
                                 >
                                     콘서트 등록
                                 </button>
@@ -291,13 +324,13 @@ const ConcertPage: React.FC = () => {
                     </div>
 
                     {/* 탭 버튼 */}
-                    <div className="bg-white/70 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-white/50 flex w-full max-w-md overflow-x-auto custom-scrollbar">
+                    <div className="bg-white/70 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-white/50 flex max-w-md overflow-x-auto custom-scrollbar">
                         {(['OPEN', 'CLOSED'] as TabType[]).map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`px-4 py-1.5 text-sm font-semibold rounded-full transition 
-                                    ${activeTab === tab ? 'bg-[#1FBFB8] text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                                    ${activeTab === tab ? 'bg-[var(--color-idol)] text-white' : 'text-gray-700 hover:bg-gray-100'}`}
                             >
                                 {tab === 'OPEN' ? '진행중' : '종료됨'}
                             </button>
@@ -311,48 +344,47 @@ const ConcertPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <AnimatePresence>
                             {concerts
-                                .filter((c) => {
-                                    if (activeTab === 'OPEN') return c.status === 'OPEN';
-                                    // 종료됨은 OPEN이 아닌 상태 모두 포함
-                                    return c.status !== 'OPEN';
-                                })
-                                .map((c) => (
-                                    <motion.div
-                                        layout
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        whileHover={{ y: -4, scale: 1.02 }}
-                                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                                        key={c.id}
-                                        onClick={() => onOpenDetail(c)}
-                                        className="bg-white/70 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden cursor-pointer border border-white hover:shadow-lg transition-all relative group"
-                                    >
-                                        <div className="h-2 w-full bg-gradient-to-r from-[#1FBFB8] via-[#17AFA8] to-[#159A93]"></div>
-                                        <div className="p-6">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wider
-                                                    ${c.status === 'OPEN' ? 'bg-[#1FBFB8] text-white' : 'bg-gray-100 text-gray-500'}`}>
-                                                    {c.status === 'OPEN' ? '🟢 진행중' : '⚫ 종료됨'}
-                                                </span>
-                                                <span className="text-gray-400 text-xs">
-                                                    {formatKST(c.concertDate).split(' ')[0]}
-                                                </span>
+                                .filter((c) => getConcertStatusForFilter(c) === activeTab)
+                                .map((c) => {
+                                    const isEnded = isConcertEnded(c.concertDate);
+                                    return (
+                                        <motion.div
+                                            layout
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.9 }}
+                                            whileHover={{ y: -4, scale: 1.02 }}
+                                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                            key={c.id}
+                                            onClick={() => onOpenDetail(c)}
+                                            className="bg-white/70 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden cursor-pointer border border-white hover:shadow-lg transition-all relative group"
+                                        >
+                                            <div className="h-2 w-full bg-gradient-to-r from-[var(--color-idol)] via-[var(--color-idol-point)] to-[var(--color-idol-dark)]"></div>
+                                            <div className="p-6">
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wider
+                                                        ${isEnded ? 'bg-gray-100 text-gray-500' : 'bg-[var(--color-idol)] text-white'}`}>
+                                                        {isEnded ? '⚫ 종료됨' : '🟢 진행중'}
+                                                    </span>
+                                                    <span className="text-gray-400 text-xs">
+                                                        {formatKST(c.concertDate).split(' ')[0]}
+                                                    </span>
+                                                </div>
+                                                <h3 className="text-xl font-black text-gray-800 mb-2 group-hover:text-gray-900 transition-colors line-clamp-2">
+                                                    {c.title}
+                                                </h3>
+                                                <p className="text-gray-600 text-sm line-clamp-2">
+                                                    {c.venue}
+                                                </p>
                                             </div>
-                                            <h3 className="text-xl font-black text-gray-800 mb-2 group-hover:text-gray-900 transition-colors line-clamp-2">
-                                                {c.title}
-                                            </h3>
-                                            <p className="text-gray-600 text-sm line-clamp-2">
-                                                {c.venue}
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                ))}
+                                        </motion.div>
+                                    );
+                                })}
                         </AnimatePresence>
                     </div>
 
                     {/* no items message */}
-                    {!loading && concerts.filter((c) => (activeTab === 'OPEN' ? c.status === 'OPEN' : c.status !== 'OPEN')).length === 0 && (
+                    {!loading && concerts.filter((c) => getConcertStatusForFilter(c) === activeTab).length === 0 && (
                         <div className="flex flex-col items-center justify-center py-20 opacity-50">
                             <div className="text-6xl mb-4">📭</div>
                             <div className="text-xl font-medium text-gray-500">조회 가능한 콘서트가 없습니다.</div>
@@ -431,7 +463,7 @@ const ConcertPage: React.FC = () => {
 
                                 <button
                                     onClick={onOpenBooking}
-                                    className="w-full py-3 bg-idol text-white font-bold rounded-lg hover:bg-idol/90 transition"
+                                    className="w-full py-3 bg-[var(--color-idol)] text-white font-bold rounded-lg hover:opacity-90 transition"
                                 >
                                     예매하기
                                 </button>
@@ -490,8 +522,8 @@ const ConcertPage: React.FC = () => {
                                                                     seat.locked
                                                                         ? "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
                                                                         : selectedSeats.includes(seat.id)
-                                                                        ? "border-idol bg-idol text-white"
-                                                                        : "border-gray-300 bg-white text-gray-900 hover:border-idol"
+                                                                        ? "border-[var(--color-idol)] bg-[var(--color-idol)] text-white"
+                                                                        : "border-gray-300 bg-white text-gray-900 hover:border-[var(--color-idol)]"
                                                                 }
                                                             `}
                                                         >
@@ -520,7 +552,7 @@ const ConcertPage: React.FC = () => {
                                     <button
                                         onClick={onConfirmBooking}
                                         disabled={selectedSeats.length === 0}
-                                        className="w-full py-3 bg-idol text-white font-bold rounded-lg hover:bg-idol/90 disabled:bg-gray-300 transition"
+                                        className="w-full py-3 bg-[var(--color-idol)] text-white font-bold rounded-lg hover:opacity-90 disabled:bg-gray-300 transition"
                                     >
                                         {selectedSeats.length > 0
                                             ? `${selectedSeats.length}개 좌석 예매하기`

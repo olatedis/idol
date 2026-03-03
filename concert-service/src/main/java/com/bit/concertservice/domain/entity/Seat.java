@@ -1,6 +1,7 @@
 package com.bit.concertservice.domain.entity;
 
 import com.bit.concertservice.domain.enumtype.SeatGrade;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.Getter;
@@ -28,6 +29,7 @@ public class Seat {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "concert_id")
+    @JsonIgnore
     private Concert concert;
 
     private boolean locked = false;
