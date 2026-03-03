@@ -57,6 +57,9 @@ const GroupPostDetailPage: React.FC = () => {
     const [reacting, setReacting] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
+    // 댓글 삭제 상태 관리
+    const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
+
     const fetchDetail = async () => {
         if (!postId) throw new Error("postId가 없습니다.");
         if (!accessToken) throw new Error("로그인이 필요합니다.");
@@ -102,7 +105,6 @@ const GroupPostDetailPage: React.FC = () => {
         };
 
         run();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [postId, accessToken]);
 
     const canEditOrDelete = useMemo(() => {
@@ -129,6 +131,13 @@ const GroupPostDetailPage: React.FC = () => {
 
         return false;
     }, [data, user]);
+
+    const canDeleteComment = (c: CommentResponse) => {
+        if (!user) return false;
+        if (c.isDeleted) return false;
+        if (user.role === "ADMIN") return true;
+        return Number(c.authorId) === Number(user.userId);
+    };
 
     const onClickLike = async () => {
         if (!data) return;
@@ -230,6 +239,32 @@ const GroupPostDetailPage: React.FC = () => {
             else alert(e?.response?.data?.message || e?.message || "댓글 작성 실패");
         } finally {
             setSubmittingComment(false);
+        }
+    };
+
+    const onClickDeleteComment = async (commentId: number) => {
+        if (!accessToken) {
+            alert("로그인이 필요합니다.");
+            return;
+        }
+        if (deletingCommentId !== null) return;
+
+        const ok = window.confirm("댓글을 삭제하시겠습니까?");
+        if (!ok) return;
+
+        setDeletingCommentId(commentId);
+        try {
+            await api.delete(`/board/posts/comments/${commentId}`);
+
+            const detail = await fetchDetail();
+            setData(detail);
+        } catch (e: any) {
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "댓글 삭제 실패");
+        } finally {
+            setDeletingCommentId(null);
         }
     };
 
@@ -373,10 +408,25 @@ const GroupPostDetailPage: React.FC = () => {
 
                             return (
                                 <div key={c.commentId} className="px-6 py-4">
-                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
-                                        <span className="font-medium text-gray-800">{nickname}</span>
-                                        <span>{c.createdAt}</span>
-                                        {c.isDeleted ? <span className="text-red-500">삭제됨</span> : null}
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
+                                            <span className="font-medium text-gray-800">{nickname}</span>
+                                            <span>{c.createdAt}</span>
+                                            {c.isDeleted ? <span className="text-red-500">삭제됨</span> : null}
+                                        </div>
+
+                                        {/* 댓글 삭제 버튼(본인 댓글만) */}
+                                        {canDeleteComment(c) && (
+                                            <button
+                                                type="button"
+                                                onClick={() => onClickDeleteComment(c.commentId)}
+                                                disabled={deletingCommentId !== null}
+                                                className="px-3 py-1.5 rounded-full border border-red-200 text-xs font-semibold text-red-600
+                                                hover:bg-red-50 hover:border-red-300 active:scale-[0.99] transition disabled:opacity-60"
+                                            >
+                                                {deletingCommentId === c.commentId ? "삭제 중..." : "삭제"}
+                                            </button>
+                                        )}
                                     </div>
 
                                     <div className="mt-2 whitespace-pre-wrap text-gray-900">
@@ -397,7 +447,8 @@ const GroupPostDetailPage: React.FC = () => {
                                 if (e.key === "Enter") onSubmitComment();
                             }}
                             placeholder="댓글을 입력하세요"
-                            className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none"
+                            className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none
+                            focus:border-gray-300 focus:ring-2 focus:ring-gray-100 transition"
                         />
 
                         <button
@@ -407,7 +458,7 @@ const GroupPostDetailPage: React.FC = () => {
                             className="px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold
                          hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
                         >
-                            등록
+                            {submittingComment ? "등록 중..." : "등록"}
                         </button>
                     </div>
                 </div>
