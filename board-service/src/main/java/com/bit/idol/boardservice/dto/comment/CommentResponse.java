@@ -2,8 +2,6 @@ package com.bit.idol.boardservice.dto.comment;
 
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
 @Data
 public class CommentResponse {
 
@@ -14,6 +12,6 @@ public class CommentResponse {
     private String content;
     private Boolean isDeleted;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String createdAt;
+    private String updatedAt;
 }

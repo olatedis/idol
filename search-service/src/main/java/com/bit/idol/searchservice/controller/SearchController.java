@@ -23,12 +23,12 @@ public class SearchController {
     @GetMapping("/chat")
     public ResponseEntity<Page<ChatDocument>> searchChat(
             @RequestHeader("X-User-Id") int userId, // Gateway에서 주입
+            @RequestHeader("X-Role") String role, // Gateway에서 주입
             @RequestParam("idolId") Long idolId,
             @RequestParam("keyword") String keyword,
-            @PageableDefault(size = 20) Pageable pageable
-    ) {
-        log.info("채팅 검색 요청: userId={}, idolId={}, keyword={}", userId, idolId, keyword);
-        Page<ChatDocument> result = searchService.searchChat(userId, idolId, keyword, pageable);
+            @PageableDefault(size = 20) Pageable pageable) {
+        log.info("채팅 검색 요청: userId={}, role={}, idolId={}, keyword={}", userId, role, idolId, keyword);
+        Page<ChatDocument> result = searchService.searchChat(userId, role, idolId, keyword, pageable);
         return ResponseEntity.ok(result);
     }
 }

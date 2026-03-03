@@ -39,8 +39,6 @@ const MainPage: React.FC = () => {
                 password,
             });
 
-            console.log("로그인 응답:", response.data);
-
             const { accessToken, refreshToken, user } = response.data;
             let userObj = user;
 

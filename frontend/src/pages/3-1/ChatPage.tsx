@@ -71,7 +71,6 @@ const ChatPage: React.FC = () => {
     const stompClientRef = React.useRef<Client | null>(null);
     const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
     const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
-    const observerTargetRef = React.useRef<HTMLDivElement | null>(null);
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
     // 아이돌 로그인 시 내 idolId 가져오기

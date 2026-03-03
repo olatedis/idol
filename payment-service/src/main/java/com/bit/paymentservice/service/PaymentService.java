@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +28,6 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final TossPgClient tossPgClient;
     private final ApplicationEventPublisher eventPublisher;
-
 
     @Transactional
     public PaymentCreateResponse createPayment(PaymentCreateRequest request) {
@@ -53,11 +53,10 @@ public class PaymentService {
                 request.getAmount(),
                 request.getDomain(),
                 request.getTargetId(),
-                request.getUserId()
-        );
+                request.getUserId());
 
         paymentRepository.save(payment);
-        log.info("결제 준비 완료: orderId={}, userId={}, amount={}, domain={}", 
+        log.info("결제 준비 완료: orderId={}, userId={}, amount={}, domain={}",
                 orderId, request.getUserId(), request.getAmount(), request.getDomain());
 
         return new PaymentCreateResponse(orderId, payment.getAmount());
@@ -77,8 +76,7 @@ public class PaymentService {
             response = tossPgClient.confirm(new TossConfirmRequest(
                     dto.getPaymentKey(),
                     dto.getOrderId(),
-                    dto.getAmount()
-            ));
+                    dto.getAmount()));
         } catch (Exception e) {
             // 실패 시 상태 업데이트 (별도 트랜잭션)
             markAsFailed((long) payment.getId());
@@ -106,7 +104,7 @@ public class PaymentService {
 
         // 사용자 검증
         if (payment.getUserId() != requestUserId) {
-            log.warn("권한 없는 결제 승인 시도: orderId={}, paymentUserId={}, requestUserId={}", 
+            log.warn("권한 없는 결제 승인 시도: orderId={}, paymentUserId={}, requestUserId={}",
                     dto.getOrderId(), payment.getUserId(), requestUserId);
             throw new IllegalArgumentException("권한이 없습니다.");
         }
@@ -119,7 +117,7 @@ public class PaymentService {
 
         // 금액 검증
         if (payment.getAmount() != dto.getAmount()) {
-            log.error("금액 불일치: orderId={}, paymentAmount={}, requestAmount={}", 
+            log.error("금액 불일치: orderId={}, paymentAmount={}, requestAmount={}",
                     dto.getOrderId(), payment.getAmount(), dto.getAmount());
             throw new IllegalArgumentException("금액 불일치");
         }
@@ -137,7 +135,7 @@ public class PaymentService {
     public void completePayment(Long paymentId, String paymentKey) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("결제 정보가 없습니다."));
-        
+
         payment.complete(paymentKey, payment.getAmount());
         log.info("결제 승인 완료(DB): orderId={}, paymentKey={}", payment.getOrderId(), paymentKey);
 
@@ -148,9 +146,7 @@ public class PaymentService {
                         payment.getOrderId(),
                         payment.getDomain(),
                         payment.getTargetId(),
-                        payment.getAmount()
-                )
-        ));
+                        payment.getAmount())));
     }
 
     @Transactional
@@ -163,5 +159,11 @@ public class PaymentService {
         } catch (Exception e) {
             log.error("결제 실패 상태 업데이트 중 오류: paymentId={}", paymentId, e);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<Payment> findMyPayments(int userId) {
+        log.info("결제 내역 조회: userId={}", userId);
+        return paymentRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 }

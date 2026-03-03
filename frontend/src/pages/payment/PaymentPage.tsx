@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../main/Header';
-import { createPaymentReady, getIdol, authorizeBillingKey } from '../../api/payment';
+import { createPaymentReady, getIdol } from '../../api/payment';
 import { loadTossPaymentsScript } from '../../utils/tossPayments';
 
 const PRICE_MAP: Record<string, number> = {
@@ -40,11 +40,11 @@ const PaymentPage: React.FC = () => {
                 // 빌링키 발급 (정기 구독)
                 // 고객키 생성 (일관된 키 사용)
                 const customerKey = `customer_user_${idolId}`;
-                
+
                 // 이전 페이지에서 사용할 수 있도록 idolId, plan, customerKey를 세션에 저장
                 try {
-                    sessionStorage.setItem('pendingSubscription', JSON.stringify({ 
-                        idolId: Number(idolId), 
+                    sessionStorage.setItem('pendingSubscription', JSON.stringify({
+                        idolId: Number(idolId),
                         plan: 'MONTHLY',
                         customerKey: customerKey
                     }));

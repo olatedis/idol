@@ -3,8 +3,6 @@ package com.bit.idol.boardservice.dto;
 import com.bit.idol.boardservice.entity.BoardType;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
 @Data
 public class PostListResponse {
     private Long postId;
@@ -19,6 +17,6 @@ public class PostListResponse {
     private Integer likeCount;
     private Integer dislikeCount;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String createdAt;
+    private String updatedAt;
 }

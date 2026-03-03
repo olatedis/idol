@@ -1,6 +1,5 @@
 package com.bit.paymentservice.api;
 
-
 import com.bit.paymentservice.domain.dto.PaymentConfirmDto;
 import com.bit.paymentservice.domain.dto.PaymentCreateRequest;
 import com.bit.paymentservice.domain.dto.PaymentCreateResponse;
@@ -13,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/payments")
@@ -26,11 +26,10 @@ public class PaymentController {
     @PostMapping("/confirm")
     public ResponseEntity<Void> confirm(
             @RequestHeader(value = "X-User-Id", required = true) int userId,
-            @RequestBody PaymentConfirmDto dto
-    ) {
+            @RequestBody PaymentConfirmDto dto) {
         try {
             log.info("결제 승인 컨트롤러 호출: orderId={}, userId={}", dto.getOrderId(), userId);
-            
+
             // userId 검증
             if (userId <= 0) {
                 log.error("유효하지 않은 사용자 ID: userId={}", userId);
@@ -55,15 +54,14 @@ public class PaymentController {
     @PostMapping("/ready")
     public ResponseEntity<PaymentCreateResponse> createPayment(
             @RequestHeader("X-User-Id") int userId, // 헤더에서 ID 추출 (보안 강화)
-            @RequestBody PaymentCreateRequest request
-    ) {
+            @RequestBody PaymentCreateRequest request) {
         try {
             // 요청 Body의 userId를 무시하고, 인증된 userId로 덮어씌움
             request.setUserId(userId);
 
-            log.info("결제 준비 컨트롤러 호출: userId={}, domain={}, amount={}", 
+            log.info("결제 준비 컨트롤러 호출: userId={}, domain={}, amount={}",
                     request.getUserId(), request.getDomain(), request.getAmount());
-            
+
             PaymentCreateResponse response = paymentService.createPayment(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
@@ -86,5 +84,12 @@ public class PaymentController {
             log.warn("결제 조회 실패: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<List<Payment>> getMyPayments(
+            @RequestHeader("X-User-Id") int userId) {
+        log.info("내 결제 내역 전체 목록 조회 컨트롤러 진입: userId={}", userId);
+        return ResponseEntity.ok(paymentService.findMyPayments(userId));
     }
 }
