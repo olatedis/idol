@@ -38,6 +38,10 @@ const ConcertPage: React.FC = () => {
 
     const { user } = useAuthStore();
 
+    // 탭 상태: 진행중(OPEN) / 종료됨(CLOSED)
+    type TabType = 'OPEN' | 'CLOSED';
+    const [activeTab, setActiveTab] = useState<TabType>('OPEN');
+
     const [concerts, setConcerts] = useState<ConcertDto[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -78,10 +82,6 @@ const ConcertPage: React.FC = () => {
         setTotalElements(null);
     };
 
-    const rowNo = (idx: number) => {
-        if (typeof totalElements === "number") return totalElements - idx;
-        return concerts.length - idx;
-    };
 
     const fetchPage = async (nextPage: number, signal?: AbortSignal) => {
         if (!API_BASE_URL) return;
@@ -146,6 +146,7 @@ const ConcertPage: React.FC = () => {
             try {
                 setLoading(true);
                 resetInfinite();
+                scrollTop();
                 await fetchPage(0, controller.signal);
             } catch (e: any) {
                 if (e?.name === "AbortError") return;
@@ -159,7 +160,7 @@ const ConcertPage: React.FC = () => {
 
         run();
         return () => controller.abort();
-    }, [API_BASE_URL, groupId]);
+    }, [API_BASE_URL, groupId, activeTab]);
 
     useEffect(() => {
         if (page === 0) return;
@@ -289,52 +290,81 @@ const ConcertPage: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* 탭 버튼 */}
+                    <div className="bg-white/70 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-white/50 flex w-full max-w-md overflow-x-auto custom-scrollbar">
+                        {(['OPEN', 'CLOSED'] as TabType[]).map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`px-4 py-1.5 text-sm font-semibold rounded-full transition 
+                                    ${activeTab === tab ? 'bg-[#1FBFB8] text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                            >
+                                {tab === 'OPEN' ? '진행중' : '종료됨'}
+                            </button>
+                        ))}
+                    </div>
+
                     {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
                     {error && <div className="text-sm text-red-600">{error}</div>}
 
-                    <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                        <div className="grid grid-cols-[90px_1fr_160px_140px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
-                            <div className="text-left">번호</div>
-                            <div className="text-left">공연명</div>
-                            <div className="text-left">장소</div>
-                            <div className="text-left">일시</div>
-                            <div className="text-right">상세</div>
-                        </div>
-
-                        {!loading && concerts.length === 0 && (
-                            <div className="px-4 py-6 text-sm text-gray-600">등록된 콘서트가 없습니다.</div>
-                        )}
-
-                        {!loading &&
-                            concerts.map((c, idx) => (
-                                <div
-                                    key={c.id}
-                                    className="w-full text-left grid grid-cols-[90px_1fr_160px_140px_90px] px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center"
-                                >
-                                    <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
-                                    <div className="min-w-0">
-                                        <div className="text-sm font-semibold text-gray-900 truncate">{c.title}</div>
-                                    </div>
-                                    <div className="text-sm text-gray-700">{c.venue}</div>
-                                    <div className="text-sm text-gray-600">{formatKST(c.concertDate)}</div>
-                                    <div className="text-right">
-                                        <button
-                                            onClick={() => onOpenDetail(c)}
-                                            className="px-3 py-1.5 rounded-full text-sm font-medium bg-idol text-white hover:bg-idol/90"
-                                        >
-                                            상세보기
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                    {/* 카드 그리드 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <AnimatePresence>
+                            {concerts
+                                .filter((c) => {
+                                    if (activeTab === 'OPEN') return c.status === 'OPEN';
+                                    // 종료됨은 OPEN이 아닌 상태 모두 포함
+                                    return c.status !== 'OPEN';
+                                })
+                                .map((c) => (
+                                    <motion.div
+                                        layout
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        whileHover={{ y: -4, scale: 1.02 }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                        key={c.id}
+                                        onClick={() => onOpenDetail(c)}
+                                        className="bg-white/70 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden cursor-pointer border border-white hover:shadow-lg transition-all relative group"
+                                    >
+                                        <div className="h-2 w-full bg-gradient-to-r from-[#1FBFB8] via-[#17AFA8] to-[#159A93]"></div>
+                                        <div className="p-6">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wider
+                                                    ${c.status === 'OPEN' ? 'bg-[#1FBFB8] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                                    {c.status === 'OPEN' ? '🟢 진행중' : '⚫ 종료됨'}
+                                                </span>
+                                                <span className="text-gray-400 text-xs">
+                                                    {formatKST(c.concertDate).split(' ')[0]}
+                                                </span>
+                                            </div>
+                                            <h3 className="text-xl font-black text-gray-800 mb-2 group-hover:text-gray-900 transition-colors line-clamp-2">
+                                                {c.title}
+                                            </h3>
+                                            <p className="text-gray-600 text-sm line-clamp-2">
+                                                {c.venue}
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                        </AnimatePresence>
                     </div>
+
+                    {/* no items message */}
+                    {!loading && concerts.filter((c) => (activeTab === 'OPEN' ? c.status === 'OPEN' : c.status !== 'OPEN')).length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                            <div className="text-6xl mb-4">📭</div>
+                            <div className="text-xl font-medium text-gray-500">조회 가능한 콘서트가 없습니다.</div>
+                        </div>
+                    )}
+                </div>
 
                     <div ref={sentinelRef} className="h-10" />
                     {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
                     {!loading && !loadingMore && concerts.length > 0 && !hasMore && (
                         <div className="text-sm text-gray-500 text-center py-2">마지막 콘서트입니다.</div>
                     )}
-                </div>
             </main>
 
             {/* 콘서트 상세 모달 */}
