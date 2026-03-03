@@ -4,9 +4,11 @@ import com.bit.idol.searchservice.document.ChatDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
+import org.springframework.data.elasticsearch.annotations.Query;
 
 public interface ChatSearchRepository extends ElasticsearchRepository<ChatDocument, String> {
-    
-    // 아이돌 ID로 필터링하고 내용 검색 (최신순 정렬은 Pageable로 처리)
-    Page<ChatDocument> findByIdolIdAndContentContaining(Long idolId, String content, Pageable pageable);
+
+    // 명시적인 Elasticsearch bool + match 쿼리 (띄어쓰기가 포함된 문장도 분석하여 검색)
+    @Query("{\"bool\": {\"must\": [{\"term\": {\"idolId\": \"?0\"}}, {\"match\": {\"content\": \"?1\"}}]}}")
+    Page<ChatDocument> searchByKeyword(Long idolId, String keyword, Pageable pageable);
 }

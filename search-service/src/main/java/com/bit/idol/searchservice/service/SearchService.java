@@ -25,16 +25,19 @@ public class SearchService {
 
     private static final String SUBSCRIPTION_CACHE_KEY = "search:sub:user:%d:idol:%d";
 
-    public Page<ChatDocument> searchChat(int userId, Long idolId, String keyword, Pageable pageable) {
-        if (!hasSubscription(userId, idolId)) {
+    public Page<ChatDocument> searchChat(int userId, String role, Long idolId, String keyword, Pageable pageable) {
+        // 아이돌 본인이거나 관리자이면 구독 검사를 무사통과합니다.
+        boolean isIdolOrAdmin = "IDOL".equals(role) || "ADMIN".equals(role);
+
+        if (!isIdolOrAdmin && !hasSubscription(userId, idolId)) {
             throw new RuntimeException("구독하지 않은 아이돌의 채팅은 검색할 수 없습니다.");
         }
-        return chatSearchRepository.findByIdolIdAndContentContaining(idolId, keyword, pageable);
+        return chatSearchRepository.searchByKeyword(idolId, keyword, pageable);
     }
 
     // 자동 완성 기능은 일단 제거 (추후 구현)
     public List<String> autoComplete(Long idolId, String prefix) {
-        return List.of(); 
+        return List.of();
     }
 
     @CircuitBreaker(name = "subscription-check", fallbackMethod = "fallbackSubscriptionCheck")
@@ -56,6 +59,6 @@ public class SearchService {
 
     public boolean fallbackSubscriptionCheck(int userId, Long idolId, Throwable t) {
         log.error("구독 서비스 장애 발생: userId={}, idolId={}, error={}", userId, idolId, t.getMessage());
-        return false; 
+        return false;
     }
 }
