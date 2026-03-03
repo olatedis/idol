@@ -353,17 +353,6 @@ public class PostService {
         // post 안에 있는 필드 중 res에도 같은이름 + 같은 타입의 필드가 있으면 getter, setter이용해서 자동복사
         BeanUtils.copyProperties(post, res);
 
-        if (post.getBoardType() != null) {
-            res.setBoardType(post.getBoardType().name());
-        }
-
-        // 명시적으로 시간 필드 포매팅 (LocalDateTime -> String 변환 오류 방지)
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        if (post.getCreatedAt() != null)
-            res.setCreatedAt(post.getCreatedAt().format(formatter));
-        if (post.getUpdatedAt() != null)
-            res.setUpdatedAt(post.getUpdatedAt().format(formatter));
-
         // comments 포함(최신이 위)
         // isDeleted=true면 content는 "삭제된 댓글입니다"로 내려줌
         List<Comment> comments = commentRepository.findByPost_PostIdOrderByCreatedAtDesc(post.getPostId());
