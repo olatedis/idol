@@ -252,7 +252,6 @@ const ConcertPage: React.FC = () => {
     };
 
     const onOpenBooking = () => {
-        if (!requireLogin()) return;
         setIsBookingModalOpen(true);
         setSelectedSeats([]);
     };
@@ -276,8 +275,20 @@ const ConcertPage: React.FC = () => {
             alert("좌석을 선택해주세요.");
             return;
         }
-        // TODO: 예매 처리
-        alert(`선택한 좌석: ${selectedSeats.length}개`);
+        // 선택한 좌석 정보 준비
+        const chosenSeats = concertSeats.filter((s) => selectedSeats.includes(s.id));
+        const totalPrice = chosenSeats.reduce((sum, s) => sum + s.price, 0);
+
+        // 결제 페이지로 이동 (예: /payment)
+        // 필요한 데이터는 state로 전달
+        navigate("/payment", {
+            state: {
+                concert: selectedConcert,
+                seats: chosenSeats,
+                totalPrice,
+            },
+        });
+
         setIsBookingModalOpen(false);
     };
 
@@ -395,7 +406,7 @@ const ConcertPage: React.FC = () => {
                     <div ref={sentinelRef} className="h-10" />
                     {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
                     {!loading && !loadingMore && concerts.length > 0 && !hasMore && (
-                        <div className="text-sm text-gray-500 text-center py-2">마지막 콘서트입니다.</div>
+                        <div className="text-sm text-gray-500 text-center py-2"></div>
                     )}
             </main>
 
@@ -517,7 +528,7 @@ const ConcertPage: React.FC = () => {
                                                             }}
                                                             disabled={seat.locked}
                                                             className={`
-                                                                p-2 rounded border-2 font-bold text-sm transition
+                                                                p-2 rounded border-2 font-bold text-sm transition flex flex-col items-center
                                                                 ${
                                                                     seat.locked
                                                                         ? "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -527,7 +538,10 @@ const ConcertPage: React.FC = () => {
                                                                 }
                                                             `}
                                                         >
-                                                            {seat.seatNumber}
+                                                            <span>{seat.seatNumber}</span>
+                                                            <span className="text-[10px] text-gray-500 mt-1">
+                                                                {seat.price.toLocaleString()}원
+                                                            </span>
                                                         </button>
                                                     ))}
                                                 </div>
