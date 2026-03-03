@@ -46,6 +46,7 @@ const GroupPostDetailPage: React.FC = () => {
     const navigate = useNavigate();
 
     const { accessToken, user } = useAuthStore();
+    (window as any).authStore = useAuthStore;
 
     const [data, setData] = useState<PostResponse | null>(null);
     const [loading, setLoading] = useState(false);
