@@ -59,8 +59,7 @@ spring:
         - id: board-service
           uri: lb://BOARD-SERVICE
           predicates:
-            - Path=/board/posts/**, /board/comments/**, /board/uploads/**, /uploads/**
-            - Path=/board/posts/**, /board/comments/**, /notices/**, /admin/notices/**
+            - Path=/board/posts/**, /board/comments/**, /board/uploads/**, /uploads/**, /notices/**, /admin/notices/**
 
         - id: search-service
           uri: lb://SEARCH-SERVICE
