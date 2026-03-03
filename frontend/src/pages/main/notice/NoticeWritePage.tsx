@@ -1,6 +1,8 @@
 import { Editor } from "@toast-ui/react-editor";
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../../../stores/authStore";
+import Header from "../Header";
 
 type NoticeWriteRequest = {
     boardType: string;
@@ -63,8 +65,8 @@ const NoticeWritePage: React.FC = () => {
             return;
         }
 
-        // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
-        const accessToken = localStorage.getItem("accessToken");
+        // TODO: 로그인 연동되면
+        const { accessToken } = useAuthStore.getState();
         if (!accessToken) {
             setError("로그인이 필요합니다. (accessToken 없음)");
             return;
@@ -82,7 +84,7 @@ const NoticeWritePage: React.FC = () => {
 
         try {
             // /board/admin/** -> board-service /admin/**
-            const res = await fetch(`${API_BASE_URL}/board/admin/notices`, {
+            const res = await fetch(`${API_BASE_URL}/admin/notices`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -111,55 +113,60 @@ const NoticeWritePage: React.FC = () => {
     };
 
     return (
-        <div className="space-y-4">
-            <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                    <div className="text-lg font-semibold text-gray-900">공지 작성(관리자)</div>
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => navigate(-1)}
-                            className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold hover:bg-gray-50"
-                        >
-                            취소
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onSubmit}
-                            disabled={submitting}
-                            className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8] disabled:opacity-60"
-                        >
-                            등록
-                        </button>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+            <Header />
+            <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+                <div className="space-y-4">
+                    <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+                        <div className="px-5 sm:px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="text-lg font-semibold text-gray-900">공지 작성(관리자)</div>
+                            <div className="flex gap-2 w-full sm:w-auto justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate(-1)}
+                                    className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold hover:bg-gray-50"
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onSubmit}
+                                    disabled={submitting}
+                                    className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8] disabled:opacity-60"
+                                >
+                                    등록
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-5 space-y-4">
+                            {error && <div className="text-sm text-red-600">{error}</div>}
+
+                            <div>
+                                <div className="text-sm font-semibold text-gray-700 mb-2">제목</div>
+                                <input
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="공지 제목을 입력해주세요."
+                                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <div className="text-sm font-semibold text-gray-700 mb-2">내용</div>
+                                <Editor
+                                    ref={editorRef}
+                                    initialValue=""
+                                    initialEditType="wysiwyg"
+                                    previewStyle="vertical"
+                                    height="360px"
+                                    useCommandShortcut={true}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <div className="px-6 py-5 space-y-4">
-                    {error && <div className="text-sm text-red-600">{error}</div>}
-
-                    <div>
-                        <div className="text-sm font-semibold text-gray-700 mb-2">제목</div>
-                        <input
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="공지 제목을 입력해주세요."
-                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none"
-                        />
-                    </div>
-
-                    <div>
-                        <div className="text-sm font-semibold text-gray-700 mb-2">내용</div>
-                        <Editor
-                            ref={editorRef}
-                            initialValue=""
-                            initialEditType="wysiwyg"
-                            previewStyle="vertical"
-                            height="360px"
-                            useCommandShortcut={true}
-                        />
-                    </div>
-                </div>
-            </div>
+            </main>
         </div>
     );
 };
