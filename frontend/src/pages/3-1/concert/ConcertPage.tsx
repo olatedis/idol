@@ -45,6 +45,13 @@ const ConcertPage: React.FC = () => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState("");
 
+    // detail modal
+    const [selectedConcert, setSelectedConcert] = useState<ConcertDto | null>(null);
+    const [seats, setSeats] = useState<any[]>([]);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [bookingSeat, setBookingSeat] = useState<string | null>(null);
+    const [showBookingModal, setShowBookingModal] = useState(false);
+
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [totalElements, setTotalElements] = useState<number | null>(null);
@@ -187,7 +194,24 @@ const ConcertPage: React.FC = () => {
             alert("예매 가능한 좌석이 없습니다.");
             return;
         }
-        navigate(`./booking/${c.concertId}`);
+        // open detail then booking modal
+        openDetail(c);
+    };
+
+    const openDetail = async (c: ConcertDto) => {
+        setSelectedConcert(c);
+        setDetailLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/concerts/${c.concertId}/seats`);
+            if (res.ok) {
+                const data = await res.json();
+                setSeats(data || []);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setDetailLoading(false);
+        }
     };
 
     const onClickCreate = () => {
@@ -285,6 +309,67 @@ const ConcertPage: React.FC = () => {
                     )}
                 </div>
             </main>
+
+            {/* detail modal */}
+            {selectedConcert && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setSelectedConcert(null)}>
+                    <div className="bg-white rounded-lg p-6 max-w-lg w-full relative" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-semibold mb-2">{selectedConcert.title}</h2>
+                        <p className="text-sm text-gray-600 mb-4">장소: {selectedConcert.venue}</p>
+                        <p className="text-sm text-gray-600 mb-4">일시: {formatKST(selectedConcert.date)}</p>
+                        <p className="mb-4">{selectedConcert.price.toLocaleString()}원</p>
+                        <p className="mb-4">잔여 좌석: {selectedConcert.remainingTickets}/{selectedConcert.totalTickets}</p>
+                        {detailLoading ? (
+                            <div>Loading seats...</div>
+                        ) : (
+                            <div className="mb-4">
+                                <div className="font-medium">등급 별 남은 좌석</div>
+                                <ul className="list-disc pl-5">
+                                    {['VIP','R','S','A'].map(g => {
+                                        const cnt = seats.filter(s => s.grade === g).length;
+                                        return <li key={g}>{g}: {cnt}</li>;
+                                    })}
+                                </ul>
+                            </div>
+                        )}
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setSelectedConcert(null)} className="px-4 py-2 rounded bg-gray-200">닫기</button>
+                            <button onClick={() => setShowBookingModal(true)} className="px-4 py-2 rounded bg-idol text-white">예매하기</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* booking modal */}
+            {showBookingModal && selectedConcert && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowBookingModal(false)}>
+                    <div className="bg-white rounded-lg p-6 max-w-xl w-full relative" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-semibold mb-4">좌석 선택</h2>
+                        <div className="grid grid-cols-5 gap-2 mb-4">
+                            {seats.map(seat => (
+                                <button
+                                    key={seat.id}
+                                    disabled={seat.locked}
+                                    onClick={() => setBookingSeat(seat.seatNumber)}
+                                    className={`w-full py-2 border rounded ${bookingSeat===seat.seatNumber?'bg-idol text-white':'bg-gray-100'} ${seat.locked?'opacity-50 cursor-not-allowed':''}`}
+                                >
+                                    {seat.seatNumber}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setShowBookingModal(false)} className="px-4 py-2 rounded bg-gray-200">취소</button>
+                            <button
+                                onClick={() => alert(`선택된 좌석: ${bookingSeat}`)}
+                                disabled={!bookingSeat}
+                                className="px-4 py-2 rounded bg-idol text-white disabled:opacity-50"
+                            >
+                                선택 완료
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
