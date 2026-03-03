@@ -17,7 +17,6 @@ import PaymentPage from "./pages/payment/PaymentPage.tsx";
 import PaymentComplete from "./pages/payment/PaymentComplete.tsx";
 import VotePage from "./pages/3-1/VotePage.tsx";
 import ConcertPage from "./pages/3-1/concert/ConcertPage.tsx";
-import ConcertDetailPage from "./pages/3-1/concert/ConcertDetailPage.tsx";
 import IdolBoardPage from "./pages/3-1/IdolBoardPage.tsx";
 import IdolPostWritePage from "./pages/3-1/IdolPostWritePage.tsx";
 import IdolPostDetailPage from "./pages/3-1/IdolPostDetailPage.tsx"; // 추가됨
@@ -67,7 +66,6 @@ function App() {
 
                     {/* 콘서트 페이지 */}
                     <Route path="concert" element={<ConcertPage />} />
-                    <Route path="concert/:concertId" element={<ConcertDetailPage />} />
 
                     {/* 채팅 페이지 */}
                     <Route path="chat" element={<ChatPage />} />

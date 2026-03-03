@@ -15,6 +15,7 @@ public class ConcertUpdateRequest {
     private String title;
     private String description;
     private String venue;
+    private String img;
     private LocalDateTime concertDate;
     private LocalDateTime startTime;
     private LocalDateTime ticketSaleDate;
