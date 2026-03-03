@@ -1,23 +1,35 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore";
+import { AnimatePresence, motion } from "framer-motion";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 20;
 
+type SeatGrade = "VIP" | "R" | "S" | "A";
+
+type SeatDto = {
+    id: number;
+    seatNumber: string;
+    grade: SeatGrade;
+    price: number;
+    locked: boolean;
+    lockedBy?: number | null;
+};
+
 type ConcertDto = {
-    concertId: number;
+    id: number;
     groupId?: number | null;
     title: string;
+    description?: string;
     venue: string;
-    date: string; // ISO string or formatted
+    concertDate: string;
     startTime?: string;
-    endTime?: string;
-    price: number;
-    totalTickets: number;
-    remainingTickets: number;
+    price?: number;
+    totalTickets?: number;
     status: "OPEN" | "SOLD_OUT" | "CLOSED" | string;
     createdAt?: string;
+    agencyId: number;
 };
 
 const ConcertPage: React.FC = () => {
@@ -26,7 +38,26 @@ const ConcertPage: React.FC = () => {
 
     const { user } = useAuthStore();
 
-    // helper to format ISO date string as KST
+    const [concerts, setConcerts] = useState<ConcertDto[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [error, setError] = useState("");
+
+    const [page, setPage] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const [totalElements, setTotalElements] = useState<number | null>(null);
+
+    const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+    const accessToken = localStorage.getItem("accessToken");
+
+    // 모달 상태
+    const [selectedConcert, setSelectedConcert] = useState<ConcertDto | null>(null);
+    const [concertSeats, setConcertSeats] = useState<SeatDto[]>([]);
+    const [seatsLoading, setSeatsLoading] = useState(false);
+    const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+    const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
+
     const formatKST = (iso?: string) => {
         if (!iso) return "";
         const d = new Date(iso);
@@ -39,27 +70,6 @@ const ConcertPage: React.FC = () => {
             minute: "2-digit",
         });
     };
-
-    const [concerts, setConcerts] = useState<ConcertDto[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [error, setError] = useState("");
-
-    // detail modal
-    const [selectedConcert, setSelectedConcert] = useState<ConcertDto | null>(null);
-    const [seats, setSeats] = useState<any[]>([]);
-    const [detailLoading, setDetailLoading] = useState(false);
-    const [bookingSeat, setBookingSeat] = useState<string | null>(null);
-    const [showBookingModal, setShowBookingModal] = useState(false);
-
-    const [page, setPage] = useState(0);
-    const [hasMore, setHasMore] = useState(true);
-    const [totalElements, setTotalElements] = useState<number | null>(null);
-
-    const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-    // access token may be used for protected requests
-    const accessToken = localStorage.getItem("accessToken");
 
     const resetInfinite = () => {
         setConcerts([]);
@@ -79,10 +89,9 @@ const ConcertPage: React.FC = () => {
         const params = new URLSearchParams();
         params.set("page", String(nextPage));
         params.set("size", String(PAGE_SIZE));
-        params.set("sort", "date,desc");
+        params.set("sort", "concertDate,desc");
         if (groupId) params.set("groupId", groupId);
 
-        // build query string
         let url = `${API_BASE_URL}/concerts`;
         const qs = params.toString();
         if (qs) url += `?${qs}`;
@@ -94,7 +103,6 @@ const ConcertPage: React.FC = () => {
         let last = true;
 
         if (Array.isArray(data)) {
-            // backend returned simple list
             content = data as ConcertDto[];
             last = true;
         } else {
@@ -112,6 +120,22 @@ const ConcertPage: React.FC = () => {
         }
 
         setHasMore(!last && content.length > 0);
+    };
+
+    const fetchConcertSeats = async (concertId: number) => {
+        if (!API_BASE_URL) return;
+        try {
+            setSeatsLoading(true);
+            const res = await fetch(`${API_BASE_URL}/concerts/${concertId}/seats`);
+            if (!res.ok) throw new Error("좌석 조회 실패");
+            const seats = await res.json();
+            setConcertSeats(seats);
+        } catch (e) {
+            console.error("좌석 조회 실패:", e);
+            setConcertSeats([]);
+        } finally {
+            setSeatsLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -182,51 +206,60 @@ const ConcertPage: React.FC = () => {
 
     const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
-    const requireLoginOrStop = () => {
+    const requireLogin = () => {
         if (accessToken) return true;
         alert("로그인이 필요합니다.");
         return false;
     };
 
-    const onClickBook = (c: ConcertDto) => {
-        if (!requireLoginOrStop()) return;
-        if (c.remainingTickets <= 0) {
-            alert("예매 가능한 좌석이 없습니다.");
+    const onOpenDetail = async (concert: ConcertDto) => {
+        setSelectedConcert(concert);
+        await fetchConcertSeats(concert.id);
+    };
+
+    const onOpenBooking = () => {
+        if (!requireLogin()) return;
+        setIsBookingModalOpen(true);
+        setSelectedSeats([]);
+    };
+
+    const toggleSeatSelection = (seatId: number) => {
+        setSelectedSeats((prev) =>
+            prev.includes(seatId) ? prev.filter((s) => s !== seatId) : [...prev, seatId]
+        );
+    };
+
+    const getSeatsByGrade = (grade: SeatGrade): SeatDto[] => {
+        return concertSeats.filter((s) => s.grade === grade);
+    };
+
+    const getSeatCountByGrade = (grade: SeatGrade): number => {
+        return concertSeats.filter((s) => s.grade === grade && !s.locked).length;
+    };
+
+    const onConfirmBooking = async () => {
+        if (selectedSeats.length === 0) {
+            alert("좌석을 선택해주세요.");
             return;
         }
-        // open detail then booking modal
-        openDetail(c);
+        // TODO: 예매 처리
+        alert(`선택한 좌석: ${selectedSeats.length}개`);
+        setIsBookingModalOpen(false);
     };
 
-    const openDetail = async (c: ConcertDto) => {
-        setSelectedConcert(c);
-        setDetailLoading(true);
-        try {
-            const res = await fetch(`${API_BASE_URL}/concerts/${c.concertId}/seats`);
-            if (res.ok) {
-                const data = await res.json();
-                setSeats(data || []);
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setDetailLoading(false);
-        }
-    };
-
-    const onClickCreate = () => {
-        if (!requireLoginOrStop()) return;
-        navigate(`./create`);
+    const onCreateConcert = () => {
+        if (!requireLogin()) return;
+        navigate("./create");
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
             <main className="pt-[100px] px-6 pb-12 max-w-7xl mx-auto relative z-10">
-                {/* 탭 제목 영역 (그룹/전체) */}
+                {/* 제목 영역 */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-black text-gray-800">콘서트 예매소</h1>
                     <p className="text-gray-500 mt-2 font-medium">
-                        {groupId ? "우리 그룹의 콘서트를 확인하세요" : "모든 그룹의 등록된 콘서트를 확인하세요"}
+                        {groupId ? "우리 그룹의 콘서트를 확인하세요" : "모든 그룹의 콘서트를 확인하세요"}
                     </p>
                 </div>
 
@@ -237,70 +270,64 @@ const ConcertPage: React.FC = () => {
 
                 <div className="space-y-4">
                     <div className="flex justify-between items-center flex-wrap gap-2">
-                <div className="text-lg font-semibold text-gray-900">콘서트 예매</div>
-
-                <div className="flex gap-2">
-                    <button
-                        type="button"
-                        onClick={scrollTop}
-                        className="px-3 py-2 rounded-full text-sm font-semibold border border-gray-200 hover:bg-gray-50"
-                    >
-                        ↑
-                    </button>
-
-                    {user?.role === 'AGENCY' && (
-                        <button
-                            type="button"
-                            onClick={onClickCreate}
-                            className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8]"
-                        >
-                            콘서트 등록
-                        </button>
-                    )}
-                </div>
-            </div>
-
-                {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
-                {error && <div className="text-sm text-red-600">{error}</div>}
-
-            <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                <div className="grid grid-cols-[90px_1fr_160px_140px_120px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
-                    <div className="text-left">번호</div>
-                    <div className="text-left">공연</div>
-                    <div className="text-left">장소</div>
-                    <div className="text-left">일시</div>
-                    <div className="text-right">남은 좌석</div>
-                    <div className="text-right">예매</div>
-                </div>
-
-                {!loading && concerts.length === 0 && (
-                    <div className="px-4 py-6 text-sm text-gray-600">등록된 콘서트가 없습니다.</div>
-                )}
-
-                {!loading &&
-                    concerts.map((c, idx) => (
-                        <div
-                            key={c.concertId}
-                            className="w-full text-left grid grid-cols-[90px_1fr_160px_140px_120px_90px] px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center"
-                        >
-                            <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
-                            <div className="min-w-0">
-                                <div className="text-sm font-semibold text-gray-900 truncate">{c.title}</div>
-                            </div>
-                            <div className="text-sm text-gray-700">{c.venue}</div>
-                            <div className="text-sm text-gray-600">{formatKST(c.date)}</div>
-                            <div className="text-sm text-gray-700 text-right tabular-nums">{c.remainingTickets}/{c.totalTickets}</div>
-                            <div className="text-right">
+                        <div className="text-lg font-semibold text-gray-900">콘서트 목록</div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={scrollTop}
+                                className="px-3 py-2 rounded-full text-sm font-semibold border border-gray-200 hover:bg-gray-50"
+                            >
+                                ↑
+                            </button>
+                            {user?.role === "AGENCY" && (
                                 <button
-                                    onClick={() => onClickBook(c)}
-                                    className={`px-3 py-1.5 rounded-full text-sm font-medium ${c.remainingTickets > 0 ? "bg-idol text-white" : "bg-gray-200 text-gray-500 cursor-not-allowed"}`}
+                                    onClick={onCreateConcert}
+                                    className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8]"
                                 >
-                                    예매
+                                    콘서트 등록
                                 </button>
-                            </div>
+                            )}
                         </div>
-                    ))}
-            </div>
+                    </div>
+
+                    {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
+                    {error && <div className="text-sm text-red-600">{error}</div>}
+
+                    <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
+                        <div className="grid grid-cols-[90px_1fr_160px_140px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                            <div className="text-left">번호</div>
+                            <div className="text-left">공연명</div>
+                            <div className="text-left">장소</div>
+                            <div className="text-left">일시</div>
+                            <div className="text-right">상세</div>
+                        </div>
+
+                        {!loading && concerts.length === 0 && (
+                            <div className="px-4 py-6 text-sm text-gray-600">등록된 콘서트가 없습니다.</div>
+                        )}
+
+                        {!loading &&
+                            concerts.map((c, idx) => (
+                                <div
+                                    key={c.id}
+                                    className="w-full text-left grid grid-cols-[90px_1fr_160px_140px_90px] px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center"
+                                >
+                                    <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
+                                    <div className="min-w-0">
+                                        <div className="text-sm font-semibold text-gray-900 truncate">{c.title}</div>
+                                    </div>
+                                    <div className="text-sm text-gray-700">{c.venue}</div>
+                                    <div className="text-sm text-gray-600">{formatKST(c.concertDate)}</div>
+                                    <div className="text-right">
+                                        <button
+                                            onClick={() => onOpenDetail(c)}
+                                            className="px-3 py-1.5 rounded-full text-sm font-medium bg-idol text-white hover:bg-idol/90"
+                                        >
+                                            상세보기
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                    </div>
 
                     <div ref={sentinelRef} className="h-10" />
                     {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
@@ -310,66 +337,171 @@ const ConcertPage: React.FC = () => {
                 </div>
             </main>
 
-            {/* detail modal */}
-            {selectedConcert && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setSelectedConcert(null)}>
-                    <div className="bg-white rounded-lg p-6 max-w-lg w-full relative" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-xl font-semibold mb-2">{selectedConcert.title}</h2>
-                        <p className="text-sm text-gray-600 mb-4">장소: {selectedConcert.venue}</p>
-                        <p className="text-sm text-gray-600 mb-4">일시: {formatKST(selectedConcert.date)}</p>
-                        <p className="mb-4">{selectedConcert.price.toLocaleString()}원</p>
-                        <p className="mb-4">잔여 좌석: {selectedConcert.remainingTickets}/{selectedConcert.totalTickets}</p>
-                        {detailLoading ? (
-                            <div>Loading seats...</div>
-                        ) : (
-                            <div className="mb-4">
-                                <div className="font-medium">등급 별 남은 좌석</div>
-                                <ul className="list-disc pl-5">
-                                    {['VIP','R','S','A'].map(g => {
-                                        const cnt = seats.filter(s => s.grade === g).length;
-                                        return <li key={g}>{g}: {cnt}</li>;
-                                    })}
-                                </ul>
-                            </div>
-                        )}
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setSelectedConcert(null)} className="px-4 py-2 rounded bg-gray-200">닫기</button>
-                            <button onClick={() => setShowBookingModal(true)} className="px-4 py-2 rounded bg-idol text-white">예매하기</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* 콘서트 상세 모달 */}
+            <AnimatePresence>
+                {selectedConcert && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+                        onClick={() => setSelectedConcert(null)}
+                    >
+                        <motion.div
+                            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                        >
+                            <div className="p-6 sm:p-8">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-900">{selectedConcert.title}</h2>
+                                        <p className="text-gray-600 mt-1">{selectedConcert.venue}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedConcert(null)}
+                                        className="text-gray-400 hover:text-gray-600 text-2xl"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
 
-            {/* booking modal */}
-            {showBookingModal && selectedConcert && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowBookingModal(false)}>
-                    <div className="bg-white rounded-lg p-6 max-w-xl w-full relative" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-xl font-semibold mb-4">좌석 선택</h2>
-                        <div className="grid grid-cols-5 gap-2 mb-4">
-                            {seats.map(seat => (
+                                <div className="space-y-4 mb-6">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">일시</span>
+                                        <span className="font-medium">{formatKST(selectedConcert.concertDate)}</span>
+                                    </div>
+                                    {selectedConcert.description && (
+                                        <div className="border-t pt-4">
+                                            <p className="text-sm text-gray-700">{selectedConcert.description}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 좌석 정보 */}
+                                <div className="border-t pt-6 mb-6">
+                                    <h3 className="font-bold text-gray-900 mb-4">좌석 현황</h3>
+                                    {seatsLoading ? (
+                                        <div className="text-sm text-gray-500">좌석 정보 로딩중...</div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {(["VIP", "R", "S", "A"] as SeatGrade[]).map((grade) => (
+                                                <div
+                                                    key={grade}
+                                                    className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                                                >
+                                                    <span className="font-medium text-gray-900">{grade}석</span>
+                                                    <span className="text-sm text-gray-600">
+                                                        {getSeatCountByGrade(grade)}석 / {getSeatsByGrade(grade).length}석
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button
-                                    key={seat.id}
-                                    disabled={seat.locked}
-                                    onClick={() => setBookingSeat(seat.seatNumber)}
-                                    className={`w-full py-2 border rounded ${bookingSeat===seat.seatNumber?'bg-idol text-white':'bg-gray-100'} ${seat.locked?'opacity-50 cursor-not-allowed':''}`}
+                                    onClick={onOpenBooking}
+                                    className="w-full py-3 bg-idol text-white font-bold rounded-lg hover:bg-idol/90 transition"
                                 >
-                                    {seat.seatNumber}
+                                    예매하기
                                 </button>
-                            ))}
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setShowBookingModal(false)} className="px-4 py-2 rounded bg-gray-200">취소</button>
-                            <button
-                                onClick={() => alert(`선택된 좌석: ${bookingSeat}`)}
-                                disabled={!bookingSeat}
-                                className="px-4 py-2 rounded bg-idol text-white disabled:opacity-50"
-                            >
-                                선택 완료
-                            </button>
-                        </div>
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
+
+            {/* 예매 모달 */}
+            <AnimatePresence>
+                {isBookingModalOpen && selectedConcert && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+                        onClick={() => setIsBookingModalOpen(false)}
+                    >
+                        <motion.div
+                            className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                        >
+                            <div className="p-6 sm:p-8">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-900">좌석 선택</h2>
+                                    <button
+                                        onClick={() => setIsBookingModalOpen(false)}
+                                        className="text-gray-400 hover:text-gray-600 text-2xl"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <div className="mb-6 space-y-6">
+                                    {(["VIP", "R", "S", "A"] as SeatGrade[]).map((grade) => {
+                                        const seatsOfGrade = getSeatsByGrade(grade);
+                                        if (seatsOfGrade.length === 0) return null;
+
+                                        return (
+                                            <div key={grade}>
+                                                <h3 className="font-bold text-gray-900 mb-3">{grade}석</h3>
+                                                <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(50px, 1fr))" }}>
+                                                    {seatsOfGrade.map((seat) => (
+                                                        <button
+                                                            key={seat.id}
+                                                            onClick={() => {
+                                                                if (!seat.locked) {
+                                                                    toggleSeatSelection(seat.id);
+                                                                }
+                                                            }}
+                                                            disabled={seat.locked}
+                                                            className={`
+                                                                p-2 rounded border-2 font-bold text-sm transition
+                                                                ${
+                                                                    seat.locked
+                                                                        ? "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                                        : selectedSeats.includes(seat.id)
+                                                                        ? "border-idol bg-idol text-white"
+                                                                        : "border-gray-300 bg-white text-gray-900 hover:border-idol"
+                                                                }
+                                                            `}
+                                                        >
+                                                            {seat.seatNumber}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="border-t pt-6">
+                                    <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                                        <p className="text-sm text-gray-600 mb-2">선택한 좌석</p>
+                                        <p className="font-bold text-gray-900">
+                                            {selectedSeats.length > 0
+                                                ? concertSeats
+                                                      .filter((s) => selectedSeats.includes(s.id))
+                                                      .map((s) => s.seatNumber)
+                                                      .join(", ")
+                                                : "선택된 좌석이 없습니다"}
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        onClick={onConfirmBooking}
+                                        disabled={selectedSeats.length === 0}
+                                        className="w-full py-3 bg-idol text-white font-bold rounded-lg hover:bg-idol/90 disabled:bg-gray-300 transition"
+                                    >
+                                        {selectedSeats.length > 0
+                                            ? `${selectedSeats.length}개 좌석 예매하기`
+                                            : "좌석을 선택해주세요"}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
