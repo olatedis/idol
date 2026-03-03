@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,7 +49,6 @@ public class CommentService {
 
         return toResponse(comment);
     }
-
 
     // 댓글 목록 조회
     @Transactional(readOnly = true)
@@ -111,7 +111,8 @@ public class CommentService {
 
     // 게시글 상세 조회 권환
     private void requireReadSubscription(Post post, Integer userId, Role role) {
-        if (role == Role.ADMIN) return;
+        if (role == Role.ADMIN)
+            return;
 
         if (post.getBoardType() == BoardType.IDOL_OFFICIAL || post.getBoardType() == BoardType.IDOL_FAN) {
             if (!subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId)) {
@@ -129,14 +130,17 @@ public class CommentService {
 
     // 수정 권한 판단
     private boolean canModify(Comment comment, Integer userId, Role role) {
-        if (role == Role.ADMIN) return true;
+        if (role == Role.ADMIN)
+            return true;
         return comment.getAuthorId().equals(userId);
     }
 
     // 삭제 권한 판단
     private boolean canDelete(Comment comment, Integer userId, Role role) {
-        if (role == Role.ADMIN) return true;
-        if (comment.getAuthorId().equals(userId)) return true;
+        if (role == Role.ADMIN)
+            return true;
+        if (comment.getAuthorId().equals(userId))
+            return true;
 
         Post post = comment.getPost();
 
@@ -174,8 +178,12 @@ public class CommentService {
         res.setIsDeleted(deleted);
         res.setContent(deleted ? "삭제된 댓글입니다" : c.getContent());
 
-        res.setCreatedAt(c.getCreatedAt());
-        res.setUpdatedAt(c.getUpdatedAt());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        if (c.getCreatedAt() != null)
+            res.setCreatedAt(c.getCreatedAt().format(formatter));
+        if (c.getUpdatedAt() != null)
+            res.setUpdatedAt(c.getUpdatedAt().format(formatter));
+
         return res;
     }
 }
