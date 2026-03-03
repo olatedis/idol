@@ -22,6 +22,7 @@ import IdolBoardPage from "./pages/3-1/IdolBoardPage.tsx";
 import IdolPostWritePage from "./pages/3-1/IdolPostWritePage.tsx";
 import IdolPostDetailPage from "./pages/3-1/IdolPostDetailPage.tsx"; // 추가됨
 import ChatPage from "./pages/3-1/ChatPage.tsx";
+import GlobalConcertPage from "./pages/main/GlobalConcertPage.tsx";
 import GroupPostEditPage from "./pages/3-1/GroupPostEditPage.tsx";
 
 function App() {
@@ -74,6 +75,9 @@ function App() {
 
                 {/* 아이돌 */}
                 <Route path="/idol" element={<IdolPage />} />
+
+                {/* 전체 콘서트 */}
+                <Route path="/concert" element={<GlobalConcertPage />} />
 
                 {/*    테스트중*/}
                 <Route path="/idol/:idolId/subscribe" element={<IdolSubscribe />} />
