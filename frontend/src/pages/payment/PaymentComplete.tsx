@@ -2,14 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../main/Header';
 import { confirmPayment, authorizeBillingKey } from '../../api/payment';
-import {useAuthStore} from "../../stores/authStore.ts";
+import { useAuthStore } from "../../stores/authStore.ts";
 
 const PaymentComplete: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [status, setStatus] = useState<'processing' | 'success' | 'failed'>('processing');
     const { user } = useAuthStore();
-    const userId = user.userId
+    const userId = user?.userId
 
     useEffect(() => {
         const qs = new URLSearchParams(location.search);
@@ -40,7 +40,7 @@ const PaymentComplete: React.FC = () => {
             authorizeBillingKey({ idolId: pendingIdolId, authKey, plan: 'MONTHLY', customerKey })
                 .then(() => {
                     // 처리 후 세션청소
-                    try { sessionStorage.removeItem('pendingSubscription'); } catch {}
+                    try { sessionStorage.removeItem('pendingSubscription'); } catch { }
                     setStatus('success');
                 })
                 .catch(() => setStatus('failed'));
@@ -55,7 +55,7 @@ const PaymentComplete: React.FC = () => {
 
             confirmPayment({ paymentKey, orderId, amount }, userId)
                 .then(() => {
-                    try { sessionStorage.removeItem('pendingSubscription'); } catch {}
+                    try { sessionStorage.removeItem('pendingSubscription'); } catch { }
                     setStatus('success');
                 })
                 .catch(() => setStatus('failed'));
