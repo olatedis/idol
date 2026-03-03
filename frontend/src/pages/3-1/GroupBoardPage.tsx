@@ -1,9 +1,9 @@
-import React, {useEffect, useMemo, useRef, useState} from "react";
-import {useNavigate, useParams, useSearchParams} from "react-router-dom";
-import {useAuthStore} from "../../stores/authStore";
-import {api} from "../../api/axios";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useAuthStore } from "../../stores/authStore";
+import { api } from "../../api/axios";
 
-type BoardKind = "official" | "fan" | "notice";
+type BoardKind = "official" | "fan";
 
 type PostListResponse = {
     postId: number;
@@ -22,19 +22,25 @@ type PostListResponse = {
     updatedAt: string;
 };
 
+type IdolDto = {
+    idolId: number;
+    name?: string | null;
+    stageName?: string | null;
+    imgUrl?: string | null;
+};
+
 function resolveBoardType(type: BoardKind): string {
-    if (type === "notice") return "ADMIN_NOTICE";
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
 }
 
 const PAGE_SIZE = 20;
 
 const GroupBoardPage: React.FC = () => {
-    const {groupId} = useParams();
+    const { groupId } = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
 
-    const {accessToken} = useAuthStore();
+    const { accessToken } = useAuthStore();
 
     // URL 상태 (필터/정렬/검색만 유지)
     const board = (sp.get("type") as BoardKind) || "official";
@@ -54,12 +60,17 @@ const GroupBoardPage: React.FC = () => {
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+    // 아이돌 드롭다운
+    const [idols, setIdols] = useState<IdolDto[]>([]);
+    const [idolLoading, setIdolLoading] = useState(false);
+    const [idolOpen, setIdolOpen] = useState(false);
+    const idolWrapRef = useRef<HTMLDivElement | null>(null);
+
     // 필터 버튼
     const leftFilters = useMemo(() => {
         return [
-            {label: "그룹 공식", type: "official" as BoardKind},
-            {label: "그룹 팬", type: "fan" as BoardKind},
-            {label: "공지", type: "notice" as BoardKind},
+            { label: "그룹 공식", type: "official" as BoardKind },
+            { label: "그룹 팬", type: "fan" as BoardKind },
         ];
     }, []);
 
@@ -118,7 +129,7 @@ const GroupBoardPage: React.FC = () => {
         // TODO: search-service 연동 시 처리
         // if (q) params.q = q;
 
-        const res = await api.get("/board/posts", {params});
+        const res = await api.get("/board/posts", { params });
         const data = res.data as any;
         const content = (data.content ?? []) as PostListResponse[];
 
@@ -130,6 +141,29 @@ const GroupBoardPage: React.FC = () => {
         const last = Boolean(data.last);
         setHasMore(!last && content.length > 0);
     };
+
+    //  그룹 소속 아이돌 목록 로드
+    useEffect(() => {
+        const run = async () => {
+            if (!groupId) {
+                setIdols([]);
+                return;
+            }
+
+            setIdolLoading(true);
+            try {
+                const res = await api.get(`/groups/${groupId}/idols`);
+                const list = (res.data ?? []) as IdolDto[];
+                setIdols(Array.isArray(list) ? list : []);
+            } catch {
+                setIdols([]);
+            } finally {
+                setIdolLoading(false);
+            }
+        };
+
+        run();
+    }, [groupId]);
 
     // 첫 페이지 로드
     useEffect(() => {
@@ -152,7 +186,6 @@ const GroupBoardPage: React.FC = () => {
         };
 
         run();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [board, sort, groupId, q]);
 
     // page가 증가하면 다음 페이지 append 로드
@@ -175,7 +208,6 @@ const GroupBoardPage: React.FC = () => {
         };
 
         run();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, hasMore]);
 
     useEffect(() => {
@@ -192,14 +224,27 @@ const GroupBoardPage: React.FC = () => {
 
                 setPage((prev) => prev + 1);
             },
-            {root: null, rootMargin: "200px", threshold: 0}
+            { root: null, rootMargin: "200px", threshold: 0 }
         );
 
         io.observe(el);
         return () => io.disconnect();
     }, [hasMore, loading, loadingMore]);
 
-    const scrollTop = () => window.scrollTo({top: 0, behavior: "smooth"});
+    useEffect(() => {
+        const onDocDown = (e: MouseEvent) => {
+            if (!idolOpen) return;
+            const wrap = idolWrapRef.current;
+            if (!wrap) return;
+            if (wrap.contains(e.target as Node)) return;
+            setIdolOpen(false);
+        };
+
+        document.addEventListener("mousedown", onDocDown);
+        return () => document.removeEventListener("mousedown", onDocDown);
+    }, [idolOpen]);
+
+    const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
     const requireLoginOrStop = () => {
         if (accessToken) return true;
@@ -217,35 +262,98 @@ const GroupBoardPage: React.FC = () => {
         navigate(`./write?type=${board}`);
     };
 
+    const onClickIdolBoard = (idolId: number) => {
+        if (!requireLoginOrStop()) return;
+        if (!groupId) return;
+        setIdolOpen(false);
+        navigate(`/group/${groupId}/idol/${idolId}/board`);
+    };
+
+    const idolLabel = (i: IdolDto) => {
+        return (
+            (i.stageName && String(i.stageName)) ||
+            (i.name && String(i.name)) ||
+            `아이돌 ${i.idolId}`
+        );
+    };
+
     return (
         <div className="space-y-4">
             {/* 상단 툴바 */}
             <div className="flex justify-between flex-wrap gap-2">
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap items-center">
                     {leftFilters.map((f) => (
                         <button
                             key={f.label}
                             onClick={() => setFilter(f.type)}
                             className={[
-                                "px-3 py-2 rounded-full text-sm font-semibold border",
+                                "px-3 py-2 rounded-full text-sm font-semibold border transition",
                                 isActiveFilter(f)
                                     ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                    : "bg-white text-gray-800 border-gray-200 hover:bg-gray-200",
+                                    : "bg-white text-gray-800 border-gray-200 hover:bg-gray-200 active:scale-[0.99]",
                             ].join(" ")}
                         >
                             {f.label}
                         </button>
                     ))}
+
+                    {/* 아이돌 드롭다운 */}
+                    <div ref={idolWrapRef} className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setIdolOpen((v) => !v)}
+                            className={[
+                                "px-3 py-2 rounded-full text-sm font-semibold border transition flex items-center gap-2",
+                                "bg-white text-gray-800 border-gray-200 hover:bg-gray-200 active:scale-[0.99]",
+                            ].join(" ")}
+                        >
+                            아이돌 게시판
+                            <span className={["transition-transform", idolOpen ? "rotate-180" : ""].join(" ")}>▾</span>
+                        </button>
+
+                        {idolOpen && (
+                            <div
+                                className="
+                                    absolute left-0 mt-2 w-56
+                                    rounded-2xl border border-gray-200 bg-white shadow-lg overflow-hidden
+                                    z-50
+                                "
+                            >
+                                {idolLoading ? (
+                                    <div className="px-4 py-3 text-sm text-gray-600">불러오는 중...</div>
+                                ) : idols.length === 0 ? (
+                                    <div className="px-4 py-3 text-sm text-gray-600">소속 아이돌이 없습니다.</div>
+                                ) : (
+                                    <div className="max-h-72 overflow-auto">
+                                        {idols.map((i) => (
+                                            <button
+                                                key={i.idolId}
+                                                type="button"
+                                                onClick={() => onClickIdolBoard(i.idolId)}
+                                                className="
+                                                    w-full text-left px-4 py-3 text-sm
+                                                    hover:bg-gray-50 active:bg-gray-100
+                                                    transition
+                                                "
+                                            >
+                                                {idolLabel(i)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex gap-2">
                     <button
                         onClick={() => setSort("latest")}
                         className={[
-                            "px-3 py-2 rounded-full text-sm font-semibold border",
+                            "px-3 py-2 rounded-full text-sm font-semibold border transition",
                             sort === "latest"
                                 ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200 hover:bg-gray-200",
+                                : "bg-white border-gray-200 hover:bg-gray-200 active:scale-[0.99]",
                         ].join(" ")}
                     >
                         최신순
@@ -254,10 +362,10 @@ const GroupBoardPage: React.FC = () => {
                     <button
                         onClick={() => setSort("top")}
                         className={[
-                            "px-3 py-2 rounded-full text-sm font-semibold border",
+                            "px-3 py-2 rounded-full text-sm font-semibold border transition",
                             sort === "top"
                                 ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200 hover:bg-gray-200",
+                                : "bg-white border-gray-200 hover:bg-gray-200 active:scale-[0.99]",
                         ].join(" ")}
                     >
                         추천순
@@ -267,10 +375,11 @@ const GroupBoardPage: React.FC = () => {
 
             {/* 검색창 */}
             <div className="flex justify-center">
-                <div
-                    className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
-                    <select defaultValue="title"
-                            className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
+                <div className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
+                    <select
+                        defaultValue="title"
+                        className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200"
+                    >
                         <option value="title">제목</option>
                         <option value="title_content">제목+내용</option>
                         <option value="content">내용</option>
@@ -285,7 +394,7 @@ const GroupBoardPage: React.FC = () => {
 
                     <button
                         type="button"
-                        className="h-12 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                        className="h-12 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition"
                         onClick={() => {
                             // TODO: search-service 연동 시 검색 실행
                         }}
@@ -300,8 +409,7 @@ const GroupBoardPage: React.FC = () => {
 
             {/* 게시글 리스트 */}
             <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                <div
-                    className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                <div className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
                     <div className="text-left">번호</div>
                     <div className="text-left">제목</div>
                     <div className="text-left">작성자</div>
@@ -325,7 +433,7 @@ const GroupBoardPage: React.FC = () => {
                                 grid grid-cols-[90px_1fr_120px_140px_90px_90px]
                                 px-4 py-3
                                 border-b border-gray-100 last:border-b-0
-                                hover:bg-gray-50
+                                hover:bg-gray-50 active:bg-gray-100
                                 transition-colors
                             "
                         >
@@ -347,7 +455,7 @@ const GroupBoardPage: React.FC = () => {
             </div>
 
             {/* 무한스크롤 sentinel */}
-            <div ref={sentinelRef} className="h-10"/>
+            <div ref={sentinelRef} className="h-10" />
 
             {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
             {!loading && !loadingMore && posts.length > 0 && !hasMore && (
@@ -364,7 +472,8 @@ const GroupBoardPage: React.FC = () => {
                         bg-gray-100 border border-gray-200
                         shadow-md
                         text-gray-800 font-semibold
-                        hover:bg-gray-200
+                        hover:bg-gray-200 active:scale-[0.99]
+                        transition
                     "
                 >
                     ↑
@@ -377,7 +486,8 @@ const GroupBoardPage: React.FC = () => {
                         px-5 py-3 rounded-2xl
                         bg-[#1FBFB8] text-white text-sm font-semibold
                         shadow-md
-                        hover:bg-[#17AFA8]
+                        hover:bg-[#17AFA8] active:scale-[0.99]
+                        transition
                     "
                 >
                     글쓰기
