@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuthStore } from "../../stores/authStore";
+import { api } from "../../api/axios";
 
 type CommentResponse = {
     commentId: number;
     authorId: number;
     authorNickname: string | null;
-
     content: string;
     isDeleted: boolean;
-
     createdAt: string;
     updatedAt: string;
 };
@@ -27,29 +27,24 @@ type PostResponse = {
     likeCount: number;
     dislikeCount: number;
 
-    // 상세 응답에 포함된다고 확정
-    // NONE / LIKE / DISLIKE
     myReaction: string;
 
     createdAt: string;
     updatedAt: string;
 
-    // 상세 응답에 포함된다고 확정
     comments: CommentResponse[];
 };
 
 type PostReactionResponse = {
     likeCount: number;
     dislikeCount: number;
-    // NONE / LIKE / DISLIKE
     myReaction: string;
 };
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const IdolPostDetailPage: React.FC = () => {
     const { postId } = useParams();
     const navigate = useNavigate();
+    const { accessToken, user } = useAuthStore();
 
     const [data, setData] = useState<PostResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -59,37 +54,16 @@ const IdolPostDetailPage: React.FC = () => {
     const [submittingComment, setSubmittingComment] = useState(false);
 
     const [reacting, setReacting] = useState(false);
+    const [deletingPost, setDeletingPost] = useState(false);
+    const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
 
-    // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
-    const accessToken = localStorage.getItem("accessToken");
+    const fetchDetail = async () => {
+        if (!postId) throw new Error("postId가 없습니다.");
+        if (!accessToken) throw new Error("로그인이 필요합니다.");
 
-    const fetchDetail = async (signal?: AbortSignal) => {
-        if (!API_BASE_URL) {
-            throw new Error("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
-        }
-        if (!postId) {
-            throw new Error("postId가 없습니다.");
-        }
-        if (!accessToken) {
-            // 상세 GET은 토큰 필수 정책
-            throw new Error("로그인이 필요합니다.");
-        }
+        const res = await api.get(`/board/posts/${postId}`);
+        const json = res.data as PostResponse;
 
-        const res = await fetch(`${API_BASE_URL}/board/posts/${postId}`, {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-            },
-            signal,
-        });
-
-        if (res.status === 401) throw new Error("로그인이 필요합니다.");
-        if (res.status === 403) throw new Error("권한이 없습니다. (구독 필요 또는 접근 불가)");
-        if (!res.ok) throw new Error("게시글 상세 조회 실패");
-
-        const json = (await res.json()) as PostResponse;
-
-        // 안전 처리: comments가 null/undefined로 올 경우 대비
         return {
             ...json,
             comments: Array.isArray(json.comments) ? json.comments : [],
@@ -97,10 +71,7 @@ const IdolPostDetailPage: React.FC = () => {
         };
     };
 
-    // 1) 최초 상세 로드
     useEffect(() => {
-        const controller = new AbortController();
-
         const run = async () => {
             setError("");
 
@@ -109,7 +80,6 @@ const IdolPostDetailPage: React.FC = () => {
                 setData(null);
                 return;
             }
-
             if (!accessToken) {
                 setError("로그인이 필요합니다.");
                 setData(null);
@@ -118,11 +88,13 @@ const IdolPostDetailPage: React.FC = () => {
 
             try {
                 setLoading(true);
-                const detail = await fetchDetail(controller.signal);
+                const detail = await fetchDetail();
                 setData(detail);
             } catch (e: any) {
-                if (e?.name === "AbortError") return;
-                setError(e?.message || "게시글 상세 조회 실패");
+                const status = e?.response?.status;
+                if (status === 401) setError("로그인이 필요합니다.");
+                else if (status === 403) setError("권한이 없습니다. (구독 필요 또는 접근 불가)");
+                else setError(e?.response?.data?.message || e?.message || "게시글 상세 조회 실패");
                 setData(null);
             } finally {
                 setLoading(false);
@@ -130,143 +102,158 @@ const IdolPostDetailPage: React.FC = () => {
         };
 
         run();
-        return () => controller.abort();
-    }, [API_BASE_URL, postId, accessToken]);
+    }, [postId, accessToken]);
 
-    // 2) 추천 토글
+    const canEditOrDeletePost = useMemo(() => {
+        if (!data || !user) return false;
+
+        // ADMIN: 전부 가능
+        if (user.role === "ADMIN") return true;
+
+        // IDOL_OFFICIAL: IDOL/AGENCY만
+        if (data.boardType === "IDOL_OFFICIAL" && (user.role === "IDOL" || user.role === "AGENCY")) return true;
+
+        // 그 외는 불가
+        return false;
+    }, [data, user]);
+
+    const onClickEdit = () => {
+        if (!postId) return;
+        navigate(`./edit`);
+    };
+
+    const onClickDelete = async () => {
+        if (!postId) return;
+        if (deletingPost) return;
+
+        const ok = window.confirm("정말 삭제하시겠습니까?");
+        if (!ok) return;
+
+        setDeletingPost(true);
+        try {
+            await api.delete(`/board/posts/${postId}`);
+            alert("삭제되었습니다.");
+            navigate(`../`);
+        } catch (e: any) {
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "삭제 실패");
+        } finally {
+            setDeletingPost(false);
+        }
+    };
+
     const onClickLike = async () => {
-        if (!data) return;
-        if (!API_BASE_URL) return;
-        if (!postId) return;
-
-        if (!accessToken) {
-            alert("로그인이 필요합니다.");
-            return;
-        }
-
+        if (!data || !postId) return;
+        if (!accessToken) return alert("로그인이 필요합니다.");
         if (reacting) return;
 
         setReacting(true);
-
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/like`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
+            const res = await api.post(`/board/posts/${postId}/like`);
+            const json = res.data as PostReactionResponse;
 
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("추천 처리 실패");
-
-            const json = (await res.json()) as PostReactionResponse;
-
-            // 서버 응답으로 동기화
-            setData((prev) => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    likeCount: json.likeCount,
-                    dislikeCount: json.dislikeCount,
-                    myReaction: json.myReaction || "NONE",
-                };
-            });
+            setData((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        likeCount: json.likeCount,
+                        dislikeCount: json.dislikeCount,
+                        myReaction: json.myReaction || "NONE",
+                    }
+                    : prev
+            );
         } catch (e: any) {
-            alert(e?.message || "추천 처리 실패");
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "추천 처리 실패");
         } finally {
             setReacting(false);
         }
     };
 
-    // 3) 비추천 토글
     const onClickDislike = async () => {
-        if (!data) return;
-        if (!API_BASE_URL) return;
-        if (!postId) return;
-
-        if (!accessToken) {
-            alert("로그인이 필요합니다.");
-            return;
-        }
-
+        if (!data || !postId) return;
+        if (!accessToken) return alert("로그인이 필요합니다.");
         if (reacting) return;
 
         setReacting(true);
-
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/dislike`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
+            const res = await api.post(`/board/posts/${postId}/dislike`);
+            const json = res.data as PostReactionResponse;
 
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("비추천 처리 실패");
-
-            const json = (await res.json()) as PostReactionResponse;
-
-            // 서버 응답으로 동기화
-            setData((prev) => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    likeCount: json.likeCount,
-                    dislikeCount: json.dislikeCount,
-                    myReaction: json.myReaction || "NONE",
-                };
-            });
+            setData((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        likeCount: json.likeCount,
+                        dislikeCount: json.dislikeCount,
+                        myReaction: json.myReaction || "NONE",
+                    }
+                    : prev
+            );
         } catch (e: any) {
-            alert(e?.message || "비추천 처리 실패");
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "비추천 처리 실패");
         } finally {
             setReacting(false);
         }
     };
 
-    // 4) 댓글 작성 → 성공 후 상세 재조회(권장 방식)
     const onSubmitComment = async () => {
-        if (!data) return;
-        if (!API_BASE_URL) return;
-        if (!postId) return;
-
+        if (!data || !postId) return;
         if (!commentInput.trim()) return;
-
-        if (!accessToken) {
-            alert("로그인이 필요합니다.");
-            return;
-        }
+        if (!accessToken) return alert("로그인이 필요합니다.");
 
         if (submittingComment) return;
-
         setSubmittingComment(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/comments`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify({
-                    content: commentInput.trim(),
-                }),
-            });
-
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("댓글 작성 실패");
-
+            await api.post(`/board/posts/${postId}/comments`, { content: commentInput.trim() });
             setCommentInput("");
 
-            // 댓글 작성 후 "상세 재조회"로 완전 동기화
             const detail = await fetchDetail();
             setData(detail);
         } catch (e: any) {
-            alert(e?.message || "댓글 작성 실패");
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "댓글 작성 실패");
         } finally {
             setSubmittingComment(false);
+        }
+    };
+
+    const canDeleteComment = (c: CommentResponse) => {
+        if (!user) return false;
+        if (user.role === "ADMIN") return true;
+        return Number(c.authorId) === Number(user.userId);
+    };
+
+    const onClickDeleteComment = async (commentId: number) => {
+        if (!postId) return;
+        if (!accessToken) return alert("로그인이 필요합니다.");
+        if (deletingCommentId) return;
+
+        const ok = window.confirm("댓글을 삭제하시겠습니까?");
+        if (!ok) return;
+
+        setDeletingCommentId(commentId);
+        try {
+            await api.delete(`/board/comments/${commentId}`);
+            const detail = await fetchDetail();
+            setData(detail);
+        } catch (e: any) {
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "댓글 삭제 실패");
+        } finally {
+            setDeletingCommentId(null);
         }
     };
 
@@ -276,14 +263,37 @@ const IdolPostDetailPage: React.FC = () => {
 
     const likeActive = data.myReaction === "LIKE";
     const dislikeActive = data.myReaction === "DISLIKE";
-
     const commentCount = Array.isArray(data.comments) ? data.comments.length : 0;
 
     return (
         <div className="space-y-4">
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 pt-6 pb-4">
-                    <div className="text-2xl font-semibold text-gray-900">{data.title}</div>
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="text-2xl font-semibold text-gray-900">{data.title}</div>
+
+                        {canEditOrDeletePost && (
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={onClickEdit}
+                                    className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
+                             hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
+                                >
+                                    수정
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onClickDelete}
+                                    disabled={deletingPost}
+                                    className="px-4 py-2 rounded-full border border-red-200 text-sm font-semibold text-red-600
+                             hover:bg-red-50 hover:border-red-300 active:scale-[0.99] transition disabled:opacity-60"
+                                >
+                                    {deletingPost ? "삭제 중..." : "삭제"}
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
                         <span className="font-medium text-gray-800">{data.authorId}</span>
@@ -293,7 +303,6 @@ const IdolPostDetailPage: React.FC = () => {
                 </div>
 
                 <div className="px-6 py-5 border-t border-gray-100">
-                    {/* content는 HTML 저장이므로 렌더링 */}
                     <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{ __html: data.content }} />
 
                     <div className="mt-8 flex justify-center gap-10">
@@ -302,10 +311,10 @@ const IdolPostDetailPage: React.FC = () => {
                             onClick={onClickLike}
                             disabled={reacting}
                             className={[
-                                "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition-colors disabled:opacity-60",
-                                likeActive
-                                    ? "bg-[#1FBFB8] border-[#1FBFB8] text-white"
-                                    : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
+                                "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition",
+                                "hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0",
+                                "disabled:opacity-60",
+                                likeActive ? "bg-[#1FBFB8] border-[#1FBFB8] text-white" : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
                             ].join(" ")}
                         >
                             <span className="text-xl">👍</span>
@@ -317,10 +326,10 @@ const IdolPostDetailPage: React.FC = () => {
                             onClick={onClickDislike}
                             disabled={reacting}
                             className={[
-                                "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition-colors disabled:opacity-60",
-                                dislikeActive
-                                    ? "bg-[#1FBFB8] border-[#1FBFB8] text-white"
-                                    : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
+                                "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition",
+                                "hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0",
+                                "disabled:opacity-60",
+                                dislikeActive ? "bg-[#1FBFB8] border-[#1FBFB8] text-white" : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
                             ].join(" ")}
                         >
                             <span className="text-xl">👎</span>
@@ -332,7 +341,8 @@ const IdolPostDetailPage: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => navigate(-1)}
-                            className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold hover:bg-gray-50"
+                            className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
+                         hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
                         >
                             목록으로
                         </button>
@@ -340,6 +350,7 @@ const IdolPostDetailPage: React.FC = () => {
                 </div>
             </div>
 
+            {/* 댓글 */}
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100">
                     <div className="font-semibold text-gray-900">댓글 {commentCount}</div>
@@ -351,13 +362,28 @@ const IdolPostDetailPage: React.FC = () => {
                     <div className="divide-y divide-gray-100">
                         {(data.comments ?? []).map((c) => {
                             const nickname = c.authorNickname ? c.authorNickname : String(c.authorId);
+                            const showDelete = !c.isDeleted && canDeleteComment(c);
 
                             return (
                                 <div key={c.commentId} className="px-6 py-4">
-                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
-                                        <span className="font-medium text-gray-800">{nickname}</span>
-                                        <span>{c.createdAt}</span>
-                                        {c.isDeleted ? <span className="text-red-500">삭제됨</span> : null}
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
+                                            <span className="font-medium text-gray-800">{nickname}</span>
+                                            <span>{c.createdAt}</span>
+                                            {c.isDeleted ? <span className="text-red-500">삭제됨</span> : null}
+                                        </div>
+
+                                        {showDelete && (
+                                            <button
+                                                type="button"
+                                                onClick={() => onClickDeleteComment(c.commentId)}
+                                                disabled={deletingCommentId === c.commentId}
+                                                className="px-3 py-1.5 rounded-full border border-red-200 text-xs font-semibold text-red-600
+                                   hover:bg-red-50 hover:border-red-300 active:scale-[0.99] transition disabled:opacity-60"
+                                            >
+                                                {deletingCommentId === c.commentId ? "삭제 중..." : "삭제"}
+                                            </button>
+                                        )}
                                     </div>
 
                                     <div className="mt-2 whitespace-pre-wrap text-gray-900">
@@ -385,9 +411,10 @@ const IdolPostDetailPage: React.FC = () => {
                             type="button"
                             onClick={onSubmitComment}
                             disabled={submittingComment}
-                            className="px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8] disabled:opacity-60"
+                            className="px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold
+                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
                         >
-                            등록
+                            {submittingComment ? "등록 중..." : "등록"}
                         </button>
                     </div>
                 </div>

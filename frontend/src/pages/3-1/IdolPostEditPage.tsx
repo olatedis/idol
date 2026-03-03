@@ -1,91 +1,150 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Editor } from "@toast-ui/react-editor";
-import React, { useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { api } from "../../api/axios";
 
-type PostWriteRequest = {
+type PostResponse = {
+    postId: number;
     boardType: string;
     idolId: number | null;
     groupId: number | null;
+
+    authorId: number;
     title: string;
     content: string;
+
+    viewCount: number;
+    likeCount: number;
+    dislikeCount: number;
+
+    myReaction?: string;
+
+    createdAt: string;
+    updatedAt: string;
 };
 
-const IdolPostWritePage: React.FC = () => {
-    const { groupId, idolId } = useParams();
+type PostUpdateRequest = {
+    title?: string | null;
+    content?: string | null;
+};
+
+const IdolPostEditPage: React.FC = () => {
+    const { postId } = useParams();
     const navigate = useNavigate();
     const { accessToken, user } = useAuthStore();
 
     const editorRef = useRef<Editor>(null);
 
-    const [title, setTitle] = useState("");
+    const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
 
-    const canWrite = useMemo(() => {
+    const [title, setTitle] = useState("");
+
+    const canEdit = useMemo(() => {
         if (!user) return false;
         return user.role === "ADMIN" || user.role === "IDOL" || user.role === "AGENCY";
     }, [user]);
 
-    if (!accessToken) {
-        return <div className="text-sm text-red-600">로그인이 필요합니다.</div>;
-    }
-    if (!canWrite) {
-        return <div className="text-sm text-red-600">권한이 없습니다.</div>;
-    }
+    useEffect(() => {
+        const run = async () => {
+            setError("");
+
+            if (!postId) {
+                setError("postId가 없습니다.");
+                setLoading(false);
+                return;
+            }
+            if (!accessToken) {
+                setError("로그인이 필요합니다.");
+                setLoading(false);
+                return;
+            }
+            if (!canEdit) {
+                setError("권한이 없습니다.");
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const res = await api.get(`/board/posts/${postId}`);
+                const data = res.data as PostResponse;
+
+                setTitle(data.title ?? "");
+
+                const inst = editorRef.current?.getInstance();
+                if (inst) inst.setHTML(data.content ?? "");
+            } catch (e: any) {
+                const status = e?.response?.status;
+                if (status === 401) setError("로그인이 필요합니다.");
+                else if (status === 403) setError("권한이 없습니다.");
+                else setError(e?.response?.data?.message || e?.message || "게시글 불러오기 실패");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        run();
+    }, [postId, accessToken, canEdit]);
 
     const onSubmit = async () => {
         setError("");
 
-        if (!accessToken) return setError("로그인이 필요합니다.");
-        if (!canWrite) return setError("권한이 없습니다.");
-        if (!groupId) return setError("groupId가 없습니다.");
-        if (!idolId) return setError("idolId가 없습니다.");
-        if (!title.trim()) return setError("제목을 입력해주세요.");
+        if (!postId) return;
+
+        if (!accessToken) {
+            setError("로그인이 필요합니다.");
+            return;
+        }
+        if (!canEdit) {
+            setError("권한이 없습니다.");
+            return;
+        }
+        if (!title.trim()) {
+            setError("제목을 입력해주세요.");
+            return;
+        }
 
         const inst = editorRef.current?.getInstance();
-        const md = inst?.getMarkdown().trim() ?? "";
         const html = inst?.getHTML()?.trim() ?? "";
-
-        if (!md || !html) return setError("내용을 입력해주세요.");
-
-        const req: PostWriteRequest = {
-            boardType: "IDOL_OFFICIAL",
-            idolId: Number(idolId),
-            groupId: null,
-            title: title.trim(),
-            content: html,
-        };
+        if (!html) {
+            setError("내용을 입력해주세요.");
+            return;
+        }
 
         if (submitting) return;
         setSubmitting(true);
 
         try {
-            const res = await api.post("/board/posts", req);
-            const newPostId = res.data?.postId;
+            const req: PostUpdateRequest = {
+                title: title.trim(),
+                content: html,
+            };
 
-            if (typeof newPostId === "number") {
-                // ✅ 절대경로로 이동
-                navigate(`/group/${groupId}/idol/${idolId}/board/${newPostId}`);
-            } else {
-                navigate(`/group/${groupId}/idol/${idolId}/board`);
-            }
+            await api.put(`/board/posts/${postId}`, req);
+
+            alert("수정되었습니다.");
+            navigate(`../`); // 상세로
         } catch (e: any) {
             const status = e?.response?.status;
             if (status === 401) setError("로그인이 필요합니다.");
             else if (status === 403) setError("권한이 없습니다.");
-            else setError(e?.response?.data?.message || e?.message || "글 작성 실패");
+            else setError(e?.response?.data?.message || e?.message || "수정 실패");
         } finally {
             setSubmitting(false);
         }
     };
 
+    if (loading) return <div className="text-sm text-gray-600">불러오는 중...</div>;
+    if (error) return <div className="text-sm text-red-600">{error}</div>;
+
     return (
         <div className="space-y-4">
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                    <div className="text-lg font-semibold text-gray-900">아이돌 공식 글쓰기</div>
+                    <div className="text-lg font-semibold text-gray-900">아이돌 공식 글 수정</div>
                     <div className="flex gap-2">
                         <button
                             type="button"
@@ -102,14 +161,12 @@ const IdolPostWritePage: React.FC = () => {
                             className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold
                          hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
                         >
-                            {submitting ? "등록 중..." : "등록"}
+                            {submitting ? "저장 중..." : "저장"}
                         </button>
                     </div>
                 </div>
 
                 <div className="px-6 py-5 space-y-4">
-                    {error && <div className="text-sm text-red-600">{error}</div>}
-
                     <div>
                         <div className="text-sm font-semibold text-gray-700 mb-2">제목</div>
                         <input
@@ -137,4 +194,4 @@ const IdolPostWritePage: React.FC = () => {
     );
 };
 
-export default IdolPostWritePage;
+export default IdolPostEditPage;
