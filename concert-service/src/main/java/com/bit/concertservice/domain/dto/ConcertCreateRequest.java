@@ -17,7 +17,9 @@ public class ConcertCreateRequest {
     private String title;          // 콘서트 이름
     private String description;    // 설명
     private String venue;          // 장소
+    private String img;             // 이미지
     private LocalDateTime concertDate;   // 시작일
     private LocalDateTime startTime;     // 시간
     private LocalDateTime ticketSaleDate; // 티켓 판매일
+
 }

@@ -50,6 +50,7 @@ public class ConcertCommandService {
                 request.getTitle(),
                 request.getDescription(),
                 request.getVenue(),
+                request.getImg(),
                 request.getConcertDate(),
                 request.getStartTime(),
                 request.getTicketSaleDate()
@@ -74,6 +75,7 @@ public class ConcertCommandService {
                 request.getTitle(),
                 request.getDescription(),
                 request.getVenue(),
+                request.getImg(),
                 request.getConcertDate(),
                 request.getStartTime(),
                 request.getTicketSaleDate()
