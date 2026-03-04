@@ -2,11 +2,12 @@ package com.bit.idol.boardservice.service;
 
 import com.bit.idol.boardservice.client.SubscriptionInternalClient;
 import com.bit.idol.boardservice.dto.reaction.PostReactionResponse;
-import com.bit.idol.boardservice.entity.*;
 import com.bit.idol.boardservice.entity.BoardType;
+import com.bit.idol.boardservice.entity.Idol;
 import com.bit.idol.boardservice.entity.Post;
 import com.bit.idol.boardservice.entity.PostReaction;
 import com.bit.idol.boardservice.entity.ReactionType;
+import com.bit.idol.boardservice.repository.IdolRepository;
 import com.bit.idol.boardservice.repository.PostReactionRepository;
 import com.bit.idol.boardservice.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,9 @@ public class PostReactionService {
 
     private final SubscriptionInternalClient subscriptionInternalClient;
 
+    // IDOL 본인 체크용 (board DB idols)
+    private final IdolRepository idolRepository;
+
     @Transactional
     public PostReactionResponse like(Long postId, Integer userId, Role role) {
         return toggle(postId, userId, role, ReactionType.LIKE);
@@ -33,7 +37,6 @@ public class PostReactionService {
     public PostReactionResponse dislike(Long postId, Integer userId, Role role) {
         return toggle(postId, userId, role, ReactionType.DISLIKE);
     }
-
 
     @Transactional(readOnly = true)
     public PostReactionResponse getMyReaction(Long postId, Integer userId, Role role) {
@@ -49,9 +52,8 @@ public class PostReactionService {
         return res;
     }
 
-    // 내부로직================
+    // 내부로직
 
-    // 토글처리
     private PostReactionResponse toggle(Long postId, Integer userId, Role role, ReactionType requested) {
         Post post = getPost(postId);
         requireReadSubscription(post, userId, role);
@@ -124,21 +126,45 @@ public class PostReactionService {
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
     }
 
-    // 게시글 상세 조회 권한(추천/비추천도 동일하게 적용)
-
+    // 게시글 읽기권한 정책 통일 (IDOL_FAN 제거 + IDOL/AGENCY 예외)
     private void requireReadSubscription(Post post, Integer userId, Role role) {
+
+        // 공지사항은 전체 공개
+        if (post.getBoardType() == BoardType.ADMIN_NOTICE) return;
+
         if (role == Role.ADMIN) return;
 
-        if (post.getBoardType() == BoardType.IDOL_OFFICIAL || post.getBoardType() == BoardType.IDOL_FAN) {
+        // IDOL_OFFICIAL: IDOL(본인)/AGENCY는 통과, USER는 구독자만
+        if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
+
+            if (role == Role.IDOL) {
+                if (isMyIdol(post.getIdolId(), userId)) return;
+            }
+            if (role == Role.AGENCY) return;
+
             boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId);
             if (!ok) throw new RuntimeException("구독이 필요합니다.");
             return;
         }
 
+        // GROUP_OFFICIAL / GROUP_FAN
         if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
+
+            // GROUP_OFFICIAL은 IDOL/AGENCY 통과(정책)
+            if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
+                if (role == Role.IDOL || role == Role.AGENCY) return;
+            }
+
             boolean ok = subscriptionInternalClient.isActiveGroupSubscriber(post.getGroupId(), userId);
             if (!ok) throw new RuntimeException("구독이 필요합니다.");
         }
+    }
+
+    //  IDOL 본인 판별 (board DB idols 기준)
+    private boolean isMyIdol(Long targetIdolId, Integer userId) {
+        Idol me = idolRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("아이돌 정보를 찾을 수 없습니다."));
+        return me.getId() != null && targetIdolId != null && me.getId().longValue() == targetIdolId;
     }
 
     // 응답 구성

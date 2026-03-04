@@ -7,8 +7,10 @@ import com.bit.idol.boardservice.dto.comment.CommentUpdateRequest;
 import com.bit.idol.boardservice.dto.comment.CommentWriteRequest;
 import com.bit.idol.boardservice.entity.BoardType;
 import com.bit.idol.boardservice.entity.Comment;
+import com.bit.idol.boardservice.entity.Idol;
 import com.bit.idol.boardservice.entity.Post;
 import com.bit.idol.boardservice.repository.CommentRepository;
+import com.bit.idol.boardservice.repository.IdolRepository;
 import com.bit.idol.boardservice.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,9 @@ public class CommentService {
 
     private final SubscriptionInternalClient subscriptionInternalClient;
     private final UserInternalClient userInternalClient;
+
+    // IDOL 본인 체크용 (board DB idols)
+    private final IdolRepository idolRepository;
 
     // 댓글 작성
     @Transactional
@@ -97,7 +102,7 @@ public class CommentService {
         post.setCommentCount(post.getCommentCount() - 1);
     }
 
-    // ================== 내부 로직 ==================
+    // 내부 로직
 
     private Post getPost(Long postId) {
         return postRepository.findById(postId)
@@ -109,23 +114,47 @@ public class CommentService {
                 .orElseThrow(() -> new RuntimeException("댓글을 찾을 수 없습니다."));
     }
 
-    // 게시글 상세 조회 권환
+    // 게시글 읽기권한 정책 통일 (IDOL_FAN 제거 + IDOL/AGENCY 예외)
     private void requireReadSubscription(Post post, Integer userId, Role role) {
-        if (role == Role.ADMIN)
-            return;
 
-        if (post.getBoardType() == BoardType.IDOL_OFFICIAL || post.getBoardType() == BoardType.IDOL_FAN) {
+        // 공지사항은 전체 공개
+        if (post.getBoardType() == BoardType.ADMIN_NOTICE) return;
+
+        if (role == Role.ADMIN) return;
+
+        // IDOL_OFFICIAL: IDOL(본인)/AGENCY는 통과, USER는 구독자만
+        if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
+
+            if (role == Role.IDOL) {
+                if (isMyIdol(post.getIdolId(), userId)) return;
+            }
+            if (role == Role.AGENCY) return;
+
             if (!subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId)) {
                 throw new RuntimeException("구독이 필요합니다.");
             }
             return;
         }
 
+        // GROUP_OFFICIAL / GROUP_FAN
         if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
+
+            // GROUP_OFFICIAL은 IDOL/AGENCY 통과(정책)
+            if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
+                if (role == Role.IDOL || role == Role.AGENCY) return;
+            }
+
             if (!subscriptionInternalClient.isActiveGroupSubscriber(post.getGroupId(), userId)) {
                 throw new RuntimeException("구독이 필요합니다.");
             }
         }
+    }
+
+    // IDOL 본인 판별 (board DB idols 기준)
+    private boolean isMyIdol(Long targetIdolId, Integer userId) {
+        Idol me = idolRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("아이돌 정보를 찾을 수 없습니다."));
+        return me.getId() != null && targetIdolId != null && me.getId().longValue() == targetIdolId;
     }
 
     // 수정 권한 판단
@@ -166,8 +195,7 @@ public class CommentService {
         return false;
     }
 
-    // Comment → CommentResponse 변환
-    // 소프트 삭제된 댓글은 content를 "삭제된 댓글입니다"로 치환
+    // Comment -> CommentResponse 변환
     private CommentResponse toResponse(Comment c) {
         CommentResponse res = new CommentResponse();
         res.setCommentId(c.getCommentId());

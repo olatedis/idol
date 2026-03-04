@@ -10,8 +10,10 @@ import com.bit.idol.boardservice.dto.comment.CommentResponse;
 import com.bit.idol.boardservice.dto.event.PostCreatedEvent;
 import com.bit.idol.boardservice.entity.BoardType;
 import com.bit.idol.boardservice.entity.Comment;
+import com.bit.idol.boardservice.entity.Idol;
 import com.bit.idol.boardservice.entity.Post;
 import com.bit.idol.boardservice.repository.CommentRepository;
+import com.bit.idol.boardservice.repository.IdolRepository;
 import com.bit.idol.boardservice.repository.PostReactionRepository;
 import com.bit.idol.boardservice.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +22,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
@@ -32,7 +33,6 @@ import java.util.stream.Collectors;
 public class PostService {
 
     private final PostRepository postRepository;
-
     private final CommentRepository commentRepository;
     private final PostReactionRepository postReactionRepository;
 
@@ -40,6 +40,8 @@ public class PostService {
     private final SubscriptionInternalClient subscriptionInternalClient;
 
     private final ApplicationEventPublisher eventPublisher;
+
+    private final IdolRepository idolRepository;
 
     @Transactional
     public PostResponse insert(PostWriteRequest req, Integer userId, Role role) {
@@ -68,7 +70,7 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
 
-        // OFFICIAL/FAN 모두 상세보기(content)는 구독자만
+        // OFFICIAL/FAN 모두 상세보기(content)는 구독자만 (단, IDOL_OFFICIAL은 IDOL/AGENCY 예외)
         requireReadSubscription(post, userId, role);
 
         postRepository.increaseViewCount(postId);
@@ -83,14 +85,15 @@ public class PostService {
             Long idolId,
             Long groupId,
             Pageable pageable) {
+
         validateBoardScope(boardType, idolId, groupId);
 
         boolean likeSort = pageable.getSort().getOrderFor("likeCount") != null;
 
         Page<Post> page;
 
-        // IDOL_* 목록
-        if (boardType == BoardType.IDOL_OFFICIAL || boardType == BoardType.IDOL_FAN) {
+        // IDOL_FAN 제거: IDOL_OFFICIAL만 처리
+        if (boardType == BoardType.IDOL_OFFICIAL) {
             page = likeSort
                     ? postRepository.findByBoardTypeAndIdolIdOrderByLikeCountDesc(boardType, idolId, pageable)
                     : postRepository.findByBoardTypeAndIdolIdOrderByCreatedAtDesc(boardType, idolId, pageable);
@@ -101,7 +104,7 @@ public class PostService {
                     ? postRepository.findByBoardTypeAndGroupIdOrderByLikeCountDesc(boardType, groupId, pageable)
                     : postRepository.findByBoardTypeAndGroupIdOrderByCreatedAtDesc(boardType, groupId, pageable);
         }
-        // 그 외 케이스는 없음
+        // ADMIN_NOTICE 등
         else {
             page = likeSort
                     ? postRepository.findByBoardTypeOrderByLikeCountDesc(boardType, pageable)
@@ -153,13 +156,12 @@ public class PostService {
         // ADMIN_NOTICE: idolId/groupId 둘 다 없어야 함
         if (boardType == BoardType.ADMIN_NOTICE) {
             if (idolId != null || groupId != null)
-                throw new RuntimeException(
-                        "공공지사항 게시판에는 idolId/groupId가 없어야 합니다.");
+                throw new RuntimeException("공공지사항 게시판에는 idolId/groupId가 없어야 합니다.");
             return;
         }
 
-        // IDOL_* : idolId 필수, groupId 금지
-        if (boardType == BoardType.IDOL_OFFICIAL || boardType == BoardType.IDOL_FAN) {
+        // IDOL_FAN 제거: IDOL_OFFICIAL만
+        if (boardType == BoardType.IDOL_OFFICIAL) {
             if (idolId == null)
                 throw new RuntimeException("아이돌 게시판에는 아이돌 ID가 필수입니다.");
             if (groupId != null)
@@ -176,7 +178,6 @@ public class PostService {
             return;
         }
 
-        // enum 확장/오류 케이스 대비
         throw new RuntimeException("유효하지 않은 게시판 타입입니다.");
     }
 
@@ -195,15 +196,7 @@ public class PostService {
         if (role == Role.ADMIN)
             return;
 
-        // IDOL_FAN: 팬(USER)만 작성 + 구독자만
-        if (boardType == BoardType.IDOL_FAN) {
-            if (role != Role.USER)
-                throw new RuntimeException("접근 권한이 없습니다.");
-            boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(idolId, userId);
-            if (!ok)
-                throw new RuntimeException("구독이 필요합니다.");
-            return;
-        }
+        // [수정] IDOL_FAN 제거됨
 
         // GROUP_FAN: 팬(USER)만 작성 + 구독자만
         if (boardType == BoardType.GROUP_FAN) {
@@ -217,10 +210,9 @@ public class PostService {
 
         // IDOL_OFFICIAL: IDOL/AGENCY만 작성 가능
         if (boardType == BoardType.IDOL_OFFICIAL) {
-            // IDOL/AGENCY만 작성 가능
             if (role == Role.IDOL) {
-                boolean ok = userInternalClient.isIdolOwner(idolId, userId);
-                if (!ok)
+                //IDOL 본인 판별을 board DB idols 기준으로 통일
+                if (!isMyIdol(idolId, userId))
                     throw new RuntimeException("접근 권한이 없습니다.");
                 return;
             }
@@ -235,7 +227,6 @@ public class PostService {
 
         // GROUP_OFFICIAL: 그룹 멤버(IDOL) 또는 AGENCY 가능
         if (boardType == BoardType.GROUP_OFFICIAL) {
-            // 그룹 게시판: 그룹 멤버 IDOL 또는 AGENCY 가능
             if (role == Role.IDOL) {
                 boolean ok = userInternalClient.isGroupMember(groupId, userId);
                 if (!ok)
@@ -269,8 +260,8 @@ public class PostService {
         if (role == Role.ADMIN)
             return;
 
-        // FAN 게시판: USER는 본인 글만 수정 가능
-        if (post.getBoardType() == BoardType.IDOL_FAN || post.getBoardType() == BoardType.GROUP_FAN) {
+        // IDOL_FAN 제거: GROUP_FAN만
+        if (post.getBoardType() == BoardType.GROUP_FAN) {
             if (role == Role.USER && post.getAuthorId().equals(userId))
                 return;
             throw new RuntimeException("접근 권한이 없습니다.");
@@ -278,10 +269,9 @@ public class PostService {
 
         // IDOL_OFFICIAL 수정: IDOL/AGENCY만
         if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
-            // IDOL/GROUP 게시판 수정: IDOL/AGENCY만, 범위 검증 포함
             if (role == Role.IDOL) {
-                boolean ok = userInternalClient.isIdolOwner(post.getIdolId(), userId);
-                if (!ok)
+                // 본인 idol 글만 수정 가능
+                if (!isMyIdol(post.getIdolId(), userId))
                     throw new RuntimeException("접근 권한이 없습니다.");
                 return;
             }
@@ -320,41 +310,58 @@ public class PostService {
     }
 
     private void requireReadSubscription(Post post, Integer userId, Role role) {
-        // 공지사항은 구독 없이 전체공개
-        if (post.getBoardType() == BoardType.ADMIN_NOTICE)
-            return;
 
-        // ADMIN은 읽기제한 없음
-        if (role == Role.ADMIN)
-            return;
+        // 공지사항은 구독 없이 전체 공개
+        if (post.getBoardType() == BoardType.ADMIN_NOTICE) return;
 
-        // 개인이든 그룹이든 상세조회는 구독자만
-        if (post.getBoardType() == BoardType.IDOL_OFFICIAL || post.getBoardType() == BoardType.IDOL_FAN) {
+        // ADMIN은 읽기 제한 없음
+        if (role == Role.ADMIN) return;
+
+        // IDOL_OFFICIAL: USER만 구독 체크, IDOL(본인)/AGENCY는 통과
+        if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
+
+            // IDOL 본인인지 확인
+            if (role == Role.IDOL) {
+                if (isMyIdol(post.getIdolId(), userId)) return;
+            }
+
+            // 소속사(AGENCY)면 통과
+            if (role == Role.AGENCY) return;
+
+            // USER는 구독자만
             boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId);
-            if (!ok)
-                throw new RuntimeException("구독이 필요합니다.");
+            if (!ok) throw new RuntimeException("구독이 필요합니다.");
             return;
         }
 
+        // GROUP_OFFICIAL / GROUP_FAN
         if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
+
+            // GROUP_OFFICIAL은 IDOL/AGENCY 통과(정책)
+            if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
+                if (role == Role.IDOL || role == Role.AGENCY) return;
+            }
+
             boolean ok = subscriptionInternalClient.isActiveGroupSubscriber(post.getGroupId(), userId);
-            if (!ok)
-                throw new RuntimeException("구독이 필요합니다.");
+            if (!ok) throw new RuntimeException("구독이 필요합니다.");
         }
     }
 
+    // IDOL 본인 판별 유틸
+    private boolean isMyIdol(Long targetIdolId, Integer userId) {
+        Idol me = idolRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("아이돌 정보를 찾을 수 없습니다."));
+        return me.getId() != null && targetIdolId != null && me.getId().longValue() == targetIdolId;
+    }
+
     // Mapper
-    // 엔티티(Post)를 api 응답용 dto로 바꿔주는 변환기
 
     // 상세 조회용
     private PostResponse toResponse(Post post) {
         PostResponse res = new PostResponse();
-        // copyProperties:
-        // post 안에 있는 필드 중 res에도 같은이름 + 같은 타입의 필드가 있으면 getter, setter이용해서 자동복사
         BeanUtils.copyProperties(post, res);
 
         // comments 포함(최신이 위)
-        // isDeleted=true면 content는 "삭제된 댓글입니다"로 내려줌
         List<Comment> comments = commentRepository.findByPost_PostIdOrderByCreatedAtDesc(post.getPostId());
         List<CommentResponse> commentResponses = comments.stream()
                 .map(this::toCommentResponse)
@@ -364,7 +371,6 @@ public class PostService {
         return res;
     }
 
-    // Comment 엔티티를 댓글dto로 변환, 소프트 댓글은 삭제된댓글로 치환
     private CommentResponse toCommentResponse(Comment c) {
         CommentResponse res = new CommentResponse();
         res.setCommentId(c.getCommentId());
@@ -383,7 +389,6 @@ public class PostService {
         return res;
     }
 
-    // 목록 조회용
     private PostListResponse toListResponse(Post post) {
         PostListResponse res = new PostListResponse();
         BeanUtils.copyProperties(post, res);
@@ -397,7 +402,7 @@ public class PostService {
 
     private String requireNonBlank(String s) {
         if (s == null)
-            return "";
+            throw new RuntimeException("빈 문자열은 허용되지 않습니다.");
         String t = s.trim();
         if (t.isEmpty())
             throw new RuntimeException("빈 문자열은 허용되지 않습니다.");

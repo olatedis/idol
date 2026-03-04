@@ -66,7 +66,6 @@ const IdolPostWritePage: React.FC = () => {
             const newPostId = res.data?.postId;
 
             if (typeof newPostId === "number") {
-                // ✅ 절대경로로 이동
                 navigate(`/group/${groupId}/idol/${idolId}/board/${newPostId}`);
             } else {
                 navigate(`/group/${groupId}/idol/${idolId}/board`);
