@@ -1,6 +1,8 @@
 import { Editor } from "@toast-ui/react-editor";
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuthStore } from "../../stores/authStore";
+import { api } from "../../api/axios";
 
 type PostWriteRequest = {
     boardType: string;
@@ -10,47 +12,43 @@ type PostWriteRequest = {
     content: string;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 const IdolPostWritePage: React.FC = () => {
-    const { idolId } = useParams();
+    const { groupId, idolId } = useParams();
     const navigate = useNavigate();
+    const { accessToken, user } = useAuthStore();
+
+    const editorRef = useRef<Editor>(null);
 
     const [title, setTitle] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
 
-    const editorRef = useRef<Editor>(null);
+    const canWrite = useMemo(() => {
+        if (!user) return false;
+        return user.role === "ADMIN" || user.role === "IDOL" || user.role === "AGENCY";
+    }, [user]);
 
-    // TODO: 로그인 연동되면 accessToken 저장 방식/키 확정
-    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+        return <div className="text-sm text-red-600">로그인이 필요합니다.</div>;
+    }
+    if (!canWrite) {
+        return <div className="text-sm text-red-600">권한이 없습니다.</div>;
+    }
 
     const onSubmit = async () => {
         setError("");
 
-        if (!accessToken) {
-            setError("로그인이 필요합니다.");
-            return;
-        }
+        if (!accessToken) return setError("로그인이 필요합니다.");
+        if (!canWrite) return setError("권한이 없습니다.");
+        if (!groupId) return setError("groupId가 없습니다.");
+        if (!idolId) return setError("idolId가 없습니다.");
+        if (!title.trim()) return setError("제목을 입력해주세요.");
 
-        if (!idolId) {
-            setError("idolId가 없습니다.");
-            return;
-        }
+        const inst = editorRef.current?.getInstance();
+        const md = inst?.getMarkdown().trim() ?? "";
+        const html = inst?.getHTML()?.trim() ?? "";
 
-        if (!title.trim()) {
-            setError("제목을 입력해주세요.");
-            return;
-        }
-
-        const instance = editorRef.current?.getInstance();
-        const md = instance?.getMarkdown().trim() ?? "";
-        const html = instance?.getHTML() ?? "";
-
-        if (!md) {
-            setError("내용을 입력해주세요.");
-            return;
-        }
+        if (!md || !html) return setError("내용을 입력해주세요.");
 
         const req: PostWriteRequest = {
             boardType: "IDOL_OFFICIAL",
@@ -60,37 +58,23 @@ const IdolPostWritePage: React.FC = () => {
             content: html,
         };
 
-        if (!API_BASE_URL) {
-            setError("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
-            return;
-        }
-
+        if (submitting) return;
         setSubmitting(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/board/posts`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify(req),
-            });
-
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다.");
-            if (!res.ok) throw new Error("글 작성 실패");
-
-            const json = (await res.json()) as any;
-            const newPostId = json?.postId;
+            const res = await api.post("/board/posts", req);
+            const newPostId = res.data?.postId;
 
             if (typeof newPostId === "number") {
-                navigate(`../${newPostId}`);
+                navigate(`/group/${groupId}/idol/${idolId}/board/${newPostId}`);
             } else {
-                navigate(`../`);
+                navigate(`/group/${groupId}/idol/${idolId}/board`);
             }
         } catch (e: any) {
-            setError(e?.message || "글 작성 실패");
+            const status = e?.response?.status;
+            if (status === 401) setError("로그인이 필요합니다.");
+            else if (status === 403) setError("권한이 없습니다.");
+            else setError(e?.response?.data?.message || e?.message || "글 작성 실패");
         } finally {
             setSubmitting(false);
         }
@@ -105,7 +89,8 @@ const IdolPostWritePage: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => navigate(-1)}
-                            className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold hover:bg-gray-50"
+                            className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
+                         hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
                         >
                             취소
                         </button>
@@ -113,9 +98,10 @@ const IdolPostWritePage: React.FC = () => {
                             type="button"
                             onClick={onSubmit}
                             disabled={submitting}
-                            className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8] disabled:opacity-60"
+                            className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold
+                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
                         >
-                            등록
+                            {submitting ? "등록 중..." : "등록"}
                         </button>
                     </div>
                 </div>

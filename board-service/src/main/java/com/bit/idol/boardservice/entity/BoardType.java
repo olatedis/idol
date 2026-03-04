@@ -9,7 +9,6 @@ FAN: 팬들이 글을 쓰는 영역 (알림 X)
 
 public enum BoardType {
     IDOL_OFFICIAL,
-    IDOL_FAN,
     GROUP_OFFICIAL,
     GROUP_FAN,
     ADMIN_NOTICE

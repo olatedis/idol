@@ -1,8 +1,8 @@
-import {Editor} from "@toast-ui/react-editor";
-import React, {useMemo, useRef, useState} from "react";
-import {useNavigate, useParams, useSearchParams} from "react-router-dom";
-import {api} from "../../api/axios";
-import {useAuthStore} from "../../stores/authStore";
+import { Editor } from "@toast-ui/react-editor";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { api } from "../../api/axios";
+import { useAuthStore } from "../../stores/authStore";
 
 type BoardKind = "official" | "fan";
 
@@ -18,10 +18,8 @@ function resolveBoardType(type: BoardKind): string {
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 const GroupPostWritePage: React.FC = () => {
-    const {groupId} = useParams();
+    const { groupId } = useParams();
     const [sp] = useSearchParams();
     const navigate = useNavigate();
 
@@ -35,13 +33,29 @@ const GroupPostWritePage: React.FC = () => {
 
     const editorRef = useRef<Editor>(null);
 
-    const {accessToken} = useAuthStore();
+    const { accessToken, user } = useAuthStore();
+
+    // USER는 GROUP_OFFICIAL 글쓰기 진입 자체 차단 (/write 직접 접근 포함)
+    useEffect(() => {
+        if (!accessToken || !user) return;
+
+        if (boardType === "GROUP_OFFICIAL" && user.role === "USER") {
+            alert("권한이 없습니다. (그룹 공식 글쓰기는 USER가 작성할 수 없습니다.)");
+            navigate(-1);
+        }
+    }, [accessToken, user, boardType, navigate]);
 
     const onSubmit = async () => {
         setError("");
 
-        if (!accessToken) {
+        if (!accessToken || !user) {
             setError("로그인이 필요합니다.");
+            return;
+        }
+
+        // 등록 시에도 한 번 더 차단
+        if (boardType === "GROUP_OFFICIAL" && user.role === "USER") {
+            setError("권한이 없습니다. (그룹 공식 글쓰기는 USER가 작성할 수 없습니다.)");
             return;
         }
 
@@ -72,11 +86,10 @@ const GroupPostWritePage: React.FC = () => {
             content: html,
         };
 
+        if (submitting) return;
         setSubmitting(true);
 
         try {
-            // 변경: fetch + API_BASE_URL + localStorage 토큰 제거
-            // api(axios)가 baseURL과 Authorization을 자동 처리
             const res = await api.post("/board/posts", req);
 
             const json = res.data as any;
@@ -106,7 +119,8 @@ const GroupPostWritePage: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => navigate(-1)}
-                            className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold hover:bg-gray-50"
+                            className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
+                         hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
                         >
                             취소
                         </button>
@@ -114,9 +128,10 @@ const GroupPostWritePage: React.FC = () => {
                             type="button"
                             onClick={onSubmit}
                             disabled={submitting}
-                            className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold hover:bg-[#17AFA8] disabled:opacity-60"
+                            className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold
+                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
                         >
-                            등록
+                            {submitting ? "등록 중..." : "등록"}
                         </button>
                     </div>
                 </div>
@@ -143,31 +158,6 @@ const GroupPostWritePage: React.FC = () => {
                             previewStyle="vertical"
                             height="360px"
                             useCommandShortcut={true}
-                            hooks={{
-                                // 이미지 삽입 시 업로드 → URL 받아서 에디터에 삽입
-                                addImageBlobHook: async (blob: Blob, callback: (url: string, altText?: string) => void) => {
-                                    try {
-                                        const form = new FormData();
-                                        // 파일명이 없으면 Toast UI가 blob만 주므로 임의 파일명 부여
-                                        form.append("file", blob, "image.jpg");
-
-                                        const res = await api.post("/board/uploads/images", form, {
-                                            headers: { "Content-Type": "multipart/form-data" },
-                                        });
-
-                                        const urlPath = res.data?.url as string; // 예: /uploads/xxx.jpg
-                                        const fullUrl = urlPath?.startsWith("http")
-                                            ? urlPath
-                                            : `${API_BASE_URL}${urlPath}`;
-
-                                        callback(fullUrl, "image");
-                                    } catch (e: any) {
-                                        alert(e?.response?.data?.message || e?.message || "이미지 업로드 실패");
-                                    }
-
-                                    return false;
-                                },
-                            }}
                         />
                     </div>
                 </div>

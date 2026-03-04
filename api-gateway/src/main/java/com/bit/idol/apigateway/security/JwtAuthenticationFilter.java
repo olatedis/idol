@@ -89,7 +89,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String nickname = claims.get("nickname", String.class);
         String role = claims.get("role", String.class);
 
-        log.info("User authenticated: userId={}, username={}", userId, username);
+        log.info("User authenticated: userId={}, username={}, role={}", userId, username, role);
 
         ServerHttpRequest.Builder builder = exchange.getRequest().mutate()
                 .header("X-User-Id", userId)

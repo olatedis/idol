@@ -28,7 +28,7 @@ public class PostEventListener {
     public void handlePostCreated(PostCreatedEvent event) {
         Post post = event.post();
         log.info("게시글 알림 이벤트 처리 (After Commit): postId={}", post.getPostId());
-        
+
         try {
             publishNewPostNotify(post);
         } catch (Exception e) {
@@ -37,6 +37,7 @@ public class PostEventListener {
     }
 
     private void publishNewPostNotify(Post post) {
+
         // ADMIN_NOTICE: 전체 공지 알림(ALL)
         if (post.getBoardType() == BoardType.ADMIN_NOTICE) {
             NotifyRequestEvent event = new NotifyRequestEvent();
@@ -59,8 +60,8 @@ public class PostEventListener {
             return;
         }
 
-        // FAN 게시판은 기본 알림 없음
-        if (post.getBoardType() == BoardType.IDOL_FAN || post.getBoardType() == BoardType.GROUP_FAN) return;
+        // FAN 게시판은 기본 알림 없음 (IDOL_FAN 제거 → GROUP_FAN만)
+        if (post.getBoardType() == BoardType.GROUP_FAN) return;
 
         // OFFICIAL만 알림 발송
         if (post.getBoardType() != BoardType.IDOL_OFFICIAL && post.getBoardType() != BoardType.GROUP_OFFICIAL) return;
@@ -75,7 +76,7 @@ public class PostEventListener {
             event.setTargetId(String.valueOf(post.getIdolId()));
         }
         // GROUP_OFFICIAL -> GROUP_SUB
-        else if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
+        else {
             event.setTargetType(NotifyTargetType.GROUP_SUB.name());
             event.setTargetId(String.valueOf(post.getGroupId()));
         }

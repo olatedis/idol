@@ -19,10 +19,11 @@ import VotePage from "./pages/3-1/VotePage.tsx";
 import ConcertPage from "./pages/3-1/concert/ConcertPage.tsx";
 import IdolBoardPage from "./pages/3-1/IdolBoardPage.tsx";
 import IdolPostWritePage from "./pages/3-1/IdolPostWritePage.tsx";
-import IdolPostDetailPage from "./pages/3-1/IdolPostDetailPage.tsx"; // 추가됨
+import IdolPostDetailPage from "./pages/3-1/IdolPostDetailPage.tsx";
 import ChatPage from "./pages/3-1/ChatPage.tsx";
 import GlobalConcertPage from "./pages/main/GlobalConcertPage.tsx";
 import GroupPostEditPage from "./pages/3-1/GroupPostEditPage.tsx";
+import IdolPostEditPage from "./pages/3-1/IdolPostEditPage.tsx";
 
 function App() {
     return (
@@ -57,9 +58,9 @@ function App() {
                     {/* 아이돌 공식 게시판 */}
                     <Route path="idol/:idolId/board" element={<IdolBoardPage />} />
 
-                    {/* board/write가 board/:postId에 먹히는 케이스 방지 */}
                     <Route path="idol/:idolId/board/write" element={<IdolPostWritePage />} />
                     <Route path="idol/:idolId/board/:postId" element={<IdolPostDetailPage />} />
+                    <Route path="idol/:idolId/board/:postId/edit" element={<IdolPostEditPage />} />"
 
                     {/* 투표 페이지 */}
                     <Route path="vote" element={<VotePage />} />
