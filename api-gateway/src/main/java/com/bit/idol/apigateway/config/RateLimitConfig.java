@@ -11,18 +11,23 @@ import java.util.Objects;
 @Configuration
 public class RateLimitConfig {
 
-    // IP 기반으로 Rate Limiting 키 생성
+    // IP 기반으로 Rate Limiting 키 생성 (주석/미사용 처리 혹은 유지 가능하지만 여기선 userId만 남김)
+    // @Bean
+    // public KeyResolver ipKeyResolver() {
+    // return exchange -> Mono.just(
+    // Objects.requireNonNull(exchange.getRequest().getRemoteAddress())
+    // .getAddress().getHostAddress()
+    // );
+    // }
+
+    // User ID 기반 KeyResolver
     @Bean
     @Primary
-    public KeyResolver ipKeyResolver() {
-        return exchange -> Mono.just(
-                Objects.requireNonNull(exchange.getRequest().getRemoteAddress())
-                        .getAddress().getHostAddress()
-        );
+    public KeyResolver userIdKeyResolver() {
+        return exchange -> {
+            String userId = exchange.getRequest().getHeaders().getFirst("X-User-Id");
+            // 헤더가 없으면 "anonymous" 버킷으로 합침 (비정상/비로그인 접근)
+            return Mono.just(userId != null && !userId.isEmpty() ? userId : "anonymous");
+        };
     }
-    
-    // (선택) User ID 기반 KeyResolver
-    // public KeyResolver userKeyResolver() {
-    //     return exchange -> Mono.just(exchange.getRequest().getHeaders().getFirst("X-User-Id"));
-    // }
 }
