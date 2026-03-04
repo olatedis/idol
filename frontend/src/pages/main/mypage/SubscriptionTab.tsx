@@ -12,6 +12,7 @@ type SubscriptionDto = {
     updatedAt: string;
     targetType: string;
     targetName?: string; // 클라이언트 단에서 조합하여 추가
+    autoRenew: boolean;
 };
 
 import { api } from "../../../api/axios";
@@ -60,6 +61,7 @@ const SubscriptionTab: React.FC = () => {
                             price: IDOL_SUBSCRIPTION_PRICE,
                             createdAt: sub.startedAt || sub.createdAt || "",
                             updatedAt: sub.expiredAt || sub.updatedAt || "",
+                            autoRenew: sub.autoRenew,
                         };
                     })
                 );
@@ -85,6 +87,7 @@ const SubscriptionTab: React.FC = () => {
                         createdAt: sub.startedAt || sub.createdAt || "",
                         updatedAt: sub.expiredAt || sub.updatedAt || "",
                         targetType: "GROUP",
+                        autoRenew: sub.autoRenew,
                     };
                 });
 
@@ -101,6 +104,32 @@ const SubscriptionTab: React.FC = () => {
             fetchSubscriptions();
         }
     }, [accessToken]);
+
+    const handleCancelSubscription = async (sub: SubscriptionDto) => {
+        if (!window.confirm(`정말 '${sub.targetName}' 구독을 해지하시겠습니까?`)) {
+            return;
+        }
+
+        try {
+            const url = sub.targetType === "IDOL"
+                ? `/subscriptions/cancel`
+                : `/subscriptions/groups/cancel`;
+
+            const body = sub.targetType === "IDOL"
+                ? { idolId: sub.targetId }
+                : { groupId: sub.targetId };
+
+            await api.post(url, body);
+
+            alert("구독이 해지되었습니다.");
+
+            // 삭제 후 목록 다시 불러오기
+            const nextSubscriptions = subscriptions.filter(s => s.subscriptionId !== sub.subscriptionId);
+            setSubscriptions(nextSubscriptions);
+        } catch (err: any) {
+            alert(err?.response?.data?.message || "구독 해지 중 오류가 발생했습니다.");
+        }
+    };
 
     if (loading) return <div className="text-gray-500 py-8 text-center">불러오는 중...</div>;
     if (error) return <div className="text-red-500 py-8 text-center">{error}</div>;
@@ -125,8 +154,10 @@ const SubscriptionTab: React.FC = () => {
 
             <div className="flex justify-between items-start mb-4">
                 <div>
-                    <span className="inline-block px-2 py-1 bg-idol/10 text-idol text-xs font-bold rounded mb-2">
+                    <span className={`inline-block px-2 py-1 text-xs font-bold rounded mb-2 ${sub.autoRenew ? "bg-idol/10 text-idol" : "bg-gray-100 text-gray-500"
+                        }`}>
                         {sub?.targetType === "IDOL" ? "아이돌 구독" : "그룹 구독"}
+                        {!sub.autoRenew && " (해지 대기)"}
                     </span>
                     <h3 className="text-lg font-bold text-gray-900">
                         {sub?.targetName || `Target ID: ${sub?.targetId}`}
@@ -134,8 +165,16 @@ const SubscriptionTab: React.FC = () => {
                 </div>
                 {sub?.targetType === "IDOL" && (
                     <div className="text-right">
-                        <div className="text-sm font-semibold text-gray-900">{(sub?.price || 0).toLocaleString()} 원</div>
-                        <div className="text-xs text-gray-500">/ 월 단위 결제</div>
+                        {sub.autoRenew ? (
+                            <>
+                                <div className="text-sm font-semibold text-gray-900">{(sub?.price || 0).toLocaleString()} 원</div>
+                                <div className="text-xs text-gray-500">/ 월 단위 결제</div>
+                            </>
+                        ) : (
+                            <div className="text-xs font-semibold text-red-500">
+                                {(sub?.updatedAt || "").split('T')[0]} 까지 이용 가능
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -151,8 +190,15 @@ const SubscriptionTab: React.FC = () => {
                 </div>
             </div>
 
-            <button className="w-full mt-4 py-2 border border-red-100 text-red-500 text-sm font-semibold rounded-xl hover:bg-red-50 transition-colors">
-                구독 취소 (준비중)
+            <button
+                onClick={() => handleCancelSubscription(sub)}
+                disabled={!sub.autoRenew}
+                className={`w-full mt-4 py-2 border text-sm font-semibold rounded-xl transition-colors ${!sub.autoRenew
+                        ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                        : "border-red-100 text-red-500 hover:bg-red-50"
+                    }`}
+            >
+                {sub.autoRenew ? "구독 해지" : "해지된 구독입니다"}
             </button>
         </div>
     );
