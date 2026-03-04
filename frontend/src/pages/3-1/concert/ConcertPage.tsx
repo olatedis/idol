@@ -283,13 +283,19 @@ const ConcertPage: React.FC = () => {
             const reservationIds: number[] = [];
 
             for (const seat of chosenSeats) {
-                const url = `${API_BASE_URL}/reservations?concertId=${selectedConcert?.id}&seatId=${seat.id}&price=${seat.price}`;
+                const url = `${API_BASE_URL}/reservations`;
                 const res = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-User-Id': String(user.userId),
+                        'X-User-Id': (user.userId),
                     },
+                    body: JSON.stringify({
+                        'userId': user.userId,
+                        'concertId': seat.id,
+                        'seatId': seat.seatNumber,
+                        'price': seat.price,
+                    })
                 });
 
                 if (!res.ok) {

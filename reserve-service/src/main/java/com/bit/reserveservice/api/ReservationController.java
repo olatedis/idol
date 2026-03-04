@@ -1,6 +1,7 @@
 package com.bit.reserveservice.api;
 
 import com.bit.reserveservice.application.ReservationService;
+import com.bit.reserveservice.domain.dto.RequestReservation;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -15,15 +16,13 @@ public class ReservationController {
     }
 
     // 예매 요청 (본인 인증 필수)
-    @GetMapping
+    @PostMapping
     public int reserve(
             @RequestHeader("X-User-Id") int userId,
-            @RequestParam int concertId,
-            @RequestParam int seatId,
-            @RequestParam int price
+            @RequestBody RequestReservation requestReservation
     ) {
         return reservationService
-                .reserve(userId, concertId, seatId, price);
+                .reserve(userId, requestReservation.getConcertId(), requestReservation.getSeatId(), requestReservation.getPrice());
     }
 
     // 예약 취소 (본인 취소)
