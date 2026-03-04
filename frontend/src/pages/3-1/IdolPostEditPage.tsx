@@ -30,7 +30,7 @@ type PostUpdateRequest = {
 };
 
 const IdolPostEditPage: React.FC = () => {
-    const { postId } = useParams();
+    const { groupId, idolId, postId } = useParams();
     const navigate = useNavigate();
     const { accessToken, user } = useAuthStore();
 
@@ -41,6 +41,8 @@ const IdolPostEditPage: React.FC = () => {
     const [error, setError] = useState("");
 
     const [title, setTitle] = useState("");
+    const [contentHtml, setContentHtml] = useState("");
+    const [contentInjected, setContentInjected] = useState(false);
 
     const canEdit = useMemo(() => {
         if (!user) return false;
@@ -73,9 +75,9 @@ const IdolPostEditPage: React.FC = () => {
                 const data = res.data as PostResponse;
 
                 setTitle(data.title ?? "");
+                setContentHtml(data.content ?? "");
+                setContentInjected(false);
 
-                const inst = editorRef.current?.getInstance();
-                if (inst) inst.setHTML(data.content ?? "");
             } catch (e: any) {
                 const status = e?.response?.status;
                 if (status === 401) setError("로그인이 필요합니다.");
@@ -89,11 +91,26 @@ const IdolPostEditPage: React.FC = () => {
         run();
     }, [postId, accessToken, canEdit]);
 
+    useEffect(() => {
+        if (loading) return;
+        if (contentInjected) return;
+
+        const inst = editorRef.current?.getInstance();
+        if (!inst) return;
+
+        setTimeout(() => {
+            const inst2 = editorRef.current?.getInstance();
+            if (!inst2) return;
+
+            inst2.setHTML(contentHtml || "");
+            setContentInjected(true);
+        }, 0);
+    }, [loading, contentHtml, contentInjected]);
+
     const onSubmit = async () => {
         setError("");
 
         if (!postId) return;
-
         if (!accessToken) {
             setError("로그인이 필요합니다.");
             return;
@@ -126,7 +143,7 @@ const IdolPostEditPage: React.FC = () => {
             await api.put(`/board/posts/${postId}`, req);
 
             alert("수정되었습니다.");
-            navigate(`../`); // 상세로
+            navigate(`/group/${groupId}/idol/${idolId}/board`);
         } catch (e: any) {
             const status = e?.response?.status;
             if (status === 401) setError("로그인이 필요합니다.");

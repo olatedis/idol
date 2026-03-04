@@ -1,41 +1,42 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useAuthStore } from "../../stores/authStore";
 import { api } from "../../api/axios";
+
+type BoardKind = "official" | "fan";
 
 type PostListResponse = {
     postId: number;
     boardType: string;
     idolId?: number | null;
     groupId?: number | null;
-
     authorId: number;
     title: string;
-
     viewCount: number;
     likeCount: number;
     dislikeCount: number;
-
     createdAt: string;
     updatedAt: string;
+};
+
+type IdolDto = {
+    idolId: number;
+    name?: string | null;
+    stageName?: string | null;
 };
 
 const PAGE_SIZE = 20;
 
 const IdolBoardPage: React.FC = () => {
-    const { idolId } = useParams();
+    const { groupId, idolId } = useParams();
     const navigate = useNavigate();
     const [sp, setSp] = useSearchParams();
 
-    const { accessToken, user } = useAuthStore();
-
-    const sort = sp.get("sort") || "latest"; // latest | top
+    const sort = sp.get("sort") || "latest";
     const q = sp.get("q") || "";
 
     const [posts, setPosts] = useState<PostListResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [error, setError] = useState("");
 
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
@@ -43,39 +44,83 @@ const IdolBoardPage: React.FC = () => {
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-    const canWrite = useMemo(() => {
-        if (!user) return false;
-        return user.role === "ADMIN" || user.role === "IDOL" || user.role === "AGENCY";
-    }, [user]);
+    const leftFilters = useMemo(() => {
+        return [
+            { label: "그룹 공식", type: "official" as BoardKind },
+            { label: "그룹 팬", type: "fan" as BoardKind },
+        ];
+    }, []);
 
-    const resetInfinite = () => {
-        setPosts([]);
-        setPage(0);
-        setHasMore(true);
-        setTotalElements(null);
+    const setFilter = (nextType: BoardKind) => {
+        if (!groupId) return;
+        navigate(`/group/${groupId}/board?type=${nextType}`);
     };
 
     const setSort = (nextSort: "latest" | "top") => {
         const next = new URLSearchParams(sp);
         next.set("sort", nextSort);
         setSp(next);
-        resetInfinite();
     };
 
     const setQuery = (value: string) => {
         const next = new URLSearchParams(sp);
         next.set("q", value);
         setSp(next);
-        resetInfinite();
     };
 
-    const rowNo = (idx: number) => {
-        if (typeof totalElements === "number") return totalElements - idx;
-        return posts.length - idx;
+    const [idols, setIdols] = useState<IdolDto[]>([]);
+    const [idolLoading, setIdolLoading] = useState(false);
+    const [idolOpen, setIdolOpen] = useState(false);
+    const idolWrapRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const run = async () => {
+            if (!groupId) return;
+            setIdolLoading(true);
+            try {
+                const res = await api.get(`/groups/${groupId}/idols`);
+                const list = (res.data ?? []) as IdolDto[];
+                setIdols(Array.isArray(list) ? list : []);
+            } finally {
+                setIdolLoading(false);
+            }
+        };
+        run();
+    }, [groupId]);
+
+    useEffect(() => {
+        const onDocDown = (e: MouseEvent) => {
+            if (!idolOpen) return;
+            const wrap = idolWrapRef.current;
+            if (!wrap) return;
+            if (wrap.contains(e.target as Node)) return;
+            setIdolOpen(false);
+        };
+        document.addEventListener("mousedown", onDocDown);
+        return () => document.removeEventListener("mousedown", onDocDown);
+    }, [idolOpen]);
+
+    const idolLabel = (i: IdolDto) =>
+        i.stageName || i.name || `아이돌 ${i.idolId}`;
+
+    const selectedIdol = idols.find(
+        (i) => i.idolId === Number(idolId)
+    );
+
+    const orderedIdols = useMemo(() => {
+        if (!selectedIdol) return idols;
+        const others = idols.filter((i) => i.idolId !== selectedIdol.idolId);
+        return [selectedIdol, ...others];
+    }, [idols, selectedIdol]);
+
+    const onClickIdolBoard = (id: number) => {
+        if (!groupId) return;
+        setIdolOpen(false);
+        navigate(`/group/${groupId}/idol/${id}/board`);
     };
 
     const fetchPage = async (nextPage: number) => {
-        if (!idolId) throw new Error("idolId가 없습니다.");
+        if (!idolId) return;
 
         const params: any = {
             boardType: "IDOL_OFFICIAL",
@@ -85,9 +130,6 @@ const IdolBoardPage: React.FC = () => {
             sort: sort === "top" ? "likeCount,desc" : "createdAt,desc",
         };
 
-        // TODO: search-service 연동 시 처리
-        // if (q) params.q = q;
-
         const res = await api.get("/board/posts", { params });
         const data = res.data as any;
         const content = (data.content ?? []) as PostListResponse[];
@@ -95,54 +137,33 @@ const IdolBoardPage: React.FC = () => {
         if (nextPage === 0) setPosts(content);
         else setPosts((prev) => [...prev, ...content]);
 
-        if (typeof data.totalElements === "number") setTotalElements(data.totalElements);
+        if (typeof data.totalElements === "number")
+            setTotalElements(data.totalElements);
 
-        const last = Boolean(data.last);
-        setHasMore(!last && content.length > 0);
+        setHasMore(!data.last && content.length > 0);
     };
 
     useEffect(() => {
         const run = async () => {
-            setError("");
-            try {
-                setLoading(true);
-                setLoadingMore(false);
-
-                resetInfinite();
-                await fetchPage(0);
-            } catch (e: any) {
-                const msg = e?.response?.data?.message || e?.message || "게시글 조회 실패";
-                setError(msg);
-                setPosts([]);
-                setHasMore(false);
-            } finally {
-                setLoading(false);
-            }
+            setLoading(true);
+            setPosts([]);
+            setPage(0);
+            await fetchPage(0);
+            setLoading(false);
         };
-
         run();
     }, [idolId, sort, q]);
 
     useEffect(() => {
         if (page === 0) return;
         if (!hasMore) return;
-
         const run = async () => {
-            setError("");
-            try {
-                setLoadingMore(true);
-                await fetchPage(page);
-            } catch (e: any) {
-                const msg = e?.response?.data?.message || e?.message || "추가 로딩 실패";
-                setError(msg);
-                setHasMore(false);
-            } finally {
-                setLoadingMore(false);
-            }
+            setLoadingMore(true);
+            await fetchPage(page);
+            setLoadingMore(false);
         };
-
         run();
-    }, [page, hasMore]);
+    }, [page]);
 
     useEffect(() => {
         const el = sentinelRef.current;
@@ -151,47 +172,93 @@ const IdolBoardPage: React.FC = () => {
 
         const io = new IntersectionObserver(
             (entries) => {
-                const first = entries[0];
-                if (!first.isIntersecting) return;
-                if (loading) return;
-                if (loadingMore) return;
-
+                if (!entries[0].isIntersecting) return;
+                if (loading || loadingMore) return;
                 setPage((prev) => prev + 1);
             },
-            { root: null, rootMargin: "200px", threshold: 0 }
+            { rootMargin: "200px" }
         );
 
         io.observe(el);
         return () => io.disconnect();
     }, [hasMore, loading, loadingMore]);
 
-    const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
-
-    const requireLoginOrStop = () => {
-        if (accessToken) return true;
-        alert("로그인이 필요합니다.");
-        return false;
-    };
+    const rowNo = (idx: number) =>
+        typeof totalElements === "number"
+            ? totalElements - idx
+            : posts.length - idx;
 
     const onClickRow = (p: PostListResponse) => {
-        if (!requireLoginOrStop()) return;
         navigate(`./${p.postId}`);
     };
 
     const onClickWrite = () => {
-        if (!requireLoginOrStop()) return;
-        if (!canWrite) {
-            alert("권한이 없습니다.");
-            return;
-        }
         navigate(`./write`);
     };
 
     return (
         <div className="space-y-4">
-            {/* 상단 툴바 */}
             <div className="flex justify-between flex-wrap gap-2">
-                <div className="text-lg font-semibold text-gray-900">아이돌 공식 게시판</div>
+                <div className="flex gap-2 flex-wrap items-center">
+                    {leftFilters.map((f) => (
+                        <button
+                            key={f.label}
+                            onClick={() => setFilter(f.type)}
+                            className="px-3 py-2 rounded-full text-sm font-semibold border transition bg-white border-gray-200 hover:bg-gray-200"
+                        >
+                            {f.label}
+                        </button>
+                    ))}
+
+                    <div ref={idolWrapRef} className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setIdolOpen((v) => !v)}
+                            className="px-3 py-2 rounded-full text-sm font-semibold border transition flex items-center gap-2 bg-[#1FBFB8] text-white border-[#1FBFB8]"
+                        >
+                            {selectedIdol
+                                ? idolLabel(selectedIdol)
+                                : "아이돌 게시판"}
+                            <span
+                                className={[
+                                    "transition-transform",
+                                    idolOpen ? "rotate-180" : "",
+                                ].join(" ")}
+                            >
+                                ▾
+                            </span>
+                        </button>
+
+                        {idolOpen && (
+                            <div className="absolute left-0 mt-2 w-56 rounded-2xl border border-gray-200 bg-white shadow-lg overflow-hidden z-50">
+                                {idolLoading ? (
+                                    <div className="px-4 py-3 text-sm text-gray-600">
+                                        불러오는 중...
+                                    </div>
+                                ) : orderedIdols.length === 0 ? (
+                                    <div className="px-4 py-3 text-sm text-gray-600">
+                                        소속 아이돌이 없습니다.
+                                    </div>
+                                ) : (
+                                    <div className="max-h-72 overflow-auto">
+                                        {orderedIdols.map((i) => (
+                                            <button
+                                                key={i.idolId}
+                                                type="button"
+                                                onClick={() =>
+                                                    onClickIdolBoard(i.idolId)
+                                                }
+                                                className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition"
+                                            >
+                                                {idolLabel(i)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
 
                 <div className="flex gap-2">
                     <button
@@ -200,7 +267,7 @@ const IdolBoardPage: React.FC = () => {
                             "px-3 py-2 rounded-full text-sm font-semibold border transition",
                             sort === "latest"
                                 ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200 hover:bg-gray-200 active:scale-[0.99]",
+                                : "bg-white border-gray-200 hover:bg-gray-200",
                         ].join(" ")}
                     >
                         최신순
@@ -212,7 +279,7 @@ const IdolBoardPage: React.FC = () => {
                             "px-3 py-2 rounded-full text-sm font-semibold border transition",
                             sort === "top"
                                 ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200 hover:bg-gray-200 active:scale-[0.99]",
+                                : "bg-white border-gray-200 hover:bg-gray-200",
                         ].join(" ")}
                     >
                         추천순
@@ -220,10 +287,9 @@ const IdolBoardPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* 검색창(UI만 유지) */}
             <div className="flex justify-center">
                 <div className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
-                    <select defaultValue="title" className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
+                    <select className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
                         <option value="title">제목</option>
                         <option value="title_content">제목+내용</option>
                         <option value="content">내용</option>
@@ -238,95 +304,79 @@ const IdolBoardPage: React.FC = () => {
 
                     <button
                         type="button"
-                        className="h-12 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-50 active:scale-[0.99] transition"
-                        onClick={() => {
-                            // TODO: search-service 연동 시 검색 실행
-                        }}
+                        className="h-12 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition"
                     >
                         🔍
                     </button>
                 </div>
             </div>
 
-            {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
-            {error && <div className="text-sm text-red-600">{error}</div>}
-
-            {/* 게시글 리스트 */}
             <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
                 <div className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
-                    <div className="text-left">번호</div>
-                    <div className="text-left">제목</div>
-                    <div className="text-left">작성자</div>
-                    <div className="text-left">작성일</div>
+                    <div>번호</div>
+                    <div>제목</div>
+                    <div>작성자</div>
+                    <div>작성일</div>
                     <div className="text-right">조회수</div>
                     <div className="text-right">좋아요</div>
                 </div>
-
-                {!loading && posts.length === 0 && <div className="px-4 py-6 text-sm text-gray-600">게시글이 없습니다.</div>}
 
                 {!loading &&
                     posts.map((p, idx) => (
                         <button
                             key={p.postId}
-                            type="button"
                             onClick={() => onClickRow(p)}
-                            className="
-                w-full text-left
-                grid grid-cols-[90px_1fr_120px_140px_90px_90px]
-                px-4 py-3
-                border-b border-gray-100 last:border-b-0
-                hover:bg-gray-50 active:bg-gray-100
-                transition-colors
-              "
+                            className="w-full text-left grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                         >
-                            <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
-
-                            <div className="min-w-0">
-                                <div className="text-sm font-semibold text-gray-900 truncate">{p.title}</div>
+                            <div className="text-sm tabular-nums">
+                                {rowNo(idx)}
                             </div>
-
-                            <div className="text-sm text-gray-700 tabular-nums">{p.authorId}</div>
-                            <div className="text-sm text-gray-600">{p.createdAt}</div>
-                            <div className="text-sm text-gray-700 text-right tabular-nums">{p.viewCount}</div>
-                            <div className="text-sm text-gray-700 text-right tabular-nums">{p.likeCount}</div>
+                            <div className="min-w-0">
+                                <div className="text-sm font-semibold truncate">
+                                    {p.title}
+                                </div>
+                            </div>
+                            <div className="text-sm tabular-nums">
+                                {p.authorId}
+                            </div>
+                            <div className="text-sm">
+                                {p.createdAt}
+                            </div>
+                            <div className="text-sm text-right tabular-nums">
+                                {p.viewCount}
+                            </div>
+                            <div className="text-sm text-right tabular-nums">
+                                {p.likeCount}
+                            </div>
                         </button>
                     ))}
             </div>
 
-            {/* 무한스크롤 sentinel */}
             <div ref={sentinelRef} className="h-10" />
-            {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
-            {!loading && !loadingMore && posts.length > 0 && !hasMore && (
-                <div className="text-sm text-gray-500 text-center py-2">마지막 게시글입니다.</div>
+
+            {loadingMore && (
+                <div className="text-sm text-gray-600">더 불러오는 중...</div>
             )}
 
-            {/* 플로팅 버튼 */}
+            {!loading && !loadingMore && posts.length > 0 && !hasMore && (
+                <div className="text-sm text-gray-500 text-center py-2">
+                    마지막 게시글입니다.
+                </div>
+            )}
+
             <div className="fixed right-4 bottom-6 z-40 flex flex-col items-end gap-3">
                 <button
-                    type="button"
-                    onClick={scrollTop}
-                    className="
-            w-12 h-12 rounded-full
-            bg-gray-100 border border-gray-200
-            shadow-md
-            text-gray-800 font-semibold
-            hover:bg-gray-200 active:scale-[0.99]
-            transition
-          "
+                    onClick={() =>
+                        window.scrollTo({ top: 0, behavior: "smooth" })
+                    }
+                    className="w-12 h-12 rounded-full bg-gray-100 border border-gray-200 shadow-md"
                 >
                     ↑
                 </button>
 
                 <button
-                    type="button"
                     onClick={onClickWrite}
-                    className="
-            px-5 py-3 rounded-2xl
-            bg-[#1FBFB8] text-white text-sm font-semibold
-            shadow-md
-            hover:bg-[#17AFA8] active:scale-[0.99]
-            transition
-          "
+                    className="px-5 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold shadow-md"
                 >
                     글쓰기
                 </button>

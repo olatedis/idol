@@ -42,7 +42,7 @@ type PostReactionResponse = {
 };
 
 const IdolPostDetailPage: React.FC = () => {
-    const { postId } = useParams();
+    const { groupId, idolId, postId } = useParams();
     const navigate = useNavigate();
     const { accessToken, user } = useAuthStore();
 
@@ -133,7 +133,7 @@ const IdolPostDetailPage: React.FC = () => {
         try {
             await api.delete(`/board/posts/${postId}`);
             alert("삭제되었습니다.");
-            navigate(`../`);
+            navigate(`/group/${groupId}/idol/${idolId}/board`);
         } catch (e: any) {
             const status = e?.response?.status;
             if (status === 401) alert("로그인이 필요합니다.");
@@ -340,7 +340,7 @@ const IdolPostDetailPage: React.FC = () => {
                     <div className="mt-6 flex justify-center">
                         <button
                             type="button"
-                            onClick={() => navigate(-1)}
+                            onClick={() => navigate(`/group/${groupId}/idol/${idolId}/board`)}
                             className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
                          hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
                         >
