@@ -1,16 +1,16 @@
 package com.bit.reserveservice.api;
 
-import com.bit.reserveservice.application.ReservationCommandService;
+import com.bit.reserveservice.application.ReservationService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/reservations")
 public class ReservationController {
 
-    private final ReservationCommandService reservationCommandService;
+    private final ReservationService reservationService;
 
-    public ReservationController(ReservationCommandService reservationCommandService) {
-        this.reservationCommandService = reservationCommandService;
+    public ReservationController(ReservationService reservationService) {
+        this.reservationService = reservationService;
     }
 
     // 예매 요청 (본인 인증 필수)
@@ -21,7 +21,16 @@ public class ReservationController {
             @RequestParam int seatId,
             @RequestParam int price
     ) {
-        return reservationCommandService
+        return reservationService
                 .reserve(userId, concertId, seatId, price);
+    }
+
+    // 예약 취소 (본인 취소)
+    @DeleteMapping("/{reservationId}")
+    public void cancelReservation(
+            @RequestHeader("X-User-Id") int userId,
+            @PathVariable int reservationId
+    ) {
+        reservationService.cancel(userId, reservationId);
     }
 }

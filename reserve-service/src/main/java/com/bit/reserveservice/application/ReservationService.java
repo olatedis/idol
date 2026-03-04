@@ -8,10 +8,11 @@ import org.springframework.stereotype.Service;
 @Service
 @AllArgsConstructor
 @Slf4j
-public class ReservationCommandService {
+public class ReservationService {
 
     private final SeatLockRepository seatLockRepository;
-    private final ReservationHandler ReservationHandler;
+    private final ReservationHandler reservationHandler;
+    private final ReservationCancellationHandler cancellationHandler;
 
 
     public int reserve(int userId, int concertId, int seatId, int price) {
@@ -22,7 +23,11 @@ public class ReservationCommandService {
         }
 
         // 2. 별도 클래스에서 트랜잭션 처리
-        return ReservationHandler.saveDbReserve(userId, concertId, seatId, price);
+        return reservationHandler.saveDbReserve(userId, concertId, seatId, price);
+    }
+
+    public void cancel(int userId, int reservationId) {
+        cancellationHandler.cancelReservationByUser(userId, reservationId);
     }
 
 }

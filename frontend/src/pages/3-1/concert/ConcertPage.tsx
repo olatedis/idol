@@ -144,10 +144,8 @@ const ConcertPage: React.FC = () => {
         try {
             setSeatsLoading(true);
             const url = `${API_BASE_URL}/concerts/${concertId}/seats`;
-            console.log("좌석 조회 요청:", url);
             const res = await fetch(url);
-            console.log("좌석 조회 응답 상태:", res.status, res.statusText);
-            
+
             if (!res.ok) {
                 const errorText = await res.text();
                 console.error("좌석 조회 실패 응답:", errorText);
@@ -155,12 +153,10 @@ const ConcertPage: React.FC = () => {
             }
             
             const seats = await res.json();
-            console.log("좌석 데이터:", seats);
-            
+
             if (Array.isArray(seats)) {
                 setConcertSeats(seats as SeatDto[]);
             } else {
-                console.warn("좌석 데이터가 배열이 아닙니다:", seats);
                 setConcertSeats([]);
             }
         } catch (e) {
@@ -179,7 +175,6 @@ const ConcertPage: React.FC = () => {
             try {
                 setLoading(true);
                 resetInfinite();
-                scrollTop();
                 await fetchPage(0, controller.signal);
             } catch (e: any) {
                 if (e?.name === "AbortError") return;
@@ -238,8 +233,6 @@ const ConcertPage: React.FC = () => {
         return () => io.disconnect();
     }, [hasMore, loading, loadingMore]);
 
-    const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
-
     const requireLogin = () => {
         if (accessToken) return true;
         alert("로그인이 필요합니다.");
@@ -279,17 +272,51 @@ const ConcertPage: React.FC = () => {
         const chosenSeats = concertSeats.filter((s) => selectedSeats.includes(s.id));
         const totalPrice = chosenSeats.reduce((sum, s) => sum + s.price, 0);
 
-        // 결제 페이지로 이동 (예: /payment)
-        // 필요한 데이터는 state로 전달
-        navigate("/payment", {
-            state: {
-                concert: selectedConcert,
-                seats: chosenSeats,
-                totalPrice,
-            },
-        });
+        // 로그인 확인
+        if (!user || !user.userId) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
 
-        setIsBookingModalOpen(false);
+        // 즉시 좌석 락(예매) 요청 - Reservation API 호출
+        try {
+            const reservationIds: number[] = [];
+
+            for (const seat of chosenSeats) {
+                const url = `${API_BASE_URL}/reservations?concertId=${selectedConcert?.id}&seatId=${seat.id}&price=${seat.price}`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-Id': String(user.userId),
+                    },
+                });
+
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || `예약 실패 (seat=${seat.id})`);
+                }
+
+                // ReservationController returns int id in body
+                const reservationId = await res.json();
+                reservationIds.push(reservationId);
+            }
+
+            // 이동: 결제 페이지로 reservationIds 포함하여 전달
+            navigate('/payment', {
+                state: {
+                    concert: selectedConcert,
+                    seats: chosenSeats,
+                    totalPrice,
+                    reservationIds,
+                },
+            });
+
+            setIsBookingModalOpen(false);
+        } catch (e: any) {
+            console.error('예약 실패:', e);
+            alert(e?.message || '예약 중 오류가 발생했습니다. 다른 좌석을 선택해주세요.');
+        }
     };
 
     const onCreateConcert = () => {
@@ -304,7 +331,7 @@ const ConcertPage: React.FC = () => {
                 <div className="mb-8">
                     <h1 className="text-3xl font-black text-gray-800">콘서트 예매</h1>
                     <p className="text-gray-500 mt-2 font-medium">
-                        {groupId ? "우리 그룹의 콘서트를 확인하세요" : "모든 그룹의 콘서트를 확인하세요"}
+                        우리 그룹의 콘서트를 확인하세요
                     </p>
                 </div>
 
@@ -317,12 +344,6 @@ const ConcertPage: React.FC = () => {
                     <div className="flex justify-between items-center flex-wrap gap-2">
                         <div className="text-lg font-semibold text-gray-900">콘서트 목록</div>
                         <div className="flex gap-2">
-                            <button
-                                onClick={scrollTop}
-                                className="px-3 py-2 rounded-full text-sm font-semibold border border-gray-200 hover:bg-gray-50"
-                            >
-                                ↑
-                            </button>
                             {user?.role === "AGENCY" && (
                                 <button
                                     onClick={onCreateConcert}

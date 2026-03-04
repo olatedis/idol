@@ -9,10 +9,7 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table(
-        name = "reservation",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"concertId", "seatId"})
-        }
+        name = "reservation"
 )
 public class Reservation {
 

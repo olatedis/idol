@@ -5,6 +5,7 @@ export interface PaymentReadyRequest {
     amount: number;
     domain: 'SUBSCRIPTION' | 'CONCERT';
     targetId: number;
+    reservationIds?: number[];
 }
 
 export interface PaymentReadyResponse {
