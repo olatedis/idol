@@ -27,6 +27,7 @@ public class Idol {
     @JoinColumn(name = "group_id")
     private Group group;
 
+    @Setter
     private String stageName;
 
     @Setter

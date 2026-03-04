@@ -94,6 +94,18 @@ public class IdolService {
         sendIdolEvent("UPDATE", idol);
     }
 
+    @Transactional
+    public void updateIdolStageName(int userId, String newStageName) {
+        Idol idol = idolRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Idol not found for user: " + userId));
+
+        idol.setStageName(newStageName);
+        log.info("아이돌 예명 변경: idolId={}, newName={}", idol.getId(), newStageName);
+
+        // Kafka 이벤트 발행
+        sendIdolEvent("UPDATE", idol);
+    }
+
     private void sendIdolEvent(String type, Idol idol) {
         try {
             IdolEvent event = IdolEvent.builder()
