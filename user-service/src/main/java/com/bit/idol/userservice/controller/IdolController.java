@@ -49,6 +49,20 @@ public class IdolController {
         return ResponseEntity.ok(idolService.getIdol(idolId));
     }
 
+    // 내 아이돌 정보 수정 (스테이지 네임 변경)
+    @PostMapping("/me/update")
+    public ResponseEntity<String> updateMyIdolInfo(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Role") String role,
+            @Valid @RequestBody com.bit.idol.userservice.dto.idol.IdolUpdateDto request) {
+        Role requesterRole = Role.valueOf(role);
+        if (requesterRole != Role.IDOL) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("아이돌 권한이 필요합니다.");
+        }
+        idolService.updateIdolStageName(userId, request.getStageName());
+        return ResponseEntity.ok("활동명이 성공적으로 변경되었습니다.");
+    }
+
     // 아이돌 전체 목록
     @GetMapping
     public ResponseEntity<List<IdolDto>> getAllIdols() {

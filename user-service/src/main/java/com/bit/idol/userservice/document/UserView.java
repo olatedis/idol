@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import java.time.LocalDateTime;
 
 @Document(collection = "user_views")
 @Getter
@@ -22,12 +23,13 @@ public class UserView {
     private String phone;
     private String address;
     private String imgUrl;
-    
+
     private String role; // Enum.name() 저장
-    
+
     private String provider;
     private String providerId;
-    
+
     private String status; // Enum.name() 저장
     private int reportCount;
+    private LocalDateTime createdAt;
 }

@@ -23,6 +23,7 @@ import IdolPostDetailPage from "./pages/3-1/IdolPostDetailPage.tsx";
 import ChatPage from "./pages/3-1/ChatPage.tsx";
 import GlobalConcertPage from "./pages/main/GlobalConcertPage.tsx";
 import GroupPostEditPage from "./pages/3-1/GroupPostEditPage.tsx";
+import MyPage from "./pages/main/mypage/MyPage.tsx";
 import IdolPostEditPage from "./pages/3-1/IdolPostEditPage.tsx";
 
 function App() {
@@ -32,9 +33,10 @@ function App() {
                 {/* 메인 */}
                 <Route path="/" element={<MainPage />} />
 
-                {/* 햄버거바에서 타고가는 공지사항 */}
+                {/* 햄버거바 메뉴 */}
                 <Route path="/notices" element={<NoticeListPage />} />
                 <Route path="/notices/:postId" element={<NoticeDetailPage />} />
+                <Route path="/mypage" element={<MyPage />} /> // 마이페이지 추가
 
                 {/* 공지 작성/수정 (관리자) */}
                 <Route path="/admin/notices/write" element={<NoticeWritePage />} />

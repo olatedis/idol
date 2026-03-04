@@ -43,7 +43,7 @@ spring:
               args:
                 redis-rate-limiter.replenishRate: 5   # 초당 5개 토큰 충전
                 redis-rate-limiter.burstCapacity: 10  # 최대 10개까지 버스트 허용
-                key-resolver: "#{@ipKeyResolver}"     # IP 기준 제한
+                key-resolver: "#{@ipKeyResolver}"     # IP 기준 제한 (비로그인 구간 유지)
         
         - id: user-service
           uri: lb://USER-SERVICE
@@ -70,7 +70,7 @@ spring:
               args:
                 redis-rate-limiter.replenishRate: 20
                 redis-rate-limiter.burstCapacity: 40
-                key-resolver: "#{@ipKeyResolver}"
+                key-resolver: "#{@userIdKeyResolver}"
 
         # --- Activity Services ---
         - id: voting-service
@@ -82,7 +82,7 @@ spring:
               args:
                 redis-rate-limiter.replenishRate: 10
                 redis-rate-limiter.burstCapacity: 20
-                key-resolver: "#{@ipKeyResolver}"
+                key-resolver: "#{@userIdKeyResolver}"
 
         - id: ranking-service
           uri: lb://RANKING-SERVICE

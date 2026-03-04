@@ -9,18 +9,14 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "subscriptions",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"user_id", "idol_id"})
-        },
-        indexes = {
-                @Index(name = "idx_user_id", columnList = "user_id"),
-                @Index(name = "idx_idol_id", columnList = "idol_id"),
-                @Index(name = "idx_status", columnList = "status"),
-                @Index(name = "idx_idol_stage_name", columnList = "stage_name")
-        }
-)
+@Table(name = "subscriptions", uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "user_id", "idol_id" })
+}, indexes = {
+        @Index(name = "idx_user_id", columnList = "user_id"),
+        @Index(name = "idx_idol_id", columnList = "idol_id"),
+        @Index(name = "idx_status", columnList = "status"),
+        @Index(name = "idx_idol_stage_name", columnList = "stage_name")
+})
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -52,7 +48,7 @@ public class Subscription {
     @Column(nullable = false)
     private SubscriptionPlan plan;
 
-    private LocalDateTime nextRenewalAt;  // 다음 갱신 예정 시간
+    private LocalDateTime nextRenewalAt; // 다음 갱신 예정 시간
 
     @Column(nullable = false)
     private boolean autoRenew;
@@ -67,8 +63,10 @@ public class Subscription {
     }
 
     public void cancel() {
-        this.status = SubscriptionStatus.CANCELED;
-        this.expiredAt = LocalDateTime.now();
+        this.autoRenew = false;
+        if (this.nextRenewalAt != null) {
+            this.expiredAt = this.nextRenewalAt;
+        }
     }
 
     public void expire() {

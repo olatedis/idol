@@ -58,7 +58,7 @@ public class UserService {
     // 마이페이지 정보 조회 (Aggregation)
     public UserMyPageDto getMyPageInfo(int userId) {
         UserDto user = getUserById(userId);
-        
+
         int subscriptionCount = 0;
 
         try {
@@ -72,8 +72,11 @@ public class UserService {
                 .username(user.getUsername())
                 .nickname(user.getNickname())
                 .email(user.getEmail())
+                .phone(user.getPhone())
+                .address(user.getAddress())
                 .profileImage(user.getImgUrl())
                 .role(user.getRole())
+                .createdAt(user.getCreatedAt())
                 .subscriptionCount(subscriptionCount)
                 .build();
     }
@@ -130,7 +133,7 @@ public class UserService {
         if (userRepository.findByUsername(userDto.getUsername()).isPresent()) {
             throw new RuntimeException("이미 존재하는 사용자 이름입니다.");
         }
-        
+
         if (userRepository.existsByNickname(userDto.getNickname())) {
             throw new RuntimeException("이미 존재하는 닉네임입니다.");
         }
@@ -147,10 +150,10 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
-        
+
         // 이벤트 발행 (커밋 후 실행됨)
         eventPublisher.publishEvent(new UserEvent(user.getId(), "CREATE"));
-        
+
         log.info("회원가입 완료: username={}, userId={}", user.getUsername(), user.getId());
     }
 
@@ -163,11 +166,11 @@ public class UserService {
                 .orElseGet(() -> {
                     String randomPassword = UUID.randomUUID().toString();
                     String socialUsername = userDto.getProvider() + "_" + userDto.getProviderId();
-                    
+
                     // 랜덤 닉네임 생성 (예: 팬돌이_1234)
-                    String randomNickname = "팬돌이_" + (int)(Math.random() * 10000);
+                    String randomNickname = "팬돌이_" + (int) (Math.random() * 10000);
                     while (userRepository.existsByNickname(randomNickname)) {
-                        randomNickname = "팬돌이_" + (int)(Math.random() * 10000);
+                        randomNickname = "팬돌이_" + (int) (Math.random() * 10000);
                     }
 
                     User newUser = User.builder()
@@ -183,10 +186,10 @@ public class UserService {
                             .build();
 
                     User savedUser = userRepository.save(newUser);
-                    
+
                     // 이벤트 발행
                     eventPublisher.publishEvent(new UserEvent(savedUser.getId(), "CREATE"));
-                    
+
                     log.info("소셜 회원가입 완료: provider={}, userId={}", userDto.getProvider(), savedUser.getId());
                     return UserDto.fromEntity(savedUser);
                 });
@@ -199,22 +202,26 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         if (userUpdateDto.getNickname() != null) {
-            if (!user.getNickname().equals(userUpdateDto.getNickname()) && 
-                userRepository.existsByNickname(userUpdateDto.getNickname())) {
+            if (!user.getNickname().equals(userUpdateDto.getNickname()) &&
+                    userRepository.existsByNickname(userUpdateDto.getNickname())) {
                 throw new RuntimeException("이미 존재하는 닉네임입니다.");
             }
             user.setNickname(userUpdateDto.getNickname());
         }
-        
-        if (userUpdateDto.getEmail() != null) user.setEmail(userUpdateDto.getEmail());
-        if (userUpdateDto.getPhone() != null) user.setPhone(userUpdateDto.getPhone());
-        if (userUpdateDto.getAddress() != null) user.setAddress(userUpdateDto.getAddress());
-        if (userUpdateDto.getImgUrl() != null) user.setImgUrl(userUpdateDto.getImgUrl());
+
+        if (userUpdateDto.getEmail() != null)
+            user.setEmail(userUpdateDto.getEmail());
+        if (userUpdateDto.getPhone() != null)
+            user.setPhone(userUpdateDto.getPhone());
+        if (userUpdateDto.getAddress() != null)
+            user.setAddress(userUpdateDto.getAddress());
+        if (userUpdateDto.getImgUrl() != null)
+            user.setImgUrl(userUpdateDto.getImgUrl());
 
         // 이벤트 발행
         eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
         updateUsernameCache(user);
-        
+
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
         return UserDto.fromEntity(user);
     }
@@ -231,7 +238,7 @@ public class UserService {
         try {
             // 1. S3 업로드
             fileUrl = s3Service.uploadFile(file);
-            
+
             // 2. DB 업데이트
             user.setImgUrl(fileUrl);
             userRepository.saveAndFlush(user); // 즉시 반영하여 DB 에러 확인
@@ -255,11 +262,11 @@ public class UserService {
             }
             throw new RuntimeException("프로필 이미지 업데이트 실패", e);
         }
-        
+
         // 이벤트 발행
         eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
         updateUsernameCache(user);
-        
+
         return UserDto.fromEntity(user);
     }
 
@@ -274,9 +281,9 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(passwordChangeDto.getNewPassword()));
-        
+
         sendPasswordChangedNotification(user);
-        
+
         return UserDto.fromEntity(user);
     }
 
@@ -312,10 +319,10 @@ public class UserService {
         }
 
         userRepository.delete(user);
-        
+
         // 이벤트 발행
         eventPublisher.publishEvent(new UserEvent(userId, "DELETE"));
-        
+
         evictUserCache(user);
     }
 
@@ -326,24 +333,24 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         user.setReportCount(user.getReportCount() + 1);
-        
+
         if (user.getReportCount() >= 10 && user.getStatus() == UserStatus.ACTIVE) {
             user.setStatus(UserStatus.SUSPENDED);
-            
+
             BanHistory history = BanHistory.builder()
                     .userId(userId)
                     .status(UserStatus.SUSPENDED)
                     .reason("신고 누적(10회)에 의한 자동 일시정지")
                     .build();
             banHistoryRepository.save(history);
-            
+
             log.warn("유저 자동 일시정지 처리: userId={}", userId);
         }
-        
+
         // 이벤트 발행
         eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
         updateUsernameCache(user);
-        
+
         return UserDto.fromEntity(user);
     }
 
@@ -353,7 +360,8 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        if (user.getStatus() == newStatus) return UserDto.fromEntity(user);
+        if (user.getStatus() == newStatus)
+            return UserDto.fromEntity(user);
 
         user.setStatus(newStatus);
 
@@ -371,7 +379,7 @@ public class UserService {
         // 이벤트 발행
         eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
         updateUsernameCache(user);
-        
+
         log.info("유저 상태 변경 완료: userId={}, status={}", userId, newStatus);
         return UserDto.fromEntity(user);
     }
@@ -401,10 +409,11 @@ public class UserService {
             log.warn("캐시 삭제 중 오류 발생: {}", e.getMessage());
         }
     }
-    
+
     private void updateUsernameCache(User user) {
         try {
-            Objects.requireNonNull(cacheManager.getCache("user:info:username")).put(user.getUsername(), UserDto.fromEntity(user));
+            Objects.requireNonNull(cacheManager.getCache("user:info:username")).put(user.getUsername(),
+                    UserDto.fromEntity(user));
         } catch (Exception e) {
             log.warn("username 캐시 갱신 실패: {}", e.getMessage());
         }
@@ -418,7 +427,7 @@ public class UserService {
                 .targetId(String.valueOf(user.getId()))
                 .occurredAt(LocalDateTime.now())
                 .build();
-        
+
         notificationProducer.send(event);
     }
 }
