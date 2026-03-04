@@ -55,6 +55,7 @@ public class UserSyncConsumer {
                     .providerId(user.getProviderId())
                     .status(user.getStatus().name())
                     .reportCount(user.getReportCount())
+                    .createdAt(user.getCreatedAt())
                     .build();
 
             userViewRepository.save(userView);

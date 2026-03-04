@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -15,9 +17,12 @@ public class UserMyPageDto {
     private String username;
     private String nickname;
     private String email;
+    private String phone;
+    private String address;
     private String profileImage;
     private Role role;
-    
+    private LocalDateTime createdAt;
+
     // 타 서비스 데이터 (Aggregation)
     private int subscriptionCount; // 구독 중인 아이돌 수
 }
