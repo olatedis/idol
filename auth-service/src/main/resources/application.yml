@@ -61,6 +61,17 @@ grpc:
   server:
     port: 9091
 
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000ms
+        permittedNumberOfCallsInHalfOpenState: 3
+    instances:
+      user-service:
+        baseConfig: default
 
 eureka:
   client:

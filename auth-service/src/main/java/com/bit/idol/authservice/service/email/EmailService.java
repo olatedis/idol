@@ -17,29 +17,34 @@ public class EmailService {
 
     public void sendVerificationCode(String toEmail, String code) {
         String subject = "[Idol Vote] 회원가입 인증번호 안내";
-        String content = String.format("""
-                <div style="font-family: 'Apple SD Gothic Neo', 'sans-serif' !important; width: 540px; height: 600px; border-top: 4px solid #555; margin: 100px auto; padding: 30px 0; box-sizing: border-box;">
-                    <h1 style="margin: 0; padding: 0 5px; font-size: 28px; font-weight: 400;">
-                        <span style="font-size: 15px; margin: 0 0 10px 3px;">Idol Vote</span><br />
-                        <span style="color: #555;">메일인증</span> 안내입니다.
-                    </h1>
-                    <p style="font-size: 16px; line-height: 26px; margin-top: 50px; padding: 0 5px;">
-                        안녕하세요.<br />
-                        Idol Vote에 가입해 주셔서 진심으로 감사드립니다.<br />
-                        아래 <b style="color: #555;">'인증 번호'</b>를 입력하여 회원가입을 완료해 주세요.<br />
-                        감사합니다.
-                    </p>
-                    <p style="font-size: 16px; margin: 40px 5px 20px; line-height: 28px;">
-                        인증 번호: <br />
-                        <span style="font-size: 24px; font-weight: bold; color: #555;">%s</span>
-                    </p>
-                </div>
-                """, code);
+        String content = String.format(
+                """
+                        <div style="font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background-color: #FFF8DB; padding: 50px 0; width: 100%%; text-align: center;">
+                            <div style="background-color: #ffffff; max-width: 500px; margin: 0 auto; border-radius: 16px; padding: 40px 30px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); text-align: center; border-top: 5px solid #FF9292;">
+                                <h1 style="color: #FF9292; font-size: 24px; margin-bottom: 30px; font-weight: bold;">
+                                    Idol Vote 회원가입 인증
+                                </h1>
+                                <p style="font-size: 16px; color: #555; line-height: 1.6; margin-bottom: 20px;">
+                                    안녕하세요!<br>
+                                    저희 <b>Idol Vote</b>에 가입해 주셔서 진심으로 감사합니다.<br>
+                                    아래의 <b style="color: #D14D72;">인증 번호</b>를 가입 화면에 입력하여<br>
+                                    회원가입 절차를 완료해 주세요.
+                                </p>
+                                <div style="background-color: #FFF8DB; border-radius: 12px; padding: 20px; display: inline-block; margin: 20px 0;">
+                                    <span style="font-size: 32px; font-weight: 800; color: #D14D72; letter-spacing: 5px;">%s</span>
+                                </div>
+                                <p style="font-size: 13px; color: #999; margin-top: 30px;">
+                                    *본 메일은 발신 전용이며, 요청하지 않으셨다면 무시해 주세요.
+                                </p>
+                            </div>
+                        </div>
+                        """,
+                code);
 
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            
+
             helper.setTo(toEmail);
             helper.setSubject(subject);
             helper.setText(content, true); // true: HTML 모드

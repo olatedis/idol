@@ -17,6 +17,7 @@ import com.bit.idol.userservice.producer.NotificationProducer;
 import com.bit.idol.userservice.repository.BanHistoryRepository;
 import com.bit.idol.userservice.repository.UserRepository;
 import com.bit.idol.userservice.repository.UserViewRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachePut;
@@ -56,16 +57,11 @@ public class UserService {
     }
 
     // 마이페이지 정보 조회 (Aggregation)
+    @CircuitBreaker(name = "subscription-service", fallbackMethod = "getMyPageInfoFallback")
     public UserMyPageDto getMyPageInfo(int userId) {
         UserDto user = getUserById(userId);
 
-        int subscriptionCount = 0;
-
-        try {
-            subscriptionCount = subscriptionFeignClient.getMySubscriptionCount(userId);
-        } catch (Exception e) {
-            log.error("구독 정보 조회 실패: {}", e.getMessage());
-        }
+        int subscriptionCount = subscriptionFeignClient.getMySubscriptionCount(userId);
 
         return UserMyPageDto.builder()
                 .id(user.getUserId())
@@ -76,8 +72,28 @@ public class UserService {
                 .address(user.getAddress())
                 .profileImage(user.getImgUrl())
                 .role(user.getRole())
+                .provider(user.getProvider())
                 .createdAt(user.getCreatedAt())
                 .subscriptionCount(subscriptionCount)
+                .build();
+    }
+
+    public UserMyPageDto getMyPageInfoFallback(int userId, Throwable t) {
+        log.error("subscription-service 통신 장애 (마이페이지 구독 갯수 조회): {}", t.getMessage());
+        UserDto user = getUserById(userId);
+
+        return UserMyPageDto.builder()
+                .id(user.getUserId())
+                .username(user.getUsername())
+                .nickname(user.getNickname())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .profileImage(user.getImgUrl())
+                .role(user.getRole())
+                .provider(user.getProvider())
+                .createdAt(user.getCreatedAt())
+                .subscriptionCount(0)
                 .build();
     }
 
@@ -305,8 +321,11 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        if (!passwordEncoder.matches(checkPassword, user.getPassword())) {
-            throw new RuntimeException("비밀번호가 일치하지 않습니다.");
+        // 소셜 로그인 회원이 아닐 경우에만 비밀번호 일치 검사 수행
+        if (user.getProvider() == null || user.getProvider().isEmpty()) {
+            if (!passwordEncoder.matches(checkPassword, user.getPassword())) {
+                throw new RuntimeException("비밀번호가 일치하지 않습니다.");
+            }
         }
 
         // 프로필 이미지 삭제 추가

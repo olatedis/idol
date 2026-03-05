@@ -88,6 +88,19 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000ms
+        permittedNumberOfCallsInHalfOpenState: 3
+    instances:
+      subscription-service:
+        baseConfig: default
+      payment-service:
+        baseConfig: default
 
 eureka:
   client:
