@@ -20,8 +20,7 @@ public class NoticeController {
     // 공지 목록 (전체 공개)
     @GetMapping
     public Page<PostListResponse> showNoticeList(Pageable pageable) {
-        return postService.selectAll(BoardType.ADMIN_NOTICE, null, null, pageable);
-    }
+        return postService.selectAll(BoardType.ADMIN_NOTICE, null, null, null, pageable);    }
 
     // 공지 상세 (전체 공개)
     @GetMapping("/{postId}")

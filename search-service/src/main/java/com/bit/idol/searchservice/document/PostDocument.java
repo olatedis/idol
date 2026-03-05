@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Document(indexName = "board_posts")
 @Setting(settingPath = "elastic/post-setting.json")
@@ -42,8 +42,8 @@ public class PostDocument {
     private String content;
 
     @Field(type = FieldType.Date)
-    private LocalDateTime createdAt;
+    private LocalDate createdAt;
 
     @Field(type = FieldType.Date)
-    private LocalDateTime updatedAt;
+    private LocalDate updatedAt;
 }

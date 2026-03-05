@@ -45,7 +45,10 @@ const GroupBoardPage: React.FC = () => {
     // URL 상태 (필터/정렬/검색만 유지)
     const board = (sp.get("type") as BoardKind) || "official";
     const sort = sp.get("sort") || "latest"; // latest | top
-    const q = sp.get("q") || "";
+    const q = sp.get("q") || ""; // 확정 검색어(버튼/엔터로만 변경)
+
+    // 입력창 상태 (타이핑은 여기만 변경)
+    const [inputQ, setInputQ] = useState(q);
 
     // 게시글 상태
     const [posts, setPosts] = useState<PostListResponse[]>([]);
@@ -101,9 +104,14 @@ const GroupBoardPage: React.FC = () => {
         resetInfinite();
     };
 
-    const setQuery = (value: string) => {
+    // 검색 실행(버튼/엔터 전용): URL의 q를 갱신하고 무한스크롤 리셋
+    const applySearch = () => {
         const next = new URLSearchParams(sp);
-        next.set("q", value);
+
+        const trimmed = inputQ.trim();
+        if (trimmed) next.set("q", trimmed);
+        else next.delete("q");
+
         setSp(next);
         resetInfinite();
     };
@@ -126,8 +134,8 @@ const GroupBoardPage: React.FC = () => {
 
         if (boardType.startsWith("GROUP_") && groupId) params.groupId = groupId;
 
-        // TODO: search-service 연동 시 처리
-        // if (q) params.q = q;
+        // search-service 연동: keyword가 있을 때만 전달 (서버 파라미터명: keyword)
+        if (q && q.trim()) params.keyword = q.trim();
 
         const res = await api.get("/board/posts", { params });
         const data = res.data as any;
@@ -141,6 +149,11 @@ const GroupBoardPage: React.FC = () => {
         const last = Boolean(data.last);
         setHasMore(!last && content.length > 0);
     };
+
+    // URL q가 바뀌면 입력창도 동기화 (뒤로가기/링크 공유 대응)
+    useEffect(() => {
+        setInputQ(q);
+    }, [q]);
 
     //  그룹 소속 아이돌 목록 로드
     useEffect(() => {
@@ -165,7 +178,7 @@ const GroupBoardPage: React.FC = () => {
         run();
     }, [groupId]);
 
-    // 첫 페이지 로드
+    // 첫 페이지 로드 (board/sort/groupId/q 변경 시)
     useEffect(() => {
         const run = async () => {
             setError("");
@@ -386,8 +399,12 @@ const GroupBoardPage: React.FC = () => {
                     </select>
 
                     <input
-                        value={q}
-                        onChange={(e) => setQuery(e.target.value)}
+                        value={inputQ}
+                        onChange={(e) => setInputQ(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key !== "Enter") return;
+                            applySearch();
+                        }}
                         placeholder="단어 위주로 검색하시면 보다 정확한 결과를 얻을 수 있습니다."
                         className="flex-1 h-12 px-4 text-sm outline-none"
                     />
@@ -396,7 +413,7 @@ const GroupBoardPage: React.FC = () => {
                         type="button"
                         className="h-12 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition"
                         onClick={() => {
-                            // TODO: search-service 연동 시 검색 실행
+                            applySearch();
                         }}
                     >
                         🔍
