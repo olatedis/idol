@@ -21,6 +21,7 @@ public class UserMyPageDto {
     private String address;
     private String profileImage;
     private Role role;
+    private String provider;
     private LocalDateTime createdAt;
 
     // 타 서비스 데이터 (Aggregation)
