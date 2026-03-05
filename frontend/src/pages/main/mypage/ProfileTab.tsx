@@ -8,6 +8,7 @@ interface UserMyPageDto {
     email: string;
     nickname: string;
     role: string;
+    provider?: string;
     profileImageUrl?: string; // mapped from profileImage
     profileImage?: string;
     createdAt?: string;
@@ -110,8 +111,14 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
 
     const handleWithdraw = async () => {
         if (!window.confirm("정말 탈퇴하시겠습니까? 관련 데이터가 모두 삭제됩니다.")) return;
+
+        if (!userInfo.provider && !withdrawPwd) {
+            alert("비밀번호를 입력해주세요.");
+            return;
+        }
+
         try {
-            await api.post("/users/withdraw", { password: withdrawPwd });
+            await api.post("/users/withdraw", { password: userInfo.provider ? "" : withdrawPwd });
             alert("회원 탈퇴가 완료되었습니다.");
             window.location.href = "/"; // 메인으로 튕기면서 로그아웃 처리
         } catch (err: any) {
@@ -266,12 +273,14 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mt-8">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">보안 및 계정 관리</h3>
                 <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-                    <button
-                        onClick={() => setIsPwdModalOpen(true)}
-                        className="px-4 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                        비밀번호 변경
-                    </button>
+                    {!userInfo.provider && (
+                        <button
+                            onClick={() => setIsPwdModalOpen(true)}
+                            className="px-4 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                            비밀번호 변경
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -347,16 +356,18 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
                             <p className="text-sm text-gray-500 mt-2">탈퇴 시 모든 구독 및 결제 내역이 삭제되며 복구할 수 없습니다.</p>
                         </div>
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">비밀번호 확인</label>
-                                <input
-                                    type="password"
-                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                                    value={withdrawPwd}
-                                    placeholder="본인 확인을 위해 입력해주세요"
-                                    onChange={e => setWithdrawPwd(e.target.value)}
-                                />
-                            </div>
+                            {!userInfo.provider && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">비밀번호 확인</label>
+                                    <input
+                                        type="password"
+                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                                        value={withdrawPwd}
+                                        placeholder="본인 확인을 위해 입력해주세요"
+                                        onChange={e => setWithdrawPwd(e.target.value)}
+                                    />
+                                </div>
+                            )}
                             <button
                                 onClick={handleWithdraw}
                                 className="w-full mt-2 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-md shadow-red-500/20"
