@@ -30,9 +30,10 @@ public class PostController {
             @RequestParam("boardType") BoardType boardType,
             @RequestParam(value = "idolId", required = false) Long idolId,
             @RequestParam(value = "groupId", required = false) Long groupId,
+            @RequestParam(value = "keyword", required = false) String keyword,
             Pageable pageable
     ) {
-        Page<PostListResponse> page = postService.selectAll(boardType, idolId, groupId, pageable);
+        Page<PostListResponse> page = postService.selectAll(boardType, idolId, groupId, keyword, pageable);
         return ResponseEntity.ok(page);
     }
 

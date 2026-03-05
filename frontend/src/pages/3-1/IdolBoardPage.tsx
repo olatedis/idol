@@ -26,6 +26,28 @@ type IdolDto = {
 
 const PAGE_SIZE = 20;
 
+// 날짜 문자열을 KST 기준으로 표시하기 위한 헬퍼 함수
+const formatDateToKST = (dateString: string) => {
+    if (!dateString) return "";
+
+    // 백엔드는 'YYYY-MM-DD HH:mm:ss' (UTC/GMT) 형태로 문자열을 전달한다고 가정
+    // JS Date 객체로 파싱 시 UTC로 인식시키기 위해 뒤에 'Z'를 추가
+    const utcDate = new Date(`${dateString.replace(" ", "T")}Z`);
+
+    if (isNaN(utcDate.getTime())) return dateString;
+
+    // KST는 UTC+9
+    const kstDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
+
+    const yy = String(kstDate.getUTCFullYear()).slice(2);
+    const mm = String(kstDate.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(kstDate.getUTCDate()).padStart(2, "0");
+    const hh = String(kstDate.getUTCHours()).padStart(2, "0");
+    const min = String(kstDate.getUTCMinutes()).padStart(2, "0");
+
+    return `${yy}.${mm}.${dd} ${hh}:${min}`;
+};
+
 const IdolBoardPage: React.FC = () => {
     const { groupId, idolId } = useParams();
     const navigate = useNavigate();
@@ -129,6 +151,9 @@ const IdolBoardPage: React.FC = () => {
             size: PAGE_SIZE,
             sort: sort === "top" ? "likeCount,desc" : "createdAt,desc",
         };
+
+        // search-service 연동: keyword가 있을 때만 전달 (서버 파라미터명: keyword)
+        if (q && q.trim()) params.keyword = q.trim();
 
         const res = await api.get("/board/posts", { params });
         const data = res.data as any;
@@ -289,11 +314,6 @@ const IdolBoardPage: React.FC = () => {
 
             <div className="flex justify-center">
                 <div className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
-                    <select className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
-                        <option value="title">제목</option>
-                        <option value="title_content">제목+내용</option>
-                        <option value="content">내용</option>
-                    </select>
 
                     <input
                         value={q}
@@ -339,9 +359,12 @@ const IdolBoardPage: React.FC = () => {
                             <div className="text-sm tabular-nums">
                                 {p.authorId}
                             </div>
+
+                            {/* 작성일은 KST 기준으로 표시 */}
                             <div className="text-sm">
-                                {p.createdAt}
+                                {formatDateToKST(p.createdAt)}
                             </div>
+
                             <div className="text-sm text-right tabular-nums">
                                 {p.viewCount}
                             </div>

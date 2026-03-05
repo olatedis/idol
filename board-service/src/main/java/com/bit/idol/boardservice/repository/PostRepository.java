@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface PostRepository extends JpaRepository<Post, Long> {
 
     // IDOL_*
@@ -47,4 +49,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Modifying
     @Query("UPDATE Post p SET p.dislikeCount = p.dislikeCount - 1 WHERE p.postId = :postId")
     void decrementDislikeCount(@Param("postId") Long postId);
+
+    List<Post> findByPostIdIn(List<Long> postIds);
 }

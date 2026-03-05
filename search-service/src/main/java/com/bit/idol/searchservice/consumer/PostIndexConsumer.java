@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,8 +52,8 @@ public class PostIndexConsumer {
                         .title(event.getTitle())
                         .content(event.getContent())
                         // createdAt/updatedAt 파싱은 실제 스키마에 맞춰 보완 가능
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
+                        .createdAt(LocalDate.now())
+                        .updatedAt(LocalDate.now())
                         .build();
 
                 upserts.add(doc);

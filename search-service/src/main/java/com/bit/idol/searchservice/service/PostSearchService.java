@@ -4,15 +4,16 @@ import com.bit.idol.searchservice.document.PostDocument;
 import com.bit.idol.searchservice.dto.PostSearchResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.query.Criteria;
-import org.springframework.data.elasticsearch.core.query.CriteriaQuery;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders.*;
 
 @Service
 @RequiredArgsConstructor
@@ -28,26 +29,31 @@ public class PostSearchService {
         }
         String k = keyword.trim();
 
-        // 스코프 조건
-        Criteria scope = new Criteria("boardType").is(boardType);
+        // 1) 스코프 쿼리 (boardType + idolId/groupId)
+        var bool = bool();
+
+        bool.filter(term(t -> t.field("boardType").value(boardType)));
 
         if (requiresIdolId(boardType)) {
-            scope = scope.and(new Criteria("idolId").is(idolId));
+            bool.filter(term(t -> t.field("idolId").value(idolId)));
         }
         if (requiresGroupId(boardType)) {
-            scope = scope.and(new Criteria("groupId").is(groupId));
+            bool.filter(term(t -> t.field("groupId").value(groupId)));
         }
 
-        // 키워드 매칭 조건
-        // - title OR content 에 포함되면 검색 결과로 잡힘
-        // - content는 응답 DTO에 포함하지 않아서 노출은 안 됨
-        Criteria keywordCriteria = new Criteria("title").contains(k)
-                .or(new Criteria("content").contains(k));
+        // 2) 키워드 쿼리 (title OR content)
+        // - wildcard는 느릴 수 있어서 match + operator OR로 처리
+        // - 정확히 "포함" 느낌을 원하면 query_string 사용도 가능
+        bool.must(bool(b -> b
+                .should(match(m -> m.field("title").query(k)))
+                .should(match(m -> m.field("content").query(k)))
+                .minimumShouldMatch("1")
+        ));
 
-        Criteria finalCriteria = scope.and(keywordCriteria);
-
-        CriteriaQuery query = new CriteriaQuery(finalCriteria);
-        query.setPageable(pageable);
+        NativeQuery query = NativeQuery.builder()
+                .withQuery(q -> q.bool(bool.build()))
+                .withPageable(pageable)
+                .build();
 
         SearchHits<PostDocument> hits = elasticsearchOperations.search(query, PostDocument.class);
 
@@ -60,7 +66,7 @@ public class PostSearchService {
         return new PageImpl<>(content, pageable, hits.getTotalHits());
     }
 
-    // 게시판 스코프 검증(게시판별 검색: 1번 정책)
+    // 이하 validateScope / requiresIdolId / requiresGroupId / isValidBoardType / toResponse는 기존 그대로 유지
     private void validateScope(String boardType, Long idolId, Long groupId) {
         if (boardType == null || boardType.isBlank()) throw new RuntimeException("boardType은 필수입니다.");
 
@@ -68,20 +74,17 @@ public class PostSearchService {
             throw new RuntimeException("유효하지 않은 boardType입니다.");
         }
 
-        // ADMIN_NOTICE는 idolId/groupId 없어야 함
         if ("ADMIN_NOTICE".equals(boardType)) {
             if (idolId != null || groupId != null) throw new RuntimeException("공지사항 검색에는 idolId/groupId가 없어야 합니다.");
             return;
         }
 
-        // IDOL_*는 idolId 필수, groupId 금지
         if (requiresIdolId(boardType)) {
             if (idolId == null) throw new RuntimeException("아이돌 게시판 검색에는 idolId가 필요합니다.");
             if (groupId != null) throw new RuntimeException("아이돌 게시판 검색에는 groupId가 없어야 합니다.");
             return;
         }
 
-        // GROUP_*는 groupId 필수, idolId 금지
         if (requiresGroupId(boardType)) {
             if (groupId == null) throw new RuntimeException("그룹 게시판 검색에는 groupId가 필요합니다.");
             if (idolId != null) throw new RuntimeException("그룹 게시판 검색에는 idolId가 없어야 합니다.");

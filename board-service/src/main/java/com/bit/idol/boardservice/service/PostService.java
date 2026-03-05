@@ -1,5 +1,6 @@
 package com.bit.idol.boardservice.service;
 
+import com.bit.idol.boardservice.client.SearchInternalClient;
 import com.bit.idol.boardservice.client.SubscriptionInternalClient;
 import com.bit.idol.boardservice.client.UserInternalClient;
 import com.bit.idol.boardservice.dto.PostListResponse;
@@ -8,6 +9,13 @@ import com.bit.idol.boardservice.dto.PostUpdateRequest;
 import com.bit.idol.boardservice.dto.PostWriteRequest;
 import com.bit.idol.boardservice.dto.comment.CommentResponse;
 import com.bit.idol.boardservice.dto.event.PostCreatedEvent;
+
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import com.bit.idol.boardservice.dto.search.PageResponse;
+import com.bit.idol.boardservice.dto.search.PostSearchResponse;
 import com.bit.idol.boardservice.entity.BoardType;
 import com.bit.idol.boardservice.entity.Comment;
 import com.bit.idol.boardservice.entity.Idol;
@@ -21,13 +29,16 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PostService {
@@ -43,10 +54,14 @@ public class PostService {
 
     private final IdolRepository idolRepository;
 
+    private final SearchInternalClient searchInternalClient;
+
+    private final com.bit.idol.boardservice.kafka.PostIndexProducer postIndexProducer;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
     @Transactional
     public PostResponse insert(PostWriteRequest req, Integer userId, Role role) {
         validateBoardScope(req.getBoardType(), req.getIdolId(), req.getGroupId());
-
         requireCreatePermission(req.getBoardType(), req.getIdolId(), req.getGroupId(), userId, role);
 
         Post post = new Post();
@@ -59,7 +74,7 @@ public class PostService {
 
         Post saved = postRepository.save(post);
 
-        // 이벤트 발행 (커밋 후 실행됨)
+        // 알림 이벤트(기존)
         eventPublisher.publishEvent(new PostCreatedEvent(saved));
 
         return toResponse(saved);
@@ -84,28 +99,72 @@ public class PostService {
             BoardType boardType,
             Long idolId,
             Long groupId,
-            Pageable pageable) {
-
+            String keyword,
+            Pageable pageable
+    ) {
         validateBoardScope(boardType, idolId, groupId);
+
+        String k = (keyword == null) ? "" : keyword.trim();
+        if (!k.isEmpty()) {
+            int page = pageable.getPageNumber();
+            int size = pageable.getPageSize();
+
+            String sortParam = null;
+            if (pageable.getSort() != null && pageable.getSort().isSorted()) {
+                Sort.Order o = pageable.getSort().iterator().next();
+                sortParam = o.getProperty() + "," + o.getDirection().name().toLowerCase();
+            }
+
+            PageResponse<PostSearchResponse> searchPage = searchInternalClient.searchPosts(
+                    boardType.name(),
+                    idolId,
+                    groupId,
+                    k,
+                    page,
+                    size,
+                    sortParam
+            );
+
+            List<PostSearchResponse> searchContent = (searchPage.getContent() == null) ? List.of() : searchPage.getContent();
+            List<Long> postIds = searchContent.stream()
+                    .map(PostSearchResponse::getPostId)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            if (postIds.isEmpty()) {
+                return new org.springframework.data.domain.PageImpl<>(List.of(), pageable, searchPage.getTotalElements());
+            }
+
+            List<Post> posts = postRepository.findByPostIdIn(postIds);
+
+            Map<Long, Post> map = posts.stream()
+                    .collect(Collectors.toMap(Post::getPostId, Function.identity(), (a, b) -> a));
+
+            List<Post> ordered = postIds.stream()
+                    .map(map::get)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            List<PostListResponse> dtoList = ordered.stream()
+                    .map(this::toListResponse)
+                    .toList();
+
+            return new org.springframework.data.domain.PageImpl<>(dtoList, pageable, searchPage.getTotalElements());
+        }
 
         boolean likeSort = pageable.getSort().getOrderFor("likeCount") != null;
 
         Page<Post> page;
 
-        // IDOL_FAN 제거: IDOL_OFFICIAL만 처리
         if (boardType == BoardType.IDOL_OFFICIAL) {
             page = likeSort
                     ? postRepository.findByBoardTypeAndIdolIdOrderByLikeCountDesc(boardType, idolId, pageable)
                     : postRepository.findByBoardTypeAndIdolIdOrderByCreatedAtDesc(boardType, idolId, pageable);
-        }
-        // GROUP_* 목록
-        else if (boardType == BoardType.GROUP_OFFICIAL || boardType == BoardType.GROUP_FAN) {
+        } else if (boardType == BoardType.GROUP_OFFICIAL || boardType == BoardType.GROUP_FAN) {
             page = likeSort
                     ? postRepository.findByBoardTypeAndGroupIdOrderByLikeCountDesc(boardType, groupId, pageable)
                     : postRepository.findByBoardTypeAndGroupIdOrderByCreatedAtDesc(boardType, groupId, pageable);
-        }
-        // ADMIN_NOTICE 등
-        else {
+        } else {
             page = likeSort
                     ? postRepository.findByBoardTypeOrderByLikeCountDesc(boardType, pageable)
                     : postRepository.findByBoardTypeOrderByCreatedAtDesc(boardType, pageable);
@@ -127,6 +186,10 @@ public class PostService {
             post.setContent(requireNonBlank(req.getContent()));
 
         Post saved = postRepository.save(post);
+
+        // 이벤트 발행 (AFTER_COMMIT에서 PostIndexEventPublisher가 Kafka로 보냄)
+        eventPublisher.publishEvent(new com.bit.idol.boardservice.dto.event.PostUpdatedEvent(saved));
+
         return toResponse(saved);
     }
 
@@ -137,6 +200,15 @@ public class PostService {
 
         requireDeletePermission(post, userId, role);
 
+        // 삭제 이벤트에 필요한 값만 스냅샷으로 확보
+        Post snapshot = new Post();
+        snapshot.setPostId(post.getPostId());
+        snapshot.setBoardType(post.getBoardType());
+        snapshot.setIdolId(post.getIdolId());
+        snapshot.setGroupId(post.getGroupId());
+        snapshot.setTitle(post.getTitle());
+        snapshot.setContent(post.getContent());
+
         // Post 하드삭제 - 반응도 함께 하드삭제
         postReactionRepository.deleteByPost_PostId(postId);
 
@@ -144,6 +216,9 @@ public class PostService {
         commentRepository.deleteByPost_PostId(postId);
 
         postRepository.delete(post);
+
+        // 이벤트 발행 (AFTER_COMMIT에서 PostIndexEventPublisher가 Kafka로 보냄)
+        eventPublisher.publishEvent(new com.bit.idol.boardservice.dto.event.PostDeletedEvent(snapshot));
     }
 
     // Validation & Permission
