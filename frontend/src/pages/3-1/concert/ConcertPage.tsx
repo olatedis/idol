@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore";
 import { AnimatePresence, motion } from "framer-motion";
 
+import { api } from '../../../api/axios';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 20;
 
@@ -97,7 +98,7 @@ const ConcertPage: React.FC = () => {
     };
 
 
-    const fetchPage = async (nextPage: number, signal?: AbortSignal) => {
+    const fetchPage = async (nextPage: number) => {
         if (!API_BASE_URL) return;
 
         const params = new URLSearchParams();
@@ -109,10 +110,10 @@ const ConcertPage: React.FC = () => {
         let url = `${API_BASE_URL}/concerts`;
         const qs = params.toString();
         if (qs) url += `?${qs}`;
-        const res = await fetch(url, { signal });
-        if (!res.ok) throw new Error("콘서트 목록 조회 실패");
+        const res = await api.get(url);
+        if (res.status !== 200) throw new Error("콘서트 목록 조회 실패");
 
-        const data = await res.json();
+        const data = res.data;
         let content: ConcertDto[] = [];
         let last = true;
 
@@ -144,15 +145,15 @@ const ConcertPage: React.FC = () => {
         try {
             setSeatsLoading(true);
             const url = `${API_BASE_URL}/concerts/${concertId}/seats`;
-            const res = await fetch(url);
+            const res = await api.get(url);
 
-            if (!res.ok) {
-                const errorText = await res.text();
+            if (res.status !== 200) {
+                const errorText = res.statusText || '좌석 조회 실패';
                 console.error("좌석 조회 실패 응답:", errorText);
                 throw new Error(`좌석 조회 실패 (${res.status})`);
             }
             
-            const seats = await res.json();
+            const seats = res.data;
 
             if (Array.isArray(seats)) {
                 setConcertSeats(seats as SeatDto[]);
@@ -175,7 +176,7 @@ const ConcertPage: React.FC = () => {
             try {
                 setLoading(true);
                 resetInfinite();
-                await fetchPage(0, controller.signal);
+                await fetchPage(0);
             } catch (e: any) {
                 if (e?.name === "AbortError") return;
                 setError(e?.message || "콘서트 목록 조회 실패");
@@ -199,7 +200,7 @@ const ConcertPage: React.FC = () => {
             setError("");
             try {
                 setLoadingMore(true);
-                await fetchPage(page, controller.signal);
+                await fetchPage(page);
             } catch (e: any) {
                 if (e?.name === "AbortError") return;
                 setError(e?.message || "추가 로딩 실패");
@@ -268,6 +269,10 @@ const ConcertPage: React.FC = () => {
             alert("좌석을 선택해주세요.");
             return;
         }
+        if (!selectedConcert) {
+            alert("콘서트 정보가 없습니다.");
+            return;
+        }
         // 선택한 좌석 정보 준비
         const chosenSeats = concertSeats.filter((s) => selectedSeats.includes(s.id));
         const totalPrice = chosenSeats.reduce((sum, s) => sum + s.price, 0);
@@ -282,29 +287,25 @@ const ConcertPage: React.FC = () => {
         try {
             const reservationIds: number[] = [];
 
+            // TODO: api.post로 바꾸기
             for (const seat of chosenSeats) {
-                const url = `${API_BASE_URL}/reservations`;
-                const res = await fetch(url, {
-                    method: 'POST',
+                const res = await api.post(`${API_BASE_URL}/reservations`, {
+                    userId: user.userId,
+                    concertId: selectedConcert.id,
+                    seatId: seat.id,
+                    price: seat.price,
+                }, {
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-User-Id': (user.userId),
-                    },
-                    body: JSON.stringify({
-                        'userId': user.userId,
-                        'concertId': seat.id,
-                        'seatId': seat.seatNumber,
-                        'price': seat.price,
-                    })
+                        'X-User-Id': String(user.userId),
+                    }
                 });
 
-                if (!res.ok) {
-                    const txt = await res.text();
-                    throw new Error(txt || `예약 실패 (seat=${seat.id})`);
+                if (res.status !== 200 && res.status !== 201) {
+                    throw new Error(`예약 실패 (seat=${seat.id})`);
                 }
 
                 // ReservationController returns int id in body
-                const reservationId = await res.json();
+                const reservationId = res.data;
                 reservationIds.push(reservationId);
             }
 
