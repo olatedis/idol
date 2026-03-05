@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 @AllArgsConstructor
 public class PaymentEvent {
@@ -12,6 +14,7 @@ public class PaymentEvent {
     private String domain;
     private int targetId;
     private int amount;
+    private List<Integer> reservationIds;
 
 
     public String toJson() {
