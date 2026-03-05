@@ -79,10 +79,13 @@ const GroupPostDetailPage: React.FC = () => {
     // 댓글 삭제 상태 관리
     const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
 
-    // [추가] 댓글 수정 상태 관리
+    // 댓글 수정 상태 관리
     const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
     const [editingContent, setEditingContent] = useState("");
     const [updatingCommentId, setUpdatingCommentId] = useState<number | null>(null);
+
+    const reactionStorageKey = (pid: string | number, uid?: number | null) =>
+        `postReaction:${uid ?? "guest"}:${pid}`;
 
     const fetchDetail = async () => {
         if (!postId) throw new Error("postId가 없습니다.");
@@ -91,10 +94,19 @@ const GroupPostDetailPage: React.FC = () => {
         const res = await api.get(`/board/posts/${postId}`);
         const json = res.data as PostResponse;
 
+        // 상세 조회 시 myReaction이 비어있으면 localStorage값으로 보정
+        const key = reactionStorageKey(postId, user?.userId);
+        const stored = localStorage.getItem(key);
+
+        const fixedMyReaction =
+            (json as any)?.myReaction && (json as any).myReaction !== "NONE"
+                ? (json as any).myReaction
+                : (stored || "NONE");
+
         return {
             ...json,
             comments: Array.isArray(json.comments) ? json.comments : [],
-            myReaction: (json.myReaction || "NONE") as string,
+            myReaction: fixedMyReaction as string,
         };
     };
 
@@ -187,6 +199,10 @@ const GroupPostDetailPage: React.FC = () => {
             const res = await api.post(`/board/posts/${postId}/like`);
             const json = res.data as PostReactionResponse;
 
+            const key = reactionStorageKey(postId, user?.userId);
+            if ((json.myReaction || "NONE") === "NONE") localStorage.removeItem(key);
+            else localStorage.setItem(key, json.myReaction);
+
             setData((prev) => {
                 if (!prev) return prev;
                 return {
@@ -221,6 +237,10 @@ const GroupPostDetailPage: React.FC = () => {
         try {
             const res = await api.post(`/board/posts/${postId}/dislike`);
             const json = res.data as PostReactionResponse;
+
+            const key = reactionStorageKey(postId, user?.userId);
+            if ((json.myReaction || "NONE") === "NONE") localStorage.removeItem(key);
+            else localStorage.setItem(key, json.myReaction);
 
             setData((prev) => {
                 if (!prev) return prev;

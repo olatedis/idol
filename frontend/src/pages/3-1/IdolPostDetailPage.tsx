@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "../../stores/authStore";
-import { api } from "../../api/axios";
+import React, {useEffect, useMemo, useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
+import {useAuthStore} from "../../stores/authStore";
+import {api} from "../../api/axios";
 
 type CommentResponse = {
     commentId: number;
@@ -60,9 +60,9 @@ const formatDateToKST = (dateString: string) => {
 };
 
 const IdolPostDetailPage: React.FC = () => {
-    const { groupId, idolId, postId } = useParams();
+    const {groupId, idolId, postId} = useParams();
     const navigate = useNavigate();
-    const { accessToken, user } = useAuthStore();
+    const {accessToken, user} = useAuthStore();
 
     const [data, setData] = useState<PostResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -75,10 +75,13 @@ const IdolPostDetailPage: React.FC = () => {
     const [deletingPost, setDeletingPost] = useState(false);
     const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
 
-    // [추가] 댓글 수정 상태 관리
+    // 댓글 수정 상태 관리
     const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
     const [editingContent, setEditingContent] = useState("");
     const [updatingCommentId, setUpdatingCommentId] = useState<number | null>(null);
+
+    const reactionStorageKey = (pid: string | number, uid?: number | null) =>
+        `postReaction:${uid ?? "guest"}:${pid}`;
 
     const fetchDetail = async () => {
         if (!postId) throw new Error("postId가 없습니다.");
@@ -87,10 +90,18 @@ const IdolPostDetailPage: React.FC = () => {
         const res = await api.get(`/board/posts/${postId}`);
         const json = res.data as PostResponse;
 
+        const key = reactionStorageKey(postId, user?.userId);
+        const stored = localStorage.getItem(key);
+
+        const fixedMyReaction =
+            (json as any)?.myReaction && (json as any).myReaction !== "NONE"
+                ? (json as any).myReaction
+                : (stored || "NONE");
+
         return {
             ...json,
             comments: Array.isArray(json.comments) ? json.comments : [],
-            myReaction: (json.myReaction || "NONE") as string,
+            myReaction: fixedMyReaction as string,
         };
     };
 
@@ -177,6 +188,10 @@ const IdolPostDetailPage: React.FC = () => {
             const res = await api.post(`/board/posts/${postId}/like`);
             const json = res.data as PostReactionResponse;
 
+            const key = reactionStorageKey(postId, user?.userId);
+            if ((json.myReaction || "NONE") === "NONE") localStorage.removeItem(key);
+            else localStorage.setItem(key, json.myReaction);
+
             setData((prev) =>
                 prev
                     ? {
@@ -207,6 +222,10 @@ const IdolPostDetailPage: React.FC = () => {
             const res = await api.post(`/board/posts/${postId}/dislike`);
             const json = res.data as PostReactionResponse;
 
+            const key = reactionStorageKey(postId, user?.userId);
+            if ((json.myReaction || "NONE") === "NONE") localStorage.removeItem(key);
+            else localStorage.setItem(key, json.myReaction);
+
             setData((prev) =>
                 prev
                     ? {
@@ -236,7 +255,7 @@ const IdolPostDetailPage: React.FC = () => {
         setSubmittingComment(true);
 
         try {
-            await api.post(`/board/posts/${postId}/comments`, { content: commentInput.trim() });
+            await api.post(`/board/posts/${postId}/comments`, {content: commentInput.trim()});
             setCommentInput("");
 
             const detail = await fetchDetail();
@@ -319,7 +338,7 @@ const IdolPostDetailPage: React.FC = () => {
 
         try {
             // [중요] IdolPostDetailPage는 삭제 엔드포인트가 /board/comments/{id} 형태라서 동일하게 맞춤
-            await api.put(`/board/posts/comments/${editingCommentId}`, { content: trimmed });
+            await api.put(`/board/posts/comments/${editingCommentId}`, {content: trimmed});
             const detail = await fetchDetail();
             setData(detail);
 
@@ -381,7 +400,7 @@ const IdolPostDetailPage: React.FC = () => {
                 </div>
 
                 <div className="px-6 py-5 border-t border-gray-100">
-                    <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{ __html: data.content }} />
+                    <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{__html: data.content}}/>
 
                     <div className="mt-8 flex justify-center gap-10">
                         <button
@@ -451,7 +470,8 @@ const IdolPostDetailPage: React.FC = () => {
                             return (
                                 <div key={c.commentId} className="px-6 py-4">
                                     <div className="flex items-center justify-between gap-3">
-                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
+                                        <div
+                                            className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
                                             <span className="font-medium text-gray-800">{nickname}</span>
 
                                             {/* [수정] 댓글 시간 KST 표시(수정되면 updatedAt 표시) */}
