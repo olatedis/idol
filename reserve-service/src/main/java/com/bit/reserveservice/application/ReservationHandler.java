@@ -41,7 +41,8 @@ public class ReservationHandler {
                     "RESERVATION",
                     seatId,
                     price,
-                    Collections.singletonList(reservation.getId())
+                    Collections.singletonList(reservation.getId()),
+                    null
             );
 
             // 3. 이벤트 발행
