@@ -35,32 +35,40 @@ public class PasswordResetService {
                 "reset:token:" + token,
                 email,
                 RESET_TOKEN_EXPIRATION,
-                TimeUnit.MILLISECONDS
-        );
+                TimeUnit.MILLISECONDS);
 
         // 3. 이메일 발송
         String resetLink = "http://localhost:3000/reset-password?token=" + token; // 프론트엔드 주소
         String subject = "[Idol] 비밀번호 재설정 안내";
-        String content = String.format("""
-                <div style="font-family: 'Apple SD Gothic Neo', 'sans-serif' !important; width: 540px; height: 600px; border-top: 4px solid #555; margin: 100px auto; padding: 30px 0; box-sizing: border-box;">
-                    <h1 style="margin: 0; padding: 0 5px; font-size: 28px; font-weight: 400;">
-                        <span style="font-size: 15px; margin: 0 0 10px 3px;">Idol Vote</span><br />
-                        <span style="color: #555;">비밀번호 재설정</span> 안내입니다.
-                    </h1>
-                    <p style="font-size: 16px; line-height: 26px; margin-top: 50px; padding: 0 5px;">
-                        안녕하세요.<br />
-                        비밀번호 재설정을 요청하셔서 안내 메일을 보내드립니다.<br />
-                        아래 버튼을 클릭하여 새로운 비밀번호를 설정해 주세요.<br />
-                        (링크는 10분간 유효합니다.)
-                    </p>
-                    <a href="%s" style="display: inline-block; margin-top: 30px; padding: 15px 30px; background-color: #555; color: #fff; text-decoration: none; font-size: 16px; border-radius: 5px;">비밀번호 재설정하기</a>
-                </div>
-                """, resetLink);
+        String content = String.format(
+                """
+                        <div style="font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background-color: #FFF8DB; padding: 50px 0; width: 100%%; text-align: center;">
+                            <div style="background-color: #ffffff; max-width: 500px; margin: 0 auto; border-radius: 16px; padding: 40px 30px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); text-align: center; border-top: 5px solid #FF9292;">
+                                <h1 style="color: #FF9292; font-size: 24px; margin-bottom: 30px; font-weight: bold;">
+                                    비밀번호 재설정 안내
+                                </h1>
+                                <p style="font-size: 16px; color: #555; line-height: 1.6; margin-bottom: 20px;">
+                                    안녕하세요.<br>
+                                    비밀번호를 새롭게 설정하기 위해 발송된 메일입니다.<br>
+                                    아래 버튼을 클릭하여 안전하게 새로운 비밀번호를<br>
+                                    변경해 주시길 바랍니다.
+                                </p>
+                                <a href="%s" style="display: inline-block; margin-top: 20px; padding: 16px 32px; background-color: #FF9292; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 6px rgba(255, 146, 146, 0.3);">
+                                    비밀번호 재설정하기
+                                </a>
+                                <p style="font-size: 13px; color: #999; margin-top: 30px;">
+                                    *(해당 링크는 발송 후 10분 동안만 유효합니다.)<br>
+                                    *본인이 요청하지 않으셨다면 이 메일을 무시해 주세요.
+                                </p>
+                            </div>
+                        </div>
+                        """,
+                resetLink);
 
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            
+
             helper.setTo(email);
             helper.setSubject(subject);
             helper.setText(content, true);
