@@ -2,7 +2,6 @@ package com.bit.paymentservice.infra.kafka;
 
 import com.bit.paymentservice.domain.dto.PaymentCreateRequest;
 import com.bit.paymentservice.domain.dto.PaymentEvent;
-import com.bit.paymentservice.infra.persistence.PaymentRepository;
 import com.bit.paymentservice.service.PaymentService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 @AllArgsConstructor
 public class ReservationEventConsumer {
 
-    private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
 
     @KafkaListener(
@@ -32,7 +30,8 @@ public class ReservationEventConsumer {
                 event.getUserId(),
                 event.getAmount(),
                 event.getDomain(),
-                event.getTargetId()
+                event.getTargetId(),
+                event.getReservationIds()
         );
 
         paymentService.createPayment(payment);

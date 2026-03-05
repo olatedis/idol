@@ -11,6 +11,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+
 @Service
 @AllArgsConstructor
 @Slf4j
@@ -23,7 +25,7 @@ public class ReservationHandler {
     @Transactional
     public int saveDbReserve(int userId, int concertId, int seatId, int price) {
         try {
-            Reservation reservation = null;
+            Reservation reservation;
             // 1. DB 저장
             reservation = Reservation.create(userId, concertId, seatId, price);
             reservationRepository.save(reservation);
@@ -38,7 +40,8 @@ public class ReservationHandler {
                     null,
                     "RESERVATION",
                     seatId,
-                    price
+                    price,
+                    Collections.singletonList(reservation.getId())
             );
 
             // 3. 이벤트 발행
