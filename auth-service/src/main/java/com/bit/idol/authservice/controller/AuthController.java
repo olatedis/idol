@@ -10,6 +10,7 @@ import com.bit.idol.authservice.service.email.VerificationService;
 import com.bit.idol.authservice.service.social.SocialAuthService;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -124,6 +125,7 @@ public class AuthController {
         return ResponseEntity.ok(email);
     }
 
+    @CircuitBreaker(name = "user-service", fallbackMethod = "resetPasswordFallback")
     @PostMapping("/password/reset")
     public ResponseEntity<String> resetPassword(@RequestBody Map<String, String> request) {
         String token = request.get("token");
@@ -164,5 +166,10 @@ public class AuthController {
     public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
         log.error("Auth Error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ex.getMessage());
+    }
+
+    public ResponseEntity<String> resetPasswordFallback(Map<String, String> request, Throwable t) {
+        log.error("user-service 통신 장애 (비밀번호 변경 중): {}", t.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("현재 비밀번호 변경 서비스를 이용할 수 없습니다. 잠시 후 시도해주세요.");
     }
 }
