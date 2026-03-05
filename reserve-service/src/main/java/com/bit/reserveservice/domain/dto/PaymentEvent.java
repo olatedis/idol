@@ -15,6 +15,7 @@ public class PaymentEvent {
     private int targetId;
     private int amount;
     private List<Integer> reservationIds;
+    private List<Integer> seatIds;
 
 
     public String toJson() {

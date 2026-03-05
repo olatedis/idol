@@ -1,6 +1,6 @@
-package com.bit.paymentservice.domain.dto;
+package com.bit.concertservice.domain.dto;
 
-import com.bit.paymentservice.domain.enumtype.PaymentDomain;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -12,11 +12,12 @@ import java.util.List;
 public class PaymentEvent {
     private int userId;
     private String orderId;
-    private PaymentDomain domain;
+    private String domain;
     private int targetId;
     private int amount;
     private List<Integer> reservationIds;
     private List<Integer> seatIds;
+
 
     public String toJson() {
         try {
@@ -34,4 +35,3 @@ public class PaymentEvent {
         }
     }
 }
-

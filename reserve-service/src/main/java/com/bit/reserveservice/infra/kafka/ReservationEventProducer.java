@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -54,7 +56,28 @@ public class ReservationEventProducer {
                 return;
             }
 
-            // 각 예약의 상태를 PENDING에서 CONFIRMED로 변경
+            // seatIds 수집
+            List<Integer> seatIds = new ArrayList<>();
+            for (Integer reservationId : event.getReservationIds()) {
+                Reservation reservation = reservationRepository.findById(reservationId).orElse(null);
+                if (reservation != null) {
+                    seatIds.add(reservation.getSeatId());
+                }
+            }
+
+            // seatIds가 포함된 PaymentEvent 재발행 (concert-service용)
+            PaymentEvent eventWithSeats = new PaymentEvent(
+                    event.getUserId(),
+                    event.getOrderId(),
+                    event.getDomain(),
+                    event.getTargetId(),
+                    event.getAmount(),
+                    event.getReservationIds(),
+                    seatIds
+            );
+            kafkaTemplate.send("payment.completed.with.seats", eventWithSeats.toJson());
+
+            // 각 예약의 상태를 PENDING에서 COMPLETED로 변경
             for (Integer reservationId : event.getReservationIds()) {
                 try {
                     Reservation reservation = reservationRepository.findById(reservationId)
@@ -69,7 +92,7 @@ public class ReservationEventProducer {
                         continue;
                     }
 
-                    // CONFIRMED로 변경
+                    // COMPLETED로 변경
                     reservation.confirm();
                     reservationRepository.save(reservation);
 
@@ -94,7 +117,7 @@ public class ReservationEventProducer {
             boolean allProcessed = true;
             for (Integer reservationId : event.getReservationIds()) {
                 Reservation res = reservationRepository.findById(reservationId).orElse(null);
-                if (res == null || res.getStatus() != ReservationStatus.CONFIRMED) {
+                if (res == null || res.getStatus() != ReservationStatus.COMPLETED) {
                     allProcessed = false;
                     break;
                 }

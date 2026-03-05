@@ -38,6 +38,8 @@ public class Seat {
 
     private LocalDateTime lockedAt;
 
+    private Integer reservedBy;  // 결제 완료된 예약자
+
     protected Seat() {}
 
     public Seat(String seatNumber, SeatGrade grade, int price, Concert concert) {
@@ -57,6 +59,11 @@ public class Seat {
         this.locked = false;
         this.lockedBy = null;
         this.lockedAt = null;
+    }
+
+    public void reserve(int userId) {
+        this.reservedBy = userId;
+        this.unlock();  // 잠금 해제
     }
 
     public boolean isLocked() { return this.locked; }
