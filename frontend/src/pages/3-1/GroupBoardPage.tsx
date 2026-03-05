@@ -35,6 +35,28 @@ function resolveBoardType(type: BoardKind): string {
 
 const PAGE_SIZE = 20;
 
+// 날짜 문자열을 KST 기준으로 표시하기 위한 헬퍼 함수
+const formatDateToKST = (dateString: string) => {
+    if (!dateString) return "";
+
+    // 백엔드는 'YYYY-MM-DD HH:mm:ss' (UTC/GMT) 형태로 문자열을 전달한다고 가정
+    // JS Date 객체로 파싱 시 UTC로 인식시키기 위해 뒤에 'Z'를 추가
+    const utcDate = new Date(`${dateString.replace(" ", "T")}Z`);
+
+    if (isNaN(utcDate.getTime())) return dateString;
+
+    // KST는 UTC+9
+    const kstDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
+
+    const yy = String(kstDate.getUTCFullYear()).slice(2);
+    const mm = String(kstDate.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(kstDate.getUTCDate()).padStart(2, "0");
+    const hh = String(kstDate.getUTCHours()).padStart(2, "0");
+    const min = String(kstDate.getUTCMinutes()).padStart(2, "0");
+
+    return `${yy}.${mm}.${dd} ${hh}:${min}`;
+};
+
 const GroupBoardPage: React.FC = () => {
     const { groupId } = useParams();
     const [sp, setSp] = useSearchParams();
@@ -321,9 +343,7 @@ const GroupBoardPage: React.FC = () => {
                             ].join(" ")}
                         >
                             아이돌 게시판
-                            <span className={["transition-transform", idolOpen ? "rotate-180" : ""].join(" ")}>
-                                ▾
-                            </span>
+                            <span className={["transition-transform", idolOpen ? "rotate-180" : ""].join(" ")}>▾</span>
                         </button>
 
                         {idolOpen && (
@@ -391,7 +411,7 @@ const GroupBoardPage: React.FC = () => {
             {/* 검색창 */}
             <div className="flex justify-center">
                 <div className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
-                    {/* [수정] 드롭다운 제거: 현재 검색은 제목+내용 통합이므로 UI 혼동만 생김 */}
+
 
                     <input
                         value={inputQ}
@@ -457,7 +477,8 @@ const GroupBoardPage: React.FC = () => {
 
                             <div className="text-sm text-gray-700 tabular-nums">{p.authorId}</div>
 
-                            <div className="text-sm text-gray-600">{p.createdAt}</div>
+                            {/* 작성일은 KST 기준으로 표시 */}
+                            <div className="text-sm text-gray-600">{formatDateToKST(p.createdAt)}</div>
 
                             <div className="text-sm text-gray-700 text-right tabular-nums">{p.viewCount}</div>
 

@@ -41,6 +41,24 @@ type PostReactionResponse = {
     myReaction: string;
 };
 
+// [추가] 날짜 문자열을 KST 기준으로 표시하기 위한 헬퍼 함수
+const formatDateToKST = (dateString: string) => {
+    if (!dateString) return "";
+
+    const utcDate = new Date(`${dateString.replace(" ", "T")}Z`);
+    if (isNaN(utcDate.getTime())) return dateString;
+
+    const kstDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
+
+    const yy = String(kstDate.getUTCFullYear()).slice(2);
+    const mm = String(kstDate.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(kstDate.getUTCDate()).padStart(2, "0");
+    const hh = String(kstDate.getUTCHours()).padStart(2, "0");
+    const min = String(kstDate.getUTCMinutes()).padStart(2, "0");
+
+    return `${yy}.${mm}.${dd} ${hh}:${min}`;
+};
+
 const IdolPostDetailPage: React.FC = () => {
     const { groupId, idolId, postId } = useParams();
     const navigate = useNavigate();
@@ -56,6 +74,11 @@ const IdolPostDetailPage: React.FC = () => {
     const [reacting, setReacting] = useState(false);
     const [deletingPost, setDeletingPost] = useState(false);
     const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
+
+    // [추가] 댓글 수정 상태 관리
+    const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+    const [editingContent, setEditingContent] = useState("");
+    const [updatingCommentId, setUpdatingCommentId] = useState<number | null>(null);
 
     const fetchDetail = async () => {
         if (!postId) throw new Error("postId가 없습니다.");
@@ -230,6 +253,15 @@ const IdolPostDetailPage: React.FC = () => {
 
     const canDeleteComment = (c: CommentResponse) => {
         if (!user) return false;
+        if (c.isDeleted) return false;
+        if (user.role === "ADMIN") return true;
+        return Number(c.authorId) === Number(user.userId);
+    };
+
+    // [추가] 댓글 수정 권한(ADMIN 또는 작성자)
+    const canEditComment = (c: CommentResponse) => {
+        if (!user) return false;
+        if (c.isDeleted) return false;
         if (user.role === "ADMIN") return true;
         return Number(c.authorId) === Number(user.userId);
     };
@@ -244,7 +276,7 @@ const IdolPostDetailPage: React.FC = () => {
 
         setDeletingCommentId(commentId);
         try {
-            await api.delete(`/board/comments/${commentId}`);
+            await api.delete(`/board/posts/comments/${commentId}`);
             const detail = await fetchDetail();
             setData(detail);
         } catch (e: any) {
@@ -254,6 +286,51 @@ const IdolPostDetailPage: React.FC = () => {
             else alert(e?.response?.data?.message || e?.message || "댓글 삭제 실패");
         } finally {
             setDeletingCommentId(null);
+        }
+    };
+
+    // [추가] 댓글 수정 시작
+    const onClickEditComment = (c: CommentResponse) => {
+        if (!canEditComment(c)) return;
+        setEditingCommentId(c.commentId);
+        setEditingContent(c.isDeleted ? "" : (c.content ?? ""));
+    };
+
+    // [추가] 댓글 수정 취소
+    const onCancelEditComment = () => {
+        setEditingCommentId(null);
+        setEditingContent("");
+        setUpdatingCommentId(null);
+    };
+
+    // [추가] 댓글 수정 저장
+    const onSubmitEditComment = async () => {
+        if (!accessToken) return alert("로그인이 필요합니다.");
+        if (!editingCommentId) return;
+
+        const trimmed = editingContent.trim();
+        if (!trimmed) {
+            alert("내용을 입력하세요.");
+            return;
+        }
+
+        if (updatingCommentId !== null) return;
+        setUpdatingCommentId(editingCommentId);
+
+        try {
+            // [중요] IdolPostDetailPage는 삭제 엔드포인트가 /board/comments/{id} 형태라서 동일하게 맞춤
+            await api.put(`/board/posts/comments/${editingCommentId}`, { content: trimmed });
+            const detail = await fetchDetail();
+            setData(detail);
+
+            onCancelEditComment();
+        } catch (e: any) {
+            const status = e?.response?.status;
+            if (status === 401) alert("로그인이 필요합니다.");
+            else if (status === 403) alert("권한이 없습니다.");
+            else alert(e?.response?.data?.message || e?.message || "댓글 수정 실패");
+        } finally {
+            setUpdatingCommentId(null);
         }
     };
 
@@ -297,7 +374,8 @@ const IdolPostDetailPage: React.FC = () => {
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
                         <span className="font-medium text-gray-800">{data.authorId}</span>
-                        <span>{data.createdAt}</span>
+                        {/* [수정] 작성일 KST 표시 */}
+                        <span>{formatDateToKST(data.createdAt)}</span>
                         <span>조회 {data.viewCount}</span>
                     </div>
                 </div>
@@ -363,32 +441,95 @@ const IdolPostDetailPage: React.FC = () => {
                         {(data.comments ?? []).map((c) => {
                             const nickname = c.authorNickname ? c.authorNickname : String(c.authorId);
                             const showDelete = !c.isDeleted && canDeleteComment(c);
+                            const showEdit = !c.isDeleted && canEditComment(c);
+                            const isEditing = editingCommentId === c.commentId;
+
+                            // [추가] 수정 표시용 시간(수정됐으면 updatedAt 우선 표시)
+                            const hasUpdated = Boolean(c.updatedAt) && c.updatedAt !== c.createdAt;
+                            const timeLabel = hasUpdated ? formatDateToKST(c.updatedAt) : formatDateToKST(c.createdAt);
 
                             return (
                                 <div key={c.commentId} className="px-6 py-4">
                                     <div className="flex items-center justify-between gap-3">
                                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
                                             <span className="font-medium text-gray-800">{nickname}</span>
-                                            <span>{c.createdAt}</span>
+
+                                            {/* [수정] 댓글 시간 KST 표시(수정되면 updatedAt 표시) */}
+                                            <span>{timeLabel}</span>
+                                            {hasUpdated ? <span className="text-gray-400">수정됨</span> : null}
+
                                             {c.isDeleted ? <span className="text-red-500">삭제됨</span> : null}
                                         </div>
 
-                                        {showDelete && (
-                                            <button
-                                                type="button"
-                                                onClick={() => onClickDeleteComment(c.commentId)}
-                                                disabled={deletingCommentId === c.commentId}
-                                                className="px-3 py-1.5 rounded-full border border-red-200 text-xs font-semibold text-red-600
+                                        <div className="flex gap-2">
+                                            {/* [추가] 댓글 수정 버튼 */}
+                                            {showEdit && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onClickEditComment(c)}
+                                                    disabled={deletingCommentId === c.commentId || updatingCommentId !== null}
+                                                    className="px-3 py-1.5 rounded-full border border-gray-200 text-xs font-semibold text-gray-700
+                                   hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition disabled:opacity-60"
+                                                >
+                                                    수정
+                                                </button>
+                                            )}
+
+                                            {showDelete && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onClickDeleteComment(c.commentId)}
+                                                    disabled={deletingCommentId === c.commentId || updatingCommentId !== null}
+                                                    className="px-3 py-1.5 rounded-full border border-red-200 text-xs font-semibold text-red-600
                                    hover:bg-red-50 hover:border-red-300 active:scale-[0.99] transition disabled:opacity-60"
-                                            >
-                                                {deletingCommentId === c.commentId ? "삭제 중..." : "삭제"}
-                                            </button>
-                                        )}
+                                                >
+                                                    {deletingCommentId === c.commentId ? "삭제 중..." : "삭제"}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
 
-                                    <div className="mt-2 whitespace-pre-wrap text-gray-900">
-                                        {c.isDeleted ? "삭제된 댓글입니다." : c.content}
-                                    </div>
+                                    {/* [추가] 인라인 수정 UI */}
+                                    {isEditing ? (
+                                        <div className="mt-3 space-y-2">
+                                            <input
+                                                value={editingContent}
+                                                onChange={(e) => setEditingContent(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") onSubmitEditComment();
+                                                    if (e.key === "Escape") onCancelEditComment();
+                                                }}
+                                                placeholder="댓글을 수정하세요"
+                                                className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none"
+                                            />
+
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={onCancelEditComment}
+                                                    disabled={updatingCommentId !== null}
+                                                    className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
+                                                    hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition disabled:opacity-60"
+                                                >
+                                                    취소
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={onSubmitEditComment}
+                                                    disabled={updatingCommentId !== null}
+                                                    className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold
+                                                    hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
+                                                >
+                                                    {updatingCommentId === c.commentId ? "저장 중..." : "저장"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-2 whitespace-pre-wrap text-gray-900">
+                                            {c.isDeleted ? "삭제된 댓글입니다." : c.content}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
