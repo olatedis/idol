@@ -74,7 +74,7 @@ const IdolBoardPage: React.FC = () => {
         resetInfinite();
     };
 
-    // 검색 실행(버튼/엔터 전용): URL의 q를 갱신하고 무한스크롤 리셋
+    // 검색 실행(버튼/엔터 전용)
     const applySearch = () => {
         const next = new URLSearchParams(sp);
 
@@ -145,7 +145,6 @@ const IdolBoardPage: React.FC = () => {
             sort: sort === "top" ? "likeCount,desc" : "createdAt,desc",
         };
 
-        // search-service 연동: keyword가 있을 때만 전달 (서버 파라미터명: keyword)
         if (q && q.trim()) params.keyword = q.trim();
 
         const res = await api.get("/board/posts", { params });
@@ -160,7 +159,6 @@ const IdolBoardPage: React.FC = () => {
         setHasMore(!data.last && content.length > 0);
     };
 
-    // URL q가 바뀌면 입력창도 동기화 (뒤로가기/링크 공유 대응)
     useEffect(() => {
         setInputQ(q);
     }, [q]);
@@ -243,12 +241,7 @@ const IdolBoardPage: React.FC = () => {
                             className="px-3 py-2 rounded-full text-sm font-semibold border transition flex items-center gap-2 bg-[#1FBFB8] text-white border-[#1FBFB8]"
                         >
                             {selectedIdol ? idolLabel(selectedIdol) : "아이돌 게시판"}
-                            <span
-                                className={[
-                                    "transition-transform",
-                                    idolOpen ? "rotate-180" : "",
-                                ].join(" ")}
-                            >
+                            <span className={["transition-transform", idolOpen ? "rotate-180" : ""].join(" ")}>
                                 ▾
                             </span>
                         </button>
@@ -283,9 +276,7 @@ const IdolBoardPage: React.FC = () => {
                         onClick={() => setSort("latest")}
                         className={[
                             "px-3 py-2 rounded-full text-sm font-semibold border transition",
-                            sort === "latest"
-                                ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200 hover:bg-gray-200",
+                            sort === "latest" ? "bg-[#1FBFB8] text-white border-[#1FBFB8]" : "bg-white border-gray-200 hover:bg-gray-200",
                         ].join(" ")}
                     >
                         최신순
@@ -295,9 +286,7 @@ const IdolBoardPage: React.FC = () => {
                         onClick={() => setSort("top")}
                         className={[
                             "px-3 py-2 rounded-full text-sm font-semibold border transition",
-                            sort === "top"
-                                ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
-                                : "bg-white border-gray-200 hover:bg-gray-200",
+                            sort === "top" ? "bg-[#1FBFB8] text-white border-[#1FBFB8]" : "bg-white border-gray-200 hover:bg-gray-200",
                         ].join(" ")}
                     >
                         추천순
@@ -307,11 +296,6 @@ const IdolBoardPage: React.FC = () => {
 
             <div className="flex justify-center">
                 <div className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
-                    <select className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200">
-                        <option value="title">제목</option>
-                        <option value="title_content">제목+내용</option>
-                        <option value="content">내용</option>
-                    </select>
 
                     <input
                         value={inputQ}

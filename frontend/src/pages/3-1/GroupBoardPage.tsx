@@ -321,7 +321,9 @@ const GroupBoardPage: React.FC = () => {
                             ].join(" ")}
                         >
                             아이돌 게시판
-                            <span className={["transition-transform", idolOpen ? "rotate-180" : ""].join(" ")}>▾</span>
+                            <span className={["transition-transform", idolOpen ? "rotate-180" : ""].join(" ")}>
+                                ▾
+                            </span>
                         </button>
 
                         {idolOpen && (
@@ -389,14 +391,7 @@ const GroupBoardPage: React.FC = () => {
             {/* 검색창 */}
             <div className="flex justify-center">
                 <div className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
-                    <select
-                        defaultValue="title"
-                        className="h-12 px-3 text-sm bg-white outline-none border-r border-blue-200"
-                    >
-                        <option value="title">제목</option>
-                        <option value="title_content">제목+내용</option>
-                        <option value="content">내용</option>
-                    </select>
+                    {/* [수정] 드롭다운 제거: 현재 검색은 제목+내용 통합이므로 UI 혼동만 생김 */}
 
                     <input
                         value={inputQ}
