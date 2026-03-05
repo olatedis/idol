@@ -41,8 +41,8 @@ spring:
           filters:
             - name: RequestRateLimiter
               args:
-                redis-rate-limiter.replenishRate: 5   # 초당 5개 토큰 충전
-                redis-rate-limiter.burstCapacity: 10  # 최대 10개까지 버스트 허용
+                redis-rate-limiter.replenishRate: 30  # 초당 30개 토큰 충전
+                redis-rate-limiter.burstCapacity: 100 # 최대 100개까지 버스트 허용
                 key-resolver: "#{@ipKeyResolver}"     # IP 기준 제한 (비로그인 구간 유지)
         
         - id: user-service
