@@ -42,7 +42,7 @@ public class ReservationHandler {
                     seatId,
                     price,
                     Collections.singletonList(reservation.getId()),
-                    null
+                    Collections.singletonList(seatId)
             );
 
             // 3. 이벤트 발행
