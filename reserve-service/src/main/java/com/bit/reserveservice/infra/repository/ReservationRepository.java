@@ -12,4 +12,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Intege
     Optional<Reservation> findByUserIdAndSeatIdAndStatus(int userId, int seatId, ReservationStatus reservationStatus);
 
     List<Reservation> findByStatusAndCreatedAtBefore(ReservationStatus status, LocalDateTime cutoff);
+
+    Optional<Reservation> findByConcertIdAndSeatId(int concertId, int seatId);
 }
