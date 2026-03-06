@@ -29,6 +29,11 @@ spring:
     topic:
       notify-request: notify-request-topic # 추가됨
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
 # ?? ??? ??? ? (FeignClient?? ??? ??)
 internal:
   key: ${INTERNAL_KEY:INTERNAL_SECRET_KEY}

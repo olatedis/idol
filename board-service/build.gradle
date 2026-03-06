@@ -47,7 +47,10 @@ dependencies {
     // Kafka (notify-request-topic producer)
     implementation 'org.springframework.kafka:spring-kafka'
 
-    // Redis session (?�말 ???�만 ?��?)
+    // Redis (for StringRedisTemplate and user status caching checks)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    
+    // Redis session (?말 ???만 ??)
     implementation 'org.springframework.session:spring-session-data-redis'
 
     // OpenFeign

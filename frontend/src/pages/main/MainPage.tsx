@@ -14,7 +14,7 @@ const MainPage: React.FC = () => {
 
     const location = useLocation();
     const navigate = useNavigate();
-    const { login } = useAuthStore();
+    const { login, user } = useAuthStore();
 
     useEffect(() => {
         if (location.state?.scrollToLogin) {
@@ -200,67 +200,69 @@ const MainPage: React.FC = () => {
                 </section>
 
                 {/* Slide 4 (Login) */}
-                <section id="login-section" className="h-screen snap-end flex flex-col items-center content-center">
-                    <motion.div
-                        initial={{ opacity: 0, y: -80, skewY: 15 }}
-                        whileInView={{ opacity: 1, y: 0, skewY: 15 }}
-                        transition={{ duration: 0.5 }}
-                        viewport={{ once: true }}
-                        className="transform mt-[15%] w-full bg-idol-point p-4 mix-blend-normal z-30"
-                    ></motion.div>
-                    <div className="w-[80%] h-1/2  p-3 content-start bg-white rounded-full z-20">
+                {!user && (
+                    <section id="login-section" className="h-screen snap-end flex flex-col items-center content-center">
+                        <motion.div
+                            initial={{ opacity: 0, y: -80, skewY: 15 }}
+                            whileInView={{ opacity: 1, y: 0, skewY: 15 }}
+                            transition={{ duration: 0.5 }}
+                            viewport={{ once: true }}
+                            className="transform mt-[15%] w-full bg-idol-point p-4 mix-blend-normal z-30"
+                        ></motion.div>
+                        <div className="w-[80%] h-1/2  p-3 content-start bg-white rounded-full z-20">
 
-                        <p className="text-2xl text-center font-semibold my-8">
-                            지금 바로 시작해보세요.
-                        </p>
+                            <p className="text-2xl text-center font-semibold my-8">
+                                지금 바로 시작해보세요.
+                            </p>
 
-                        <div className="content-center items-center">
+                            <div className="content-center items-center">
 
-                            <div className="w-full justify-center items-center">
-                                <form onSubmit={handleLogin} className="flex flex-col items-center mt-6">
-                                    <input type="text"
-                                        id="username"
-                                        name="username"
-                                        placeholder="아이디를 입력하세요."
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        className="mx-[15%] w-[250px] mb-2 rounded-lg appearance-none border border-gray-300 py-2 px-4 bg-white placeholder-gray-400 text-base
-                                                focus:outline-none focus:ring-2 focus:ring-idol focus:border-transparent"/>
+                                <div className="w-full justify-center items-center">
+                                    <form onSubmit={handleLogin} className="flex flex-col items-center mt-6">
+                                        <input type="text"
+                                            id="username"
+                                            name="username"
+                                            placeholder="아이디를 입력하세요."
+                                            onChange={(e) => setUsername(e.target.value)}
+                                            className="mx-[15%] w-[250px] mb-2 rounded-lg appearance-none border border-gray-300 py-2 px-4 bg-white placeholder-gray-400 text-base
+                                                    focus:outline-none focus:ring-2 focus:ring-idol focus:border-transparent"/>
 
-                                    <input type="password"
-                                        id="password"
-                                        name="password"
-                                        placeholder="비밀번호를 입력하세요."
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="mx-[15%] w-[250px] rounded-lg appearance-none border border-gray-300 py-2 px-4 bg-white placeholder-gray-400 text-base
-                                                focus:outline-none focus:ring-2 focus:ring-idol focus:border-transparent"/>
-                                    <button
-                                        type="submit"
-                                        className="flex-1/2 mx-[15%] w-[250px] my-2  px-6 py-2 rounded-md bg-idol text-white hover:cursor-pointer">로그인
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsSignupOpen(true)}
-                                        className="flex-1/2 mx-[15%] w-[250px] mb-2  px-6 py-2 rounded-md bg-idol text-white hover:cursor-pointer">가입하기
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleKakaoLogin}
-                                        className="flex-1/2 mx-[15%] w-[250px] mb-2  px-6 py-2 rounded-md bg-yellow-300 text-black hover:cursor-pointer">👁️‍🗨️카카오 계정으로 로그인
-                                    </button>
-                                </form>
+                                        <input type="password"
+                                            id="password"
+                                            name="password"
+                                            placeholder="비밀번호를 입력하세요."
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="mx-[15%] w-[250px] rounded-lg appearance-none border border-gray-300 py-2 px-4 bg-white placeholder-gray-400 text-base
+                                                    focus:outline-none focus:ring-2 focus:ring-idol focus:border-transparent"/>
+                                        <button
+                                            type="submit"
+                                            className="flex-1/2 mx-[15%] w-[250px] my-2  px-6 py-2 rounded-md bg-idol text-white hover:cursor-pointer">로그인
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsSignupOpen(true)}
+                                            className="flex-1/2 mx-[15%] w-[250px] mb-2  px-6 py-2 rounded-md bg-idol text-white hover:cursor-pointer">가입하기
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleKakaoLogin}
+                                            className="flex-1/2 mx-[15%] w-[250px] mb-2  px-6 py-2 rounded-md bg-yellow-300 text-black hover:cursor-pointer">👁️‍🗨️카카오 계정으로 로그인
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
+
                         </div>
 
-                    </div>
-
-                    <motion.div
-                        initial={{ opacity: 0, y: -80, skewY: -20 }}
-                        whileInView={{ opacity: 1, y: 0, skewY: -20 }}
-                        transition={{ duration: 0.5 }}
-                        viewport={{ once: true }}
-                        className="transform  w-full bg-idol-point p-4 mix-blend-normal z-10"
-                    ></motion.div>
-                </section>
+                        <motion.div
+                            initial={{ opacity: 0, y: -80, skewY: -20 }}
+                            whileInView={{ opacity: 1, y: 0, skewY: -20 }}
+                            transition={{ duration: 0.5 }}
+                            viewport={{ once: true }}
+                            className="transform  w-full bg-idol-point p-4 mix-blend-normal z-10"
+                        ></motion.div>
+                    </section>
+                )}
 
             </main>
 

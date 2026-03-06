@@ -9,6 +9,7 @@ import com.bit.idol.userservice.dto.notification.TargetType;
 import com.bit.idol.userservice.dto.user.PasswordChangeDto;
 import com.bit.idol.userservice.dto.user.UserDto;
 import com.bit.idol.userservice.dto.user.UserUpdateDto;
+import com.bit.idol.userservice.dto.user.BanHistoryDto;
 import com.bit.idol.userservice.entity.BanHistory;
 import com.bit.idol.userservice.entity.Role;
 import com.bit.idol.userservice.entity.User;
@@ -34,6 +35,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -131,6 +134,10 @@ public class UserService {
         return userViewRepository.findAll().stream()
                 .map(this::convertViewToDto)
                 .collect(Collectors.toList());
+    }
+
+    public Page<UserDto> getAllUsersWithPaging(Pageable pageable) {
+        return userRepository.findAll(pageable).map(UserDto::fromEntity);
     }
 
     @Transactional
@@ -353,17 +360,17 @@ public class UserService {
 
         user.setReportCount(user.getReportCount() + 1);
 
-        if (user.getReportCount() >= 10 && user.getStatus() == UserStatus.ACTIVE) {
-            user.setStatus(UserStatus.SUSPENDED);
+        if (user.getReportCount() >= 5 && user.getStatus() == UserStatus.ACTIVE) {
+            user.setStatus(UserStatus.RESTRICTED);
 
             BanHistory history = BanHistory.builder()
                     .userId(userId)
-                    .status(UserStatus.SUSPENDED)
-                    .reason("신고 누적(10회)에 의한 자동 일시정지")
+                    .status(UserStatus.RESTRICTED)
+                    .reason("신고 누적(5회)에 의한 자동 활동 제한 (쓰기 금지)")
                     .build();
             banHistoryRepository.save(history);
 
-            log.warn("유저 자동 일시정지 처리: userId={}", userId);
+            log.warn("유저 자동 활동 제한 처리: userId={}", userId);
         }
 
         // 이벤트 발행
@@ -375,7 +382,7 @@ public class UserService {
 
     @Transactional
     @CachePut(value = "user:info:id", key = "#userId")
-    public UserDto updateUserStatus(int userId, UserStatus newStatus, String reason) {
+    public UserDto updateUserStatus(int userId, UserStatus newStatus, String reason, Integer durationDays) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
@@ -385,7 +392,12 @@ public class UserService {
         user.setStatus(newStatus);
 
         if (newStatus == UserStatus.ACTIVE) {
-            user.setReportCount(0);
+            user.setReportCount(0); // 징계 해제 시 카운트 초기화
+            user.setSuspendedUntil(null);
+        } else if (durationDays != null && durationDays > 0) {
+            user.setSuspendedUntil(LocalDateTime.now().plusDays(durationDays));
+        } else if (newStatus == UserStatus.BANNED) {
+            user.setSuspendedUntil(null); // 영구정지 등
         }
 
         BanHistory history = BanHistory.builder()
@@ -403,6 +415,14 @@ public class UserService {
         return UserDto.fromEntity(user);
     }
 
+    // 유저 제재 내역 리스트 조회
+    public List<BanHistoryDto> getUserBanHistory(int userId) {
+        return banHistoryRepository.findByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(BanHistoryDto::fromEntity)
+                .collect(Collectors.toList());
+    }
+
     private UserDto convertViewToDto(UserView view) {
         return UserDto.builder()
                 .userId(view.getId())
@@ -417,6 +437,7 @@ public class UserService {
                 .providerId(view.getProviderId())
                 .status(UserStatus.valueOf(view.getStatus()))
                 .reportCount(view.getReportCount())
+                .suspendedUntil(view.getSuspendedUntil())
                 .build();
     }
 

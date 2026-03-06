@@ -6,6 +6,7 @@ import com.bit.idol.userservice.dto.user.UserDto;
 import com.bit.idol.userservice.dto.user.UserInfoResponse;
 import com.bit.idol.userservice.dto.user.UserUpdateDto;
 import com.bit.idol.userservice.dto.user.UserWithdrawDto;
+import com.bit.idol.userservice.dto.user.BanHistoryDto;
 import com.bit.idol.userservice.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -72,7 +75,7 @@ public class UserController {
             @RequestParam("file") MultipartFile file) {
         // 모든 권한 허용
         log.info("프로필 이미지 변경 요청: userId={}, role={}", userId, role);
-        
+
         UserDto updatedUser = userService.updateProfileImage(userId, file);
         String fileUrl = updatedUser.getImgUrl();
 
@@ -100,5 +103,13 @@ public class UserController {
         userService.withdrawUser(userId, userWithdrawDto.getPassword());
         log.info("회원 탈퇴 완료: userId={}", userId);
         return ResponseEntity.ok("회원 탈퇴 완료");
+    }
+
+    // 내 제재 내역 조회
+    @GetMapping("/me/bans-history")
+    public ResponseEntity<List<BanHistoryDto>> getMyBanHistory(@RequestHeader("X-User-Id") int userId,
+            @RequestHeader("X-Role") String role) {
+        log.info("내 정지 내역 조회 요청: userId={}, role={}", userId, role);
+        return ResponseEntity.ok(userService.getUserBanHistory(userId));
     }
 }

@@ -14,6 +14,9 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Set;
 
@@ -25,6 +28,8 @@ public class StompHandler implements ChannelInterceptor {
     private final ConnectService connectService;
     private final ChatService chatService;
     private final UserFeignClient userFeignClient;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -108,6 +113,33 @@ public class StompHandler implements ChannelInterceptor {
 
         if (userId == null) {
             throw new RuntimeException("세션이 만료되었습니다.");
+        }
+
+        // Redis 조회: 유저 상태가 RESTRICTED 등 제재 상태이면 발송 차단
+        String userCacheKey = "user:info:id::" + userId;
+        String userJson = stringRedisTemplate.opsForValue().get(userCacheKey);
+        if (userJson != null) {
+            try {
+                JsonNode rootNode = objectMapper.readTree(userJson);
+                JsonNode statusNode = rootNode.has("status") ? rootNode.get("status")
+                        : (rootNode.isArray() && rootNode.size() > 1 && rootNode.get(1).has("status")
+                                ? rootNode.get(1).get("status")
+                                : null);
+
+                if (statusNode != null) {
+                    String status = statusNode.asText();
+                    if ("RESTRICTED".equals(status) || "SUSPENDED".equals(status) || "BANNED".equals(status)) {
+                        throw new RuntimeException("활동이 제한된 계정입니다.");
+                    }
+                }
+            } catch (RuntimeException e) {
+                if (e.getMessage().equals("활동이 제한된 계정입니다.")) {
+                    throw e;
+                }
+                log.warn("STOMP 유저 제재 상태 확인 중 오류 (계속 진행): {}", e.getMessage());
+            } catch (Exception e) {
+                log.warn("STOMP 유저 제재 상태 파싱 중 오류 (계속 진행): {}", e.getMessage());
+            }
         }
 
         // 2. 목적지(Destination) 파싱 -> idolId 추출
