@@ -472,7 +472,14 @@ const GroupBoardPage: React.FC = () => {
                             <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
 
                             <div className="min-w-0">
-                                <div className="text-sm font-semibold text-gray-900 truncate">{p.title}</div>
+                                <div className="text-sm font-semibold text-gray-900 truncate">
+                                    {p.title}
+                                    {Number((p as any).commentCount) > 0 && (
+                                        <span className="ml-3 text-gray-500 text-sm font-normal">
+                                            [ {Number((p as any).commentCount)} ]
+                                        </span>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="text-sm text-gray-700 tabular-nums">{p.authorId}</div>

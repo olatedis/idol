@@ -17,6 +17,8 @@ public class PostListResponse {
     private Integer likeCount;
     private Integer dislikeCount;
 
+    private Integer commentCount;
+
     private String createdAt;
     private String updatedAt;
 }
