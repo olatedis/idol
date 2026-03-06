@@ -11,18 +11,21 @@ import java.time.Duration;
 public class SeatLockRepository {
 
     private final RedisTemplate<String, String> redisTemplate;
+    private final int lockExpireMinutes;
 
-    public SeatLockRepository(RedisTemplate<String, String> redisTemplate) {
+    public SeatLockRepository(RedisTemplate<String, String> redisTemplate,
+                              @org.springframework.beans.factory.annotation.Value("${reservation.lock-expire-minutes:5}") int lockExpireMinutes) {
         this.redisTemplate = redisTemplate;
+        this.lockExpireMinutes = lockExpireMinutes;
     }
 
     public boolean lock(int concertId, int seatId, int userId) {
         String key = "seat:lock:%d:%d".formatted(concertId, seatId);
 
         Boolean success = redisTemplate.opsForValue()
-                .setIfAbsent(key, String.valueOf(userId), Duration.ofMinutes(2));
+                .setIfAbsent(key, String.valueOf(userId), Duration.ofMinutes(lockExpireMinutes));
 
-        log.info("좌석 락 시도: key={}, userId={}, success={}", key, userId, success);
+        log.info("좌석 락 시도: key={}, userId={}, success={}, ttlMinutes={}", key, userId, success, lockExpireMinutes);
         return Boolean.TRUE.equals(success);
     }
 
