@@ -5,6 +5,7 @@ import Header from "../Header";
 import ProfileTab from "./ProfileTab";
 import SubscriptionTab from "./SubscriptionTab";
 import PaymentHistoryTab from "./PaymentHistoryTab";
+import BanHistoryTab from "./BanHistoryTab";
 import AdminPage from "./AdminPage";
 import AgencyPage from "./AgencyPage";
 
@@ -27,7 +28,7 @@ const MyPage: React.FC = () => {
     const { accessToken } = useAuthStore();
 
     // UI State
-    const [activeTab, setActiveTab] = useState<"profile" | "subscription" | "payment" | "agency" | "admin">("profile");
+    const [activeTab, setActiveTab] = useState<"profile" | "subscription" | "payment" | "bans" | "agency" | "admin">("profile");
 
     // Data State
     const [userInfo, setUserInfo] = useState<UserMyPageDto | null>(null);
@@ -115,6 +116,15 @@ const MyPage: React.FC = () => {
                             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
                         )}
                     </button>
+                    <button
+                        className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "bans" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                        onClick={() => setActiveTab("bans")}
+                    >
+                        제재 이력
+                        {activeTab === "bans" && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
+                        )}
+                    </button>
                     {userInfo?.role === "AGENCY" && (
                         <button
                             className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "agency" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
@@ -151,6 +161,10 @@ const MyPage: React.FC = () => {
 
                     {activeTab === "payment" && (
                         <PaymentHistoryTab />
+                    )}
+
+                    {activeTab === "bans" && (
+                        <BanHistoryTab />
                     )}
 
                     {activeTab === "agency" && (
