@@ -38,12 +38,13 @@ public class UserDto {
     private String address;
     private Role role;
     private String imgUrl;
-    
+
     private String provider;
     private String providerId;
 
     private UserStatus status;
     private int reportCount;
+    private LocalDateTime suspendedUntil; // 일시 정지 해제 시간
 
     private LocalDateTime createdAt; // 가입일 추가
 
@@ -66,6 +67,7 @@ public class UserDto {
                 .providerId(user.getProviderId())
                 .status(user.getStatus())
                 .reportCount(user.getReportCount())
+                .suspendedUntil(user.getSuspendedUntil())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

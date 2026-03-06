@@ -31,5 +31,6 @@ public class UserView {
 
     private String status; // Enum.name() 저장
     private int reportCount;
+    private LocalDateTime suspendedUntil;
     private LocalDateTime createdAt;
 }

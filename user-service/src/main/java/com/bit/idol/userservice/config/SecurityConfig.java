@@ -19,8 +19,18 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션 사용 안
                                                                                                               // 함 (최적화)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/users/**", "/idols/**", "/groups/**").permitAll() // 회원가입, 아이돌 조회, 그룹 내 아이돌
-                                                                                             // 조회 등 허용
+                        .requestMatchers("/users/**", "/idols/**", "/groups/**", "/reports/**", "/admin/**").permitAll() // 회원가입,
+                                                                                                                         // 아이돌
+                                                                                                                         // 조회,
+                                                                                                                         // 그룹
+                                                                                                                         // 내
+                                                                                                                         // 아이돌
+                                                                                                                         // 조회,
+                                                                                                                         // 신고,
+                                                                                                                         // 관리자
+                                                                                                                         // API
+                                                                                                                         // 등
+                                                                                                                         // 허용
                         .requestMatchers("/internal/**").permitAll() // 내부 통신용 API 허용
                         .requestMatchers("/actuator/**").permitAll() // 상태 확인용
                         .anyRequest().authenticated() // 그 외 요청은 인증 필요

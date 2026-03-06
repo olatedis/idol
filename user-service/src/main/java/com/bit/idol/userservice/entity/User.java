@@ -12,9 +12,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users", indexes = {
-    @Index(name = "idx_email", columnList = "email"),
-    @Index(name = "idx_nickname", columnList = "nickname"),
-    @Index(name = "idx_provider", columnList = "provider, providerId") // 소셜 로그인 조회용 복합 인덱스
+        @Index(name = "idx_email", columnList = "email"),
+        @Index(name = "idx_nickname", columnList = "nickname"),
+        @Index(name = "idx_provider", columnList = "provider, providerId") // 소셜 로그인 조회용 복합 인덱스
 })
 @Getter
 @Setter
@@ -51,7 +51,7 @@ public class User {
     private Role role;
 
     // --- 소셜 로그인 필드 ---
-    private String provider;   // KAKAO, GOOGLE, NAVER
+    private String provider; // KAKAO, GOOGLE, NAVER
     private String providerId; // 소셜 서비스의 고유 ID
 
     // --- 신고 및 제재 필드 ---
@@ -63,6 +63,8 @@ public class User {
     @Column(nullable = false)
     @Builder.Default
     private int reportCount = 0; // 누적 신고 횟수
+
+    private LocalDateTime suspendedUntil; // 일시 정지/제한 해제 일시
 
     @CreationTimestamp
     @Column(updatable = false)
