@@ -354,6 +354,11 @@ const IdolBoardPage: React.FC = () => {
                             <div className="min-w-0">
                                 <div className="text-sm font-semibold truncate">
                                     {p.title}
+                                    {Number((p as any).commentCount) > 0 &&(
+                                        <span className="ml-3 text-gray-500 text-sm font-normal">
+                                            [ {Number((p as any).commentCount)} ]
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             <div className="text-sm tabular-nums">

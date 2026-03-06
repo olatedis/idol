@@ -468,6 +468,8 @@ public class PostService {
         PostListResponse res = new PostListResponse();
         BeanUtils.copyProperties(post, res);
 
+        res.setCommentCount(post.getCommentCount());
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         if (post.getCreatedAt() != null)
             res.setCreatedAt(post.getCreatedAt().format(formatter));

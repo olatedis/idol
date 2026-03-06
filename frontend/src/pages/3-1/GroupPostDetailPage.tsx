@@ -374,6 +374,22 @@ const GroupPostDetailPage: React.FC = () => {
         navigate(`./edit`);
     };
 
+    const goToList = () => {
+        if (!data?.groupId) return;
+
+        if (data.boardType === "GROUP_OFFICIAL") {
+            navigate(`/group/${data.groupId}/board?type=official`);
+            return;
+        }
+
+        if (data.boardType === "GROUP_FAN") {
+            navigate(`/group/${data.groupId}/board?type=fan`);
+            return;
+        }
+
+        navigate(`/group/${data.groupId}/board`);
+    };
+
     const onClickDelete = async () => {
         if (!postId) return;
         if (deleting) return;
@@ -385,7 +401,7 @@ const GroupPostDetailPage: React.FC = () => {
         try {
             await api.delete(`/board/posts/${postId}`);
             alert("삭제되었습니다.");
-            navigate(`../`);
+            goToList();
         } catch (e: any) {
             const status = e?.response?.status;
             if (status === 401) alert("로그인이 필요합니다.");
@@ -484,9 +500,9 @@ const GroupPostDetailPage: React.FC = () => {
                     <div className="mt-6 flex justify-center">
                         <button
                             type="button"
-                            onClick={() => navigate(-1)}
+                            onClick={goToList}
                             className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
-                         hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
+ hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
                         >
                             목록으로
                         </button>
