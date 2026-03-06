@@ -36,6 +36,11 @@ spring:
       payment-completed: payment.completed # 추가됨
       payment-requested: payment.requested # 추가됨
 
+# 예약 만료 설정
+reservation:
+  lock-expire-minutes: 5  # 5분 후 예약 만료
+  expire-check-ms: 30000  # 30초마다 체크
+
 eureka:
   client:
     service-url:
