@@ -82,6 +82,8 @@ function App() {
 
                 {/*    테스트중*/}
                 <Route path="/idol/:idolId/subscribe" element={<IdolSubscribe />} />
+                {/* 아이돌 구독 페이지 (그룹/아이돌 선택) */}
+                <Route path="/idol/subscribe" element={<IdolSubscribe />} />
 
                 {/* 결제 플로우 */}
                 <Route path="/payment" element={<PaymentPage />} />

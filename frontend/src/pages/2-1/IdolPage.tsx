@@ -119,6 +119,14 @@ const IdolPage: React.FC = () => {
 
             <main className="pt-[80px] px-6 pb-12">
 
+                {/* 아이돌 구독 페이지로 이동 */}
+                <div className="mb-6 text-right">
+                    <button
+                        onClick={() => navigate('/idol/subscribe')}
+                        className="px-4 py-2 rounded-full bg-idol-point text-white hover:opacity-90 transition"
+                    >아이돌 구독하기</button>
+                </div>
+
                 {/* 구독중인 그룹 */}
                 <section className="my-8 relative">
                     <div className="bg-idol rounded-lg py-3 text-center text-white font-semibold mb-8">

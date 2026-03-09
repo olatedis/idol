@@ -36,3 +36,20 @@ export const getAgencyRevenue = async (agencyId: number): Promise<any> => {
     const res = await api.get(`/payments/agency/${agencyId}/revenue`);
     return res.data;
 };;
+
+// fetch available groups for subscription
+export const fetchGroups = () => {
+    return api.get('/groups').then(r => r.data);
+};
+
+// fetch idols belonging to a specific group
+export const fetchGroupIdols = (groupId: number) => {
+    return api.get(`/groups/${groupId}/idols`).then(r => r.data);
+};
+
+// subscribe to an entire group (free)
+export const subscribeGroup = (userId: number, groupId: number) => {
+    const headers: any = {};
+    if (userId) headers['X-User-Id'] = userId;
+    return api.post('/subscriptions/groups', { groupId, autoRenew: true }, { headers }).then(r => r.data);
+};
