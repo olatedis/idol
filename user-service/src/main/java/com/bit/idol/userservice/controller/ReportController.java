@@ -81,7 +81,8 @@ public class ReportController {
         if (!"ADMIN".equals(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(page, size,
+                Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
         return ResponseEntity.ok(userService.getAllUsersWithPaging(pageable));
     }
 

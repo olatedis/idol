@@ -25,8 +25,8 @@ public class BanHistory {
     private int userId; // 제재 대상자 ID
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserStatus status; // 변경된 상태 (SUSPENDED, BANNED, ACTIVE)
+    @Column(length = 50, nullable = false)
+    private UserStatus status; // 변경된 상태 (SUSPENDED, BANNED, ACTIVE, RESTRICTED)
 
     private String reason; // 제재/해제 사유
 
