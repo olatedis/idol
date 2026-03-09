@@ -38,7 +38,21 @@ public class SubscriptionController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(subscriptionService.subscribe(userId, request));
     }
-
+    /**
+     * 디버그/결제취소용: PENDING 상태인 구독을 삭제한다.
+     */
+    @DeleteMapping("/{subscriptionId}")
+    public ResponseEntity<Void> deletePendingSubscription(
+            @RequestHeader("X-User-Id") int userId,
+            @PathVariable int subscriptionId
+    ) {
+        try {
+            subscriptionService.deletePending(userId, subscriptionId);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
     // 개인(아이돌) 구독 해지
     @PostMapping("/cancel")
     public ResponseEntity<Void> cancel(

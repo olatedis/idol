@@ -16,7 +16,7 @@ const IdolSubscribe: React.FC = () => {
     }, [idolId]);
 
     const handleChoose = (plan: 'MONTHLY' | 'ANNUAL') => {
-        navigate(`/payment`, { state: { idolId, plan } });
+        navigate(`/payment`, { state: { domain: 'SUBSCRIPTION', idolId, plan } });
     };
 
     return (

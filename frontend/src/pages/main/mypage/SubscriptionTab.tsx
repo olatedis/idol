@@ -19,7 +19,8 @@ type SubscriptionDto = {
 import { api } from "../../../api/axios";
 
 // 구독료 변수 설정 (나중에 변경 시 여기서 일괄 수정)
-const IDOL_SUBSCRIPTION_PRICE = 4500;
+// 실제 가격은 백엔드 SubscriptionPlan과 일치해야 합니다.
+const IDOL_SUBSCRIPTION_PRICE = 9900; // 월간
 const GROUP_SUBSCRIPTION_PRICE = 0;
 
 const formatKstDate = (dateString?: string) => {

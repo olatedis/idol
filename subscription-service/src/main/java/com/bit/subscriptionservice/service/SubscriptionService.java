@@ -165,6 +165,26 @@ public class SubscriptionService {
         log.info("개인(아이돌) 구독 해지 완료: userId={}, idolId={}", userId, request.getIdolId());
     }
 
+    /**
+     * 결제 실패 시 생성된 PENDING 상태 구독을 삭제한다.
+     */
+    @Transactional
+    public void deletePending(int userId, int subscriptionId) {
+        Subscription subscription = subscriptionRepository
+                .findById(subscriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("구독 정보가 없습니다."));
+
+        if (subscription.getUserId() != userId) {
+            throw new IllegalArgumentException("권한이 없습니다.");
+        }
+        if (subscription.getStatus() != SubscriptionStatus.PENDING) {
+            throw new IllegalArgumentException("삭제할 수 없는 상태의 구독입니다.");
+        }
+
+        subscriptionRepository.delete(subscription);
+        log.info("Pending 구독 삭제: subscriptionId={}, userId={}", subscriptionId, userId);
+    }
+
     // 내 개인(아이돌) 구독 목록 조회
     public List<SubscriptionDto> getMySubscriptions(int userId) {
         return subscriptionRepository
