@@ -6,25 +6,25 @@ import NoticeListPage from "./pages/main/notice/NoticeListPage.tsx";
 import NoticeDetailPage from "./pages/main/notice/NoticeDetailPage.tsx";
 import NoticeWritePage from "./pages/main/notice/NoticeWritePage.tsx";
 import NoticeEditPage from "./pages/main/notice/NoticeEditPage.tsx";
-import GroupServicePage from "./pages/3-1/GroupServicePage.tsx";
-import GroupBoardPage from "./pages/3-1/GroupBoardPage.tsx";
+import DefaultServicePage from "./pages/3-1/DefaultServicePage.tsx";
+import GroupBoardPage from "./pages/3-1/board/group/GroupBoardPage.tsx";
 import IdolPage from "./pages/2-1/IdolPage.tsx";
-import GroupPostWritePage from "./pages/3-1/GroupPostWritePage.tsx";
-import GroupPostDetailPage from "./pages/3-1/GroupPostDetailPage.tsx";
+import GroupPostWritePage from "./pages/3-1/board/group/GroupPostWritePage.tsx";
+import GroupPostDetailPage from "./pages/3-1/board/group/GroupPostDetailPage.tsx";
 import OAuthKakao from "./pages/auth/OAuthKakao.tsx";
 import IdolSubscribe from "./pages/payment/IdolSubscribe.tsx";
 import PaymentPage from "./pages/payment/PaymentPage.tsx";
 import PaymentComplete from "./pages/payment/PaymentComplete.tsx";
-import VotePage from "./pages/3-1/VotePage.tsx";
+import VotePage from "./pages/3-1/vote/VotePage.tsx";
 import ConcertPage from "./pages/3-1/concert/ConcertPage.tsx";
-import IdolBoardPage from "./pages/3-1/IdolBoardPage.tsx";
-import IdolPostWritePage from "./pages/3-1/IdolPostWritePage.tsx";
-import IdolPostDetailPage from "./pages/3-1/IdolPostDetailPage.tsx";
-import ChatPage from "./pages/3-1/ChatPage.tsx";
+import IdolBoardPage from "./pages/3-1/board/idol/IdolBoardPage.tsx";
+import IdolPostWritePage from "./pages/3-1/board/idol/IdolPostWritePage.tsx";
+import IdolPostDetailPage from "./pages/3-1/board/idol/IdolPostDetailPage.tsx";
+import ChatPage from "./pages/3-1/chat/ChatPage.tsx";
 import GlobalConcertPage from "./pages/main/GlobalConcertPage.tsx";
-import GroupPostEditPage from "./pages/3-1/GroupPostEditPage.tsx";
+import GroupPostEditPage from "./pages/3-1/board/group/GroupPostEditPage.tsx";
 import MyPage from "./pages/main/mypage/MyPage.tsx";
-import IdolPostEditPage from "./pages/3-1/IdolPostEditPage.tsx";
+import IdolPostEditPage from "./pages/3-1/board/idol/IdolPostEditPage.tsx";
 
 function App() {
     return (
@@ -46,7 +46,7 @@ function App() {
                 <Route path="/oauth/kakao" element={<OAuthKakao />} />
 
                 {/* 그룹 서비스 */}
-                <Route path="/group/:groupId" element={<GroupServicePage />}>
+                <Route path="/group/:groupId" element={<DefaultServicePage />}>
                     <Route index element={<Navigate to="board" replace />} />
 
                     {/* 그룹 게시판 */}

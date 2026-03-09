@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { useAuthStore } from "../../stores/authStore";
-import { api } from "../../api/axios";
+import { useAuthStore } from "../../../stores/authStore.ts";
+import { api } from "../../../api/axios.ts";
 import { Client } from "@stomp/stompjs";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";

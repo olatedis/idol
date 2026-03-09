@@ -1,8 +1,8 @@
 import { Editor } from "@toast-ui/react-editor";
 import React, { useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "../../stores/authStore";
-import { api } from "../../api/axios";
+import { useAuthStore } from "../../../../stores/authStore.ts";
+import { api } from "../../../../api/axios.ts";
 
 type PostWriteRequest = {
     boardType: string;

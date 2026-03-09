@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useAuthStore } from "../../stores/authStore";
-import { api } from "../../api/axios";
+import { useAuthStore } from "../../../../stores/authStore.ts";
+import { api } from "../../../../api/axios.ts";
 
 type BoardKind = "official" | "fan";
 

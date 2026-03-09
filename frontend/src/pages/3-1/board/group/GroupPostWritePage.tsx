@@ -1,8 +1,8 @@
 import { Editor } from "@toast-ui/react-editor";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { api } from "../../api/axios";
-import { useAuthStore } from "../../stores/authStore";
+import { api } from "../../../../api/axios.ts";
+import { useAuthStore } from "../../../../stores/authStore.ts";
 
 type BoardKind = "official" | "fan";
 
