@@ -15,4 +15,7 @@ public class NotificationItemResponse {
 
     public String redirectUrl;
     public String occurredAt;
+
+    public String readAt;
+    public boolean isRead;
 }

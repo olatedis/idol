@@ -91,11 +91,12 @@ public class PostEventListener {
 
         String redirectUrl;
         if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
-            redirectUrl = "/board/posts/" + post.getPostId()
-                    + "?boardType=IDOL_OFFICIAL&idolId=" + post.getIdolId();
+            redirectUrl = "/group/" + post.getGroupId()
+                    + "/idol/" + post.getIdolId()
+                    + "/board/" + post.getPostId();
         } else {
-            redirectUrl = "/board/posts/" + post.getPostId()
-                    + "?boardType=GROUP_OFFICIAL&groupId=" + post.getGroupId();
+            redirectUrl = "/group/" + post.getGroupId()
+                    + "/board/" + post.getPostId();
         }
         event.setRedirectUrl(redirectUrl);
 

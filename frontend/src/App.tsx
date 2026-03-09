@@ -62,7 +62,7 @@ function App() {
 
                     <Route path="idol/:idolId/board/write" element={<IdolPostWritePage />} />
                     <Route path="idol/:idolId/board/:postId" element={<IdolPostDetailPage />} />
-                    <Route path="idol/:idolId/board/:postId/edit" element={<IdolPostEditPage />} />"
+                    <Route path="idol/:idolId/board/:postId/edit" element={<IdolPostEditPage />} />
 
                     {/* 투표 페이지 */}
                     <Route path="vote" element={<VotePage />} />

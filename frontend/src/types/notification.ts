@@ -8,6 +8,7 @@ export type NotificationItem = {
     occurredAt: string;
     args?: Record<string, string> | null;
     isRead?: boolean;
+    readAt?: string | null;
 };
 
 export type NotificationListResponse = {
