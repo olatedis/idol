@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
-import { api } from "../../api/axios";
-import { useAuthStore } from "../../stores/authStore";
+import { api } from "../../../api/axios";
+import { useAuthStore } from "../../../stores/authStore";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
-import { showSuccessToast, showErrorToast, showConfirm } from "../../utils/alert";
+import { showSuccessToast, showErrorToast, showConfirm } from "../../../utils/alert";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 

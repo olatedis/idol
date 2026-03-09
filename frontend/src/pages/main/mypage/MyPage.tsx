@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore";
 import Swal from 'sweetalert2';
 import Header from "../Header";
@@ -9,6 +9,7 @@ import PaymentHistoryTab from "./PaymentHistoryTab";
 import BanHistoryTab from "./BanHistoryTab";
 import AdminPage from "./AdminPage";
 import AgencyPage from "./AgencyPage";
+import NotificationPreferenceTab from "./NotificationPreferenceTab";
 
 type UserMyPageDto = {
     userId: number;
@@ -28,9 +29,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const MyPage: React.FC = () => {
     const navigate = useNavigate();
     const { accessToken } = useAuthStore();
+    const location = useLocation();
 
     // UI State
-    const [activeTab, setActiveTab] = useState<"profile" | "subscription" | "payment" | "bans" | "agency" | "admin">("profile");
+    const [activeTab, setActiveTab] = useState<"profile" | "subscription" | "payment" | "bans" | "notification" | "agency" | "admin">("profile");
 
     // Data State
     const [userInfo, setUserInfo] = useState<UserMyPageDto | null>(null);
@@ -84,6 +86,14 @@ const MyPage: React.FC = () => {
         }
         fetchMyInfo();
     }, [accessToken, navigate]);
+
+    useEffect(() => {
+        const initialTab = location.state?.initialTab
+
+        if(initialTab === "notification") {
+            setActiveTab("notification");
+        }
+    }, [location.state]);
 
     if (loading) {
         return (
@@ -140,7 +150,16 @@ const MyPage: React.FC = () => {
                             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
                         )}
                     </button>
-                    {userInfo?.role === "AGENCY" && (
+                    <button
+                        className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "notification" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                        onClick={() => setActiveTab("notification")}
+                    >
+                        알림 설정
+                        {activeTab === "notification" && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
+                        )}
+                    </button>
+                        {userInfo?.role === "AGENCY" && (
                         <button
                             className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "agency" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                             onClick={() => setActiveTab("agency")}
@@ -180,6 +199,10 @@ const MyPage: React.FC = () => {
 
                     {activeTab === "bans" && (
                         <BanHistoryTab />
+                    )}
+
+                    {activeTab === "notification" && (
+                        <NotificationPreferenceTab />
                     )}
 
                     {activeTab === "agency" && (

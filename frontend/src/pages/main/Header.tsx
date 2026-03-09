@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,6 +12,9 @@ import type { IdolMessageStackPayload, NotificationItem } from "../../types/noti
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
+
+    const location = useLocation();
+
     const { user, logout, accessToken } = useAuthStore();
     const isLoggedIn = !!user || !!accessToken;
 
@@ -52,6 +55,11 @@ const Header: React.FC = () => {
     const closeMenu = () => setIsMenuOpen(false);
 
     const toggleNotification = () => setIsNotificationOpen((prev) => !prev);
+
+    const goToNotificationSetting = () => {
+        setIsNotificationOpen(false);
+        navigate("/mypage", {state: { initialTab: "notification" } })
+    }
 
     const handleNotificationClick = async (notification: NotificationItem) => {
         console.log("클릭 알림", notification);
@@ -219,7 +227,6 @@ const Header: React.FC = () => {
                 onConnected: () => {
                     console.log("알림 SSE 연결 성공");
                 },
-                // 수정
                 onNotification: (payload) => {
                     setNotifications((prev) => [
                         {
@@ -369,12 +376,41 @@ const Header: React.FC = () => {
                                             >
                                                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                                                     <div className="font-semibold text-gray-800">알림</div>
-                                                    <button
-                                                        onClick={handleReadAllNotifications}
-                                                        className="text-xs text-idol hover:text-idol-dark transition"
-                                                    >
-                                                        전체 읽음
-                                                    </button>
+
+                                                    <div className="flex items-center gap-3">
+                                                        <button
+                                                            onClick={handleReadAllNotifications}
+                                                            className="text-xs text-idol hover:text-idol-dark transition"
+                                                        >
+                                                            전체 읽음
+                                                        </button>
+
+                                                        <button
+                                                            onClick={goToNotificationSetting}
+                                                            className="text-gray-500 hover:text-idol transition"
+                                                            title="알림 설정"
+                                                        >
+                                                            <svg
+                                                                className="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M10.325 4.317a1.724 1.724 0 013.35 0 1.724 1.724 0 002.573 1.066 1.724 1.724 0 012.365.997 1.724 1.724 0 001.995 1.995 1.724 1.724 0 01.997 2.365 1.724 1.724 0 001.066 2.573 1.724 1.724 0 010 3.35 1.724 1.724 0 00-1.066 2.573 1.724 1.724 0 01-.997 2.365 1.724 1.724 0 00-1.995 1.995 1.724 1.724 0 01-2.365.997 1.724 1.724 0 00-2.573 1.066 1.724 1.724 0 01-3.35 0 1.724 1.724 0 00-2.573-1.066 1.724 1.724 0 01-2.365-.997 1.724 1.724 0 00-1.995-1.995 1.724 1.724 0 01-.997-2.365 1.724 1.724 0 00-1.066-2.573 1.724 1.724 0 010-3.35 1.724 1.724 0 001.066-2.573 1.724 1.724 0 01.997-2.365 1.724 1.724 0 001.995-1.995 1.724 1.724 0 012.365-.997 1.724 1.724 0 002.573-1.066z"
+                                                                />
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
                                                 </div>
 
                                                 <div
