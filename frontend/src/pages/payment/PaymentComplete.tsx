@@ -4,6 +4,8 @@ import Header from '../main/Header';
 import { confirmPayment, authorizeBillingKey } from '../../api/payment';
 import { useAuthStore } from "../../stores/authStore.ts";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const PaymentComplete: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -28,6 +30,25 @@ const PaymentComplete: React.FC = () => {
             console.warn('sessionStorage read failed', e);
         }
 
+        const cancelPendingReservations = async () => {
+            try {
+                const rawPending = sessionStorage.getItem('pendingReservations');
+                if (!rawPending) return;
+                const parsed = JSON.parse(rawPending) as { reservationIds?: number[] };
+                const ids = parsed?.reservationIds || [];
+                if (ids.length === 0) return;
+                for (const id of ids) {
+                    await fetch(`${API_BASE_URL}/reservations/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'X-User-Id': String(userId) }
+                    });
+                }
+                try { sessionStorage.removeItem('pendingReservations'); } catch {}
+            } catch (e) {
+                console.error('예약 취소 실패', e);
+            }
+        };
+
         if (type === 'billing') {
             // 빌링키 발급 처리
             const pendingIdolId = pending?.idolId;
@@ -43,7 +64,10 @@ const PaymentComplete: React.FC = () => {
                     try { sessionStorage.removeItem('pendingSubscription'); } catch { }
                     setStatus('success');
                 })
-                .catch(() => setStatus('failed'));
+                .catch(async () => {
+                    await cancelPendingReservations();
+                    setStatus('failed');
+                });
         } else {
             // 일반 결제 처리
             if (!paymentKey || !orderId) {
@@ -56,9 +80,13 @@ const PaymentComplete: React.FC = () => {
             confirmPayment({ paymentKey, orderId, amount }, userId)
                 .then(() => {
                     try { sessionStorage.removeItem('pendingSubscription'); } catch { }
+                    try { sessionStorage.removeItem('pendingReservations'); } catch {}
                     setStatus('success');
                 })
-                .catch(() => setStatus('failed'));
+                .catch(async () => {
+                    await cancelPendingReservations();
+                    setStatus('failed');
+                });
         }
     }, [location.search]);
 

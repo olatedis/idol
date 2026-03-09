@@ -12,9 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -31,60 +34,102 @@ public class ReservationEventProducer {
     private final ObjectMapper objectMapper;
 
 
+    @Transactional
     @KafkaListener(
             topics = "payment.completed",
             groupId = "reservation-service"
     )
-
     public void consume(String message) {
-        PaymentEvent event = PaymentEvent.fromJson(message);
-
-        if (!"RESERVATION".equals(event.getDomain())) {
-            return;
-        }
-
-        Reservation reservation =
-                reservationRepository
-                        .findByUserIdAndSeatIdAndStatus(
-                                event.getUserId(),
-                                event.getTargetId(),
-                                ReservationStatus.PENDING
-                        )
-                        .orElseThrow();
-
-        reservation.confirm();
-
-        // 예약 성공 후 잠금 해제
+        log.info("Kafka 메시지 수신: {}", message);
         try {
-            seatLockRepository.unlock(reservation.getConcertId(), reservation.getSeatId());
+            PaymentEvent event = PaymentEvent.fromJson(message);
+
+            // domain이 CONCERT인 경우만 처리 (콘서트 예약)
+            if (!"CONCERT".equals(event.getDomain())) {
+                log.info("미지원 도메인 필터링: domain={}", event.getDomain());
+                return;
+            }
+
+            // reservationIds가 없으면 처리 불가
+            if (event.getReservationIds() == null || event.getReservationIds().isEmpty()) {
+                log.warn("예약 ID가 없음: orderId={}, userId={}", event.getOrderId(), event.getUserId());
+                return;
+            }
+
+            // seatIds 수집
+            List<Integer> seatIds = new ArrayList<>();
+            for (Integer reservationId : event.getReservationIds()) {
+                Reservation reservation = reservationRepository.findById(reservationId).orElse(null);
+                if (reservation != null) {
+                    seatIds.add(reservation.getSeatId());
+                }
+            }
+
+            // seatIds가 포함된 PaymentEvent 재발행 (concert-service용)
+            PaymentEvent eventWithSeats = new PaymentEvent(
+                    event.getUserId(),
+                    event.getOrderId(),
+                    event.getDomain(),
+                    event.getTargetId(),
+                    event.getAmount(),
+                    event.getReservationIds(),
+                    seatIds
+            );
+            kafkaTemplate.send("payment.completed.with.seats", eventWithSeats.toJson());
+
+            // 각 예약의 상태를 PENDING에서 COMPLETED로 변경
+            for (Integer reservationId : event.getReservationIds()) {
+                try {
+                    Reservation reservation = reservationRepository.findById(reservationId)
+                            .orElseThrow(() -> new IllegalArgumentException(
+                                    String.format("예약을 찾을 수 없음: reservationId=%d", reservationId)
+                            ));
+
+                    // 예약 상태 확인
+                    if (reservation.getStatus() != ReservationStatus.PENDING) {
+                        log.warn("예약 상태 불일치: reservationId={}, status={}", 
+                                reservationId, reservation.getStatus());
+                        continue;
+                    }
+
+                    // COMPLETED로 변경
+                    reservation.confirm();
+                    reservationRepository.save(reservation);
+
+                    // 좌석 잠금 해제
+                    try {
+                        seatLockRepository.unlock(reservation.getConcertId(), reservation.getSeatId());
+                    } catch (Exception e) {
+                        log.warn("좌석 잠금 해제 실패: concert={}, seat={}, error={}", 
+                                reservation.getConcertId(), reservation.getSeatId(), e.getMessage());
+                    }
+
+                    log.info("예약 확정 완료: reservationId={}, userId={}, concertId={}, seatId={}",
+                            reservationId, reservation.getUserId(), 
+                            reservation.getConcertId(), reservation.getSeatId());
+
+                } catch (Exception e) {
+                    log.error("예약 처리 실패: reservationId={}, error={}", reservationId, e.getMessage());
+                }
+            }
+
+            // 모든 예약이 처리되면 알림 발행
+            boolean allProcessed = true;
+            for (Integer reservationId : event.getReservationIds()) {
+                Reservation res = reservationRepository.findById(reservationId).orElse(null);
+                if (res == null || res.getStatus() != ReservationStatus.COMPLETED) {
+                    allProcessed = false;
+                    break;
+                }
+            }
+
+            if (allProcessed) {
+                reservationRepository.findById(event.getReservationIds().getFirst()).ifPresent(this::publishReservationCreated);
+            }
+
         } catch (Exception e) {
-            log.warn("좌석 잠금 해제 실패: concert={}, seat={}, error={}", reservation.getConcertId(), reservation.getSeatId(), e.getMessage());
+            log.error("Kafka 메시지 처리 실패: error={}", e.getMessage(), e);
         }
-
-        // 알림 발행
-        publishReservationCreated(reservation);
-
-        log.info("좌석 결제 완료: userId={}, concert={}, seat={}",
-                reservation.getUserId(), reservation.getConcertId(), reservation.getSeatId());
-
-        /*
-        String uuid = UUID.randomUUID().toString();
-        Map<String,String> map = new HashMap<>();
-        map.put("userId", String.valueOf(event.getUserId()));
-        map.put("concertId", String.valueOf(reservation.getConcertId()));
-        map.put("seatId", String.valueOf(reservation.getSeatId()));
-        kafkaTemplate.send(
-                "RESERVATION_CREATED",
-                ReservationEvent.builder()
-                        .eventId(uuid)
-                        .targetType(ReservationEvent.TargetType.USER)
-                        .targetId(String.valueOf(reservation.getUserId()))
-                        .args(map)
-                        .occurredAt(LocalDateTime.now())
-                        .build()
-                        .toJson()
-        );
-        */
     }
 
     public void publishReservationCreated(Reservation reservation) {

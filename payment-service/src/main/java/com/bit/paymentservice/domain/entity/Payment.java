@@ -4,8 +4,10 @@ import com.bit.paymentservice.domain.enumtype.PaymentDomain;
 import com.bit.paymentservice.domain.enumtype.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Data
@@ -42,6 +44,9 @@ public class Payment {
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
+    
+    @Column(columnDefinition = "JSON")
+    private String reservationIds;  // JSON 배열 형식으로 예약 ID 저장
 
     private LocalDateTime createdAt;
     
@@ -50,7 +55,7 @@ public class Payment {
     protected Payment() {
     }
 
-    private Payment(String orderId, int targetId, int userId, int amount, PaymentDomain domain) {
+    private Payment(String orderId, int targetId, int userId, int amount, PaymentDomain domain, List<Integer> reservationIds) {
         this.orderId = orderId;
         this.targetId = targetId;
         this.userId = userId;
@@ -58,6 +63,7 @@ public class Payment {
         this.domain = domain;
         this.status = PaymentStatus.READY;
         this.createdAt = LocalDateTime.now();
+        this.reservationIds = serializeReservationIds(reservationIds);
     }
 
     public static Payment ready(
@@ -65,7 +71,8 @@ public class Payment {
             int amount,
             PaymentDomain domain,
             int targetId,
-            int userId
+            int userId,
+            List<Integer> reservationIds
     ) {
         Payment payment = new Payment();
         payment.orderId = orderId;
@@ -75,9 +82,31 @@ public class Payment {
         payment.status = PaymentStatus.READY;
         payment.userId = userId;
         payment.createdAt = LocalDateTime.now();
+        payment.reservationIds = serializeReservationIds(reservationIds);
         return payment;
     }
 
+    private static String serializeReservationIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) return "[]";
+        try {
+            return new ObjectMapper().writeValueAsString(ids);
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    public List<Integer> deserializeReservationIds() {
+        if (reservationIds == null || reservationIds.isEmpty() || "[]".equals(reservationIds)) {
+            return List.of();
+        }
+        try {
+            return new ObjectMapper().readValue(reservationIds,
+                    new com.fasterxml.jackson.core.type.TypeReference<>() {
+                    });
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
 
     public void complete(String paymentKey, int amount) {
         this.paymentKey = paymentKey;

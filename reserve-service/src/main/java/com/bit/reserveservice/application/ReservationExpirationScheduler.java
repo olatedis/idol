@@ -10,8 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,8 +22,7 @@ import java.util.List;
 public class ReservationExpirationScheduler {
 
     private final ReservationRepository reservationRepository;
-    private final SeatLockRepository seatLockRepository;
-    // private final ReservationEventProducer eventProducer; // 사용 안 함
+    private final ReservationExpirationHandler expirationHandler;
 
     @Value("${reservation.lock-expire-minutes:10}") // 기본값 10분 추가
     private int expireMinutes;
@@ -31,12 +30,16 @@ public class ReservationExpirationScheduler {
     @Scheduled(fixedDelayString = "${reservation.expire-check-ms:60000}")
     @SchedulerLock(name = "expirePendingReservations", lockAtLeastFor = "PT30S", lockAtMostFor = "PT50S")
     public void expirePendingReservations() {
+        log.info("예약 만료 체크 시작... (cutoff: {}분 전)", expireMinutes);
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(expireMinutes);
         
         // 트랜잭션 없이 조회 (OSIV 껐으므로 안전)
         List<Reservation> expired = reservationRepository.findByStatusAndCreatedAtBefore(ReservationStatus.PENDING, cutoff);
         
+        log.info("만료된 예약 조회 결과: {}건 (cutoff: {})", expired.size(), cutoff);
+        
         if (expired.isEmpty()) {
+            log.debug("만료된 예약 없음");
             return;
         }
 
@@ -44,33 +47,37 @@ public class ReservationExpirationScheduler {
 
         for (Reservation r : expired) {
             try {
-                // 개별 트랜잭션으로 처리
-                expireReservation(r.getId());
+                log.info("예약 만료 처리: reservationId={}, userId={}, createdAt={}", 
+                        r.getId(), r.getUserId(), r.getCreatedAt());
+                // 별도 클래스의 메서드 호출로 트랜잭션 프록시 적용
+                expirationHandler.expireReservation(r.getId());
             } catch (Exception e) {
                 log.error("예약 만료 처리 중 오류: reservationId={}, error={}", r.getId(), e.getMessage());
             }
         }
+        
+        log.info("예약 만료 체크 완료");
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void expireReservation(int reservationId) {
-        Reservation r = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("예약을 찾을 수 없습니다."));
+    // 수동 실행을 위한 메서드 (테스트용)
+    public void expirePendingReservationsManual() {
+        log.info("수동 예약 만료 체크 실행");
+        expirePendingReservations();
+    }
+}
 
-        if (r.getStatus() != ReservationStatus.PENDING) {
-            return; // 이미 처리됨
-        }
-
-        r.cancel();
-        reservationRepository.save(r);
-
-        // Redis 락 해제 (트랜잭션과 무관하게 실행)
-        try {
-            seatLockRepository.unlock(r.getConcertId(), r.getSeatId());
-        } catch (Exception e) {
-            log.warn("좌석 잠금 해제 실패(만료): concert={}, seat={}, error={}", r.getConcertId(), r.getSeatId(), e.getMessage());
-        }
-
-        log.info("만료로 예약 취소 처리 완료: reservationId={}, userId={}", r.getId(), r.getUserId());
+@RestController
+class ReservationExpirationController {
+    
+    private final ReservationExpirationScheduler scheduler;
+    
+    ReservationExpirationController(ReservationExpirationScheduler scheduler) {
+        this.scheduler = scheduler;
+    }
+    
+    @GetMapping("/admin/expire-reservations")
+    public String expireReservations() {
+        scheduler.expirePendingReservationsManual();
+        return "예약 만료 처리 실행됨";
     }
 }

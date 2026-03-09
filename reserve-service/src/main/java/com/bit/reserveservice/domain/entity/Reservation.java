@@ -8,12 +8,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(
-        name = "reservation",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"concertId", "seatId"})
-        }
-)
+@Table(name = "reservation")
 public class Reservation {
 
     @Id
@@ -50,11 +45,17 @@ public class Reservation {
     }
 
     public void confirm() {
-        this.status = ReservationStatus.CONFIRMED;
+        this.status = ReservationStatus.COMPLETED;
     }
 
     public void cancel() {
         this.status = ReservationStatus.CANCELED;
+    }
+
+    public void updateForReuse(int price) {
+        this.price = price;
+        this.status = ReservationStatus.PENDING;
+        this.createdAt = LocalDateTime.now();
     }
 }
 
