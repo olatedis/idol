@@ -57,3 +57,55 @@ export const readOneNotification = async (
 
     return response.json();
 };
+
+export type NotificationPreferenceResponse = {
+    userId: number;
+    chatEnabled: boolean;
+    voteEnabled: boolean;
+    ticketEnabled: boolean;
+    noticeEnabled: boolean;
+};
+
+export type UpdateNotificationPreferenceRequest = {
+    chatEnabled: boolean;
+    voteEnabled: boolean;
+    ticketEnabled: boolean;
+    noticeEnabled: boolean;
+};
+
+export const getNotificationPreference = async (
+    accessToken: string
+): Promise<NotificationPreferenceResponse> => {
+    const response = await fetch(`${API_BASE_URL}/notify/preferences`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error("알림 설정 조회 실패");
+    }
+
+    return response.json();
+};
+
+export const updateNotificationPreference = async (
+    accessToken: string,
+    body: UpdateNotificationPreferenceRequest
+): Promise<NotificationPreferenceResponse> => {
+    const response = await fetch(`${API_BASE_URL}/notify/preferences`, {
+        method: "PUT",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+        throw new Error("알림 설정 수정 실패");
+    }
+
+    return response.json();
+};
