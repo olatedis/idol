@@ -32,7 +32,14 @@ const PaymentPage: React.FC = () => {
             // 저장: 결제 완료/실패 시 사용할 대기중 예약 정보
             try { sessionStorage.setItem('pendingReservations', JSON.stringify({ reservationIds })); } catch (e) { /* ignore */ }
 
-            const ready = await createPaymentReady({ userId, amount: totalPrice, domain: 'CONCERT', targetId: concert.id, reservationIds });
+            const ready = await createPaymentReady({
+                userId,
+                amount: totalPrice,
+                domain: 'CONCERT',
+                targetId: concert.id,
+                agencyId: concert.agencyId,
+                reservationIds
+            });
 
             // 현재는 toss 결제만 연결. 추후 method에 따라 분기 가능.
             toss.requestPayment('카드', {
@@ -106,7 +113,7 @@ const PaymentPage: React.FC = () => {
                                                     headers: { 'X-User-Id': String(user.userId) }
                                                 });
                                             }
-                                            try { sessionStorage.removeItem('pendingReservations'); } catch {}
+                                            try { sessionStorage.removeItem('pendingReservations'); } catch { }
                                         }
                                     } catch (e) {
                                         console.error('예약 취소 실패', e);

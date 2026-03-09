@@ -33,12 +33,8 @@ public class ReservationEventProducer {
     private final SeatLockRepository seatLockRepository;
     private final ObjectMapper objectMapper;
 
-
     @Transactional
-    @KafkaListener(
-            topics = "payment.completed",
-            groupId = "reservation-service"
-    )
+    @KafkaListener(topics = "payment.completed", groupId = "reservation-service")
     public void consume(String message) {
         log.info("Kafka 메시지 수신: {}", message);
         try {
@@ -72,9 +68,9 @@ public class ReservationEventProducer {
                     event.getDomain(),
                     event.getTargetId(),
                     event.getAmount(),
+                    event.getAgencyId(), // agencyId 전달
                     event.getReservationIds(),
-                    seatIds
-            );
+                    seatIds);
             kafkaTemplate.send("payment.completed.with.seats", eventWithSeats.toJson());
 
             // 각 예약의 상태를 PENDING에서 COMPLETED로 변경
@@ -82,12 +78,11 @@ public class ReservationEventProducer {
                 try {
                     Reservation reservation = reservationRepository.findById(reservationId)
                             .orElseThrow(() -> new IllegalArgumentException(
-                                    String.format("예약을 찾을 수 없음: reservationId=%d", reservationId)
-                            ));
+                                    String.format("예약을 찾을 수 없음: reservationId=%d", reservationId)));
 
                     // 예약 상태 확인
                     if (reservation.getStatus() != ReservationStatus.PENDING) {
-                        log.warn("예약 상태 불일치: reservationId={}, status={}", 
+                        log.warn("예약 상태 불일치: reservationId={}, status={}",
                                 reservationId, reservation.getStatus());
                         continue;
                     }
@@ -100,12 +95,12 @@ public class ReservationEventProducer {
                     try {
                         seatLockRepository.unlock(reservation.getConcertId(), reservation.getSeatId());
                     } catch (Exception e) {
-                        log.warn("좌석 잠금 해제 실패: concert={}, seat={}, error={}", 
+                        log.warn("좌석 잠금 해제 실패: concert={}, seat={}, error={}",
                                 reservation.getConcertId(), reservation.getSeatId(), e.getMessage());
                     }
 
                     log.info("예약 확정 완료: reservationId={}, userId={}, concertId={}, seatId={}",
-                            reservationId, reservation.getUserId(), 
+                            reservationId, reservation.getUserId(),
                             reservation.getConcertId(), reservation.getSeatId());
 
                 } catch (Exception e) {
@@ -124,7 +119,8 @@ public class ReservationEventProducer {
             }
 
             if (allProcessed) {
-                reservationRepository.findById(event.getReservationIds().getFirst()).ifPresent(this::publishReservationCreated);
+                reservationRepository.findById(event.getReservationIds().getFirst())
+                        .ifPresent(this::publishReservationCreated);
             }
 
         } catch (Exception e) {
@@ -166,6 +162,5 @@ public class ReservationEventProducer {
         log.info("결제 요청 발행: domain={}, userId={}, targetId={}",
                 event.getDomain(), event.getUserId(), event.getTargetId());
     }
-
 
 }

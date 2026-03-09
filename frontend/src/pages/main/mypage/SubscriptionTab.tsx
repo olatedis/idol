@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Swal from 'sweetalert2';
 import { useAuthStore } from "../../../stores/authStore";
 
 type SubscriptionDto = {
@@ -12,6 +13,7 @@ type SubscriptionDto = {
     updatedAt: string;
     targetType: string;
     autoRenew: boolean;
+    status?: string; // Added for cancellation status
 };
 
 import { api } from "../../../api/axios";
@@ -19,6 +21,14 @@ import { api } from "../../../api/axios";
 // 구독료 변수 설정 (나중에 변경 시 여기서 일괄 수정)
 const IDOL_SUBSCRIPTION_PRICE = 4500;
 const GROUP_SUBSCRIPTION_PRICE = 0;
+
+const formatKstDate = (dateString?: string) => {
+    if (!dateString) return "-";
+    const parseString = dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString + 'Z';
+    const date = new Date(parseString);
+    const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+    return kstDate.toISOString().split('T')[0];
+};
 
 const SubscriptionTab: React.FC = () => {
     const { accessToken } = useAuthStore();
@@ -61,6 +71,7 @@ const SubscriptionTab: React.FC = () => {
                             createdAt: sub.startedAt || sub.createdAt || "",
                             updatedAt: sub.expiredAt || sub.updatedAt || "",
                             autoRenew: sub.autoRenew,
+                            status: sub.status || "ACTIVE", // Default status
                         };
                     })
                 );
@@ -87,6 +98,7 @@ const SubscriptionTab: React.FC = () => {
                         updatedAt: sub.expiredAt || sub.updatedAt || "",
                         targetType: "GROUP",
                         autoRenew: sub.autoRenew,
+                        status: sub.status || "ACTIVE", // Default status
                     };
                 });
 
@@ -105,28 +117,43 @@ const SubscriptionTab: React.FC = () => {
     }, [accessToken]);
 
     const handleCancelSubscription = async (sub: SubscriptionDto) => {
-        if (!window.confirm(`정말 '${sub.targetName}' 구독을 해지하시겠습니까?`)) {
-            return;
-        }
+        const result = await Swal.fire({
+            title: '구독을 해지하시겠습니까?',
+            text: `정말 '${sub.targetName}' 구독을 해지하시겠습니까?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#fe2a55',
+            cancelButtonColor: '#e5e7eb',
+            confirmButtonText: '해지',
+            cancelButtonText: '<span class="text-gray-700">취소</span>'
+        });
+
+        if (!result.isConfirmed) return;
 
         try {
-            const url = sub.targetType === "IDOL"
-                ? `/subscriptions/cancel`
-                : `/subscriptions/groups/cancel`;
-
-            const body = sub.targetType === "IDOL"
-                ? { idolId: sub.targetId }
-                : { groupId: sub.targetId };
-
-            await api.post(url, body);
-
-            alert("구독이 해지되었습니다.");
-
-            // 삭제 후 목록 다시 불러오기
-            const nextSubscriptions = subscriptions.filter(s => s.subscriptionId !== sub.subscriptionId);
-            setSubscriptions(nextSubscriptions);
+            await api.post(`/subscriptions/${sub.subscriptionId}/cancel`);
+            // UI를 즉시 갱신 (상태를 CANCELLED로 변경)
+            setSubscriptions((prev) =>
+                prev.map((item) =>
+                    item.subscriptionId === sub.subscriptionId
+                        ? { ...item, status: "CANCELLED", autoRenew: false } // Also set autoRenew to false
+                        : item
+                )
+            );
+            Swal.fire({
+                icon: 'success',
+                title: '해지 완료',
+                text: '구독이 해지되었습니다.',
+                timer: 1500,
+                showConfirmButton: false
+            });
         } catch (err: any) {
-            alert(err?.response?.data?.message || "구독 해지 중 오류가 발생했습니다.");
+            console.error("구독 해지 실패", err);
+            Swal.fire({
+                icon: 'error',
+                title: '해지 실패',
+                text: err?.response?.data?.message || "구독 해지 중 오류가 발생했습니다."
+            });
         }
     };
 
@@ -171,7 +198,7 @@ const SubscriptionTab: React.FC = () => {
                             </>
                         ) : (
                             <div className="text-xs font-semibold text-red-500">
-                                {(sub?.updatedAt || "").split('T')[0]} 까지 이용 가능
+                                {formatKstDate(sub?.updatedAt)} 까지 이용 가능
                             </div>
                         )}
                     </div>
@@ -182,7 +209,7 @@ const SubscriptionTab: React.FC = () => {
                 <div className="flex justify-between items-center">
                     <span>구독 기간</span>
                     <span className="text-gray-900 font-medium">
-                        {(sub?.createdAt || "").split('T')[0]} ~ {(sub?.updatedAt || "").split('T')[0]}
+                        {formatKstDate(sub?.createdAt)} ~ {formatKstDate(sub?.updatedAt)}
                     </span>
                 </div>
             </div>

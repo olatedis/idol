@@ -37,7 +37,10 @@ public class AuthService {
 
         // 2. 차단 여부 확인
         if ("BANNED".equals(user.getStatus())) {
-            throw new RuntimeException("계정이 정지되었습니다.");
+            throw new RuntimeException("계정이 영구 정지되었습니다.");
+        }
+        if ("SUSPENDED".equals(user.getStatus())) {
+            throw new RuntimeException("계정이 일시 정지되었습니다.");
         }
 
         // 3. 브루트 포스 방어 (Redis 기반 실패 횟수 잠금)
@@ -120,7 +123,7 @@ public class AuthService {
             throw new RuntimeException("사용자를 찾을 수 없습니다.");
         }
 
-        if ("BANNED".equals(user.getStatus())) {
+        if ("BANNED".equals(user.getStatus()) || "SUSPENDED".equals(user.getStatus())) {
             redisTemplate.delete("RT:" + userId);
             throw new RuntimeException("계정이 정지되었습니다.");
         }

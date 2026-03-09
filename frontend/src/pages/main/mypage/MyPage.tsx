@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore";
+import Swal from 'sweetalert2';
 import Header from "../Header";
 import ProfileTab from "./ProfileTab";
 import SubscriptionTab from "./SubscriptionTab";
@@ -19,6 +20,7 @@ type UserMyPageDto = {
     createdAt?: string;
     phone?: string;
     address?: string;
+    agencyId?: number;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -43,7 +45,11 @@ const MyPage: React.FC = () => {
             });
 
             if (res.status === 401) {
-                alert("인증이 만료되었습니다. 다시 로그인해주세요.");
+                Swal.fire({
+                    icon: 'warning',
+                    title: '인증 만료',
+                    text: '인증이 만료되었습니다. 다시 로그인해주세요.',
+                });
                 useAuthStore.getState().logout();
                 navigate("/");
                 return;
@@ -55,7 +61,11 @@ const MyPage: React.FC = () => {
             setUserInfo(data);
         } catch (e) {
             console.error(e);
-            alert("사용자 정보를 불러오는 중 오류가 발생했습니다.");
+            Swal.fire({
+                icon: 'error',
+                title: '오류',
+                text: '사용자 정보를 불러오는 중 오류가 발생했습니다.',
+            });
         } finally {
             setLoading(false);
         }
@@ -63,8 +73,13 @@ const MyPage: React.FC = () => {
 
     useEffect(() => {
         if (!accessToken) {
-            alert("로그인이 필요합니다.");
-            navigate("/");
+            Swal.fire({
+                icon: 'warning',
+                title: '로그인 필요',
+                text: '로그인이 필요합니다.'
+            }).then(() => {
+                navigate("/");
+            });
             return;
         }
         fetchMyInfo();
@@ -168,7 +183,7 @@ const MyPage: React.FC = () => {
                     )}
 
                     {activeTab === "agency" && (
-                        <AgencyPage />
+                        <AgencyPage agencyId={userInfo?.agencyId} />
                     )}
 
                     {activeTab === "admin" && (

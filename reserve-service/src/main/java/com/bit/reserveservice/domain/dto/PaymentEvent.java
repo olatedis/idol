@@ -16,9 +16,9 @@ public class PaymentEvent {
     private String domain;
     private int targetId;
     private int amount;
+    private int agencyId;
     private List<Integer> reservationIds;
     private List<Integer> seatIds;
-
 
     public String toJson() {
         try {
@@ -36,4 +36,3 @@ public class PaymentEvent {
         }
     }
 }
-

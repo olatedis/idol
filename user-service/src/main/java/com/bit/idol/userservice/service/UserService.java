@@ -18,6 +18,7 @@ import com.bit.idol.userservice.producer.NotificationProducer;
 import com.bit.idol.userservice.repository.BanHistoryRepository;
 import com.bit.idol.userservice.repository.UserRepository;
 import com.bit.idol.userservice.repository.UserViewRepository;
+import com.bit.idol.userservice.repository.AgencyAccountRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
@@ -46,6 +47,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserViewRepository userViewRepository;
     private final BanHistoryRepository banHistoryRepository;
+    private final AgencyAccountRepository agencyAccountRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final CacheManager cacheManager;
     private final S3Service s3Service;
@@ -66,6 +68,13 @@ public class UserService {
 
         int subscriptionCount = subscriptionFeignClient.getMySubscriptionCount(userId);
 
+        Integer agencyId = null;
+        if (user.getRole() == Role.AGENCY) {
+            agencyId = agencyAccountRepository.findByUser_Id(userId)
+                    .map(account -> account.getAgency().getId())
+                    .orElse(null);
+        }
+
         return UserMyPageDto.builder()
                 .id(user.getUserId())
                 .username(user.getUsername())
@@ -77,7 +86,9 @@ public class UserService {
                 .role(user.getRole())
                 .provider(user.getProvider())
                 .createdAt(user.getCreatedAt())
+                .status(user.getStatus())
                 .subscriptionCount(subscriptionCount)
+                .agencyId(agencyId)
                 .build();
     }
 
@@ -85,6 +96,13 @@ public class UserService {
         log.error("subscription-service 통신 장애 (마이페이지 구독 갯수 조회): {}", t.getMessage());
         UserDto user = getUserById(userId);
 
+        Integer agencyId = null;
+        if (user.getRole() == Role.AGENCY) {
+            agencyId = agencyAccountRepository.findByUser_Id(userId)
+                    .map(account -> account.getAgency().getId())
+                    .orElse(null);
+        }
+
         return UserMyPageDto.builder()
                 .id(user.getUserId())
                 .username(user.getUsername())
@@ -96,7 +114,9 @@ public class UserService {
                 .role(user.getRole())
                 .provider(user.getProvider())
                 .createdAt(user.getCreatedAt())
+                .status(user.getStatus())
                 .subscriptionCount(0)
+                .agencyId(agencyId)
                 .build();
     }
 

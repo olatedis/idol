@@ -39,6 +39,12 @@ const GroupPostWritePage: React.FC = () => {
     useEffect(() => {
         if (!accessToken || !user) return;
 
+        if (user.status === "RESTRICTED") {
+            alert("활동 제한 상태에서는 글을 작성할 수 없습니다.");
+            navigate(-1);
+            return;
+        }
+
         if (boardType === "GROUP_OFFICIAL" && user.role === "USER") {
             alert("권한이 없습니다. (그룹 공식 글쓰기는 USER가 작성할 수 없습니다.)");
             navigate(-1);
@@ -50,6 +56,11 @@ const GroupPostWritePage: React.FC = () => {
 
         if (!accessToken || !user) {
             setError("로그인이 필요합니다.");
+            return;
+        }
+
+        if (user.status === "RESTRICTED") {
+            setError("활동 제한 상태에서는 글을 작성할 수 없습니다.");
             return;
         }
 

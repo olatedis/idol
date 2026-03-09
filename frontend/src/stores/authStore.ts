@@ -31,6 +31,7 @@ interface User {
     email: string;
     nickname: string;
     role: string;
+    status: string;
 }
 
 interface AuthState {

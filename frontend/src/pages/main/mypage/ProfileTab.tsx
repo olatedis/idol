@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { api } from "../../../api/axios";
+import Swal from 'sweetalert2';
 
 interface UserMyPageDto {
     userId: number; // mapped from id in backend
@@ -65,10 +66,20 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
             await api.post("/users/me/image", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
-            alert("프로필 이미지가 변경되었습니다.");
+            Swal.fire({
+                icon: 'success',
+                title: '완료',
+                text: '프로필 이미지가 변경되었습니다.',
+                timer: 1500,
+                showConfirmButton: false
+            });
             onRefresh();
         } catch (err: any) {
-            alert(err?.response?.data?.message || "이미지 변경 실패");
+            Swal.fire({
+                icon: 'error',
+                title: '오류',
+                text: err?.response?.data?.message || "이미지 변경 에러가 발생했습니다."
+            });
         }
     };
 
@@ -86,43 +97,91 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
                     : Promise.resolve()
             ]);
 
-            alert("회원 정보가 수정되었습니다.");
+            Swal.fire({
+                icon: 'success',
+                title: '완료',
+                text: '회원 정보가 수정되었습니다.',
+                timer: 1500,
+                showConfirmButton: false
+            });
             setIsEditing(false);
             onRefresh();
         } catch (err: any) {
-            alert(err?.response?.data?.message || "정보 수정 실패");
+            Swal.fire({
+                icon: 'error',
+                title: '오류',
+                text: err?.response?.data?.message || "정보 수정에 실패했습니다."
+            });
         }
     };
 
     const handleChangePassword = async () => {
         if (pwdForm.newPassword.length < 8) {
-            alert("새 비밀번호는 8자 이상이어야 합니다.");
+            Swal.fire({
+                icon: 'warning',
+                text: '새 비밀번호는 8자 이상이어야 합니다.'
+            });
             return;
         }
         try {
             await api.post("/users/password/change", pwdForm);
-            alert("비밀번호가 성공적으로 변경되었습니다.");
+            Swal.fire({
+                icon: 'success',
+                title: '완료',
+                text: '비밀번호가 성공적으로 변경되었습니다.',
+                timer: 1500,
+                showConfirmButton: false
+            });
             setIsPwdModalOpen(false);
             setPwdForm({ currentPassword: "", newPassword: "" });
         } catch (err: any) {
-            alert(err?.response?.data?.message || "비밀번호 변경 실패");
+            Swal.fire({
+                icon: 'error',
+                title: '오류',
+                text: err?.response?.data?.message || "비밀번호 변경에 실패했습니다."
+            });
         }
     };
 
     const handleWithdraw = async () => {
-        if (!window.confirm("정말 탈퇴하시겠습니까? 관련 데이터가 모두 삭제됩니다.")) return;
+        const result = await Swal.fire({
+            title: '정말 탈퇴하시겠습니까?',
+            text: '관련 데이터가 모두 삭제되며 복구할 수 없습니다.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#fe2a55',
+            cancelButtonColor: '#e5e7eb',
+            confirmButtonText: '탈퇴',
+            cancelButtonText: '<span class="text-gray-700">취소</span>'
+        });
+
+        if (!result.isConfirmed) return;
 
         if (!userInfo.provider && !withdrawPwd) {
-            alert("비밀번호를 입력해주세요.");
+            Swal.fire({
+                icon: 'warning',
+                text: '비밀번호를 입력해주세요.'
+            });
             return;
         }
 
         try {
             await api.post("/users/withdraw", { password: userInfo.provider ? "" : withdrawPwd });
-            alert("회원 탈퇴가 완료되었습니다.");
-            window.location.href = "/"; // 메인으로 튕기면서 로그아웃 처리
+            Swal.fire({
+                icon: 'success',
+                title: '탈퇴 완료',
+                text: '회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                window.location.href = "/"; // 메인으로 튕기면서 로그아웃 처리
+            });
         } catch (err: any) {
-            alert(err?.response?.data?.message || "탈퇴 실패");
+            Swal.fire({
+                icon: 'error',
+                title: '오류',
+                text: err?.response?.data?.message || "회원 탈퇴에 실패했습니다."
+            });
         }
     };
 

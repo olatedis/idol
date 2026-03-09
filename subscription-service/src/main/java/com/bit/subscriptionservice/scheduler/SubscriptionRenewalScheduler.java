@@ -51,7 +51,7 @@ public class SubscriptionRenewalScheduler {
                 try {
                     renewSubscription(subscription);
                 } catch (Exception e) {
-                    log.error("구독 갱신 실패: subscriptionId={}, userId={}, error={}", 
+                    log.error("구독 갱신 실패: subscriptionId={}, userId={}, error={}",
                             subscription.getId(), subscription.getUserId(), e.getMessage(), e);
                 }
             }
@@ -68,7 +68,7 @@ public class SubscriptionRenewalScheduler {
      */
     @Transactional
     public void renewSubscription(Subscription subscription) {
-        log.info("구독 갱신 처리: subscriptionId={}, userId={}, idolId={}", 
+        log.info("구독 갱신 처리: subscriptionId={}, userId={}, idolId={}",
                 subscription.getId(), subscription.getUserId(), subscription.getIdolId());
 
         subscription.renew();
@@ -79,7 +79,7 @@ public class SubscriptionRenewalScheduler {
             try {
                 processBillingKeyPayment(subscription);
             } catch (Exception e) {
-                log.error("빌링키 결제 실패, 대체 결제 요청 이벤트 발행: subscriptionId={}, error={}", 
+                log.error("빌링키 결제 실패, 대체 결제 요청 이벤트 발행: subscriptionId={}, error={}",
                         subscription.getId(), e.getMessage(), e);
                 publishPaymentEvent(subscription);
             }
@@ -93,7 +93,7 @@ public class SubscriptionRenewalScheduler {
      * 빌링키를 사용한 자동결제 처리
      */
     private void processBillingKeyPayment(Subscription subscription) {
-        log.info("빌링키 자동결제 처리: subscriptionId={}, plan={}", 
+        log.info("빌링키 자동결제 처리: subscriptionId={}, plan={}",
                 subscription.getId(), subscription.getPlan());
 
         String orderId = "SUB-" + subscription.getId() + "-" + System.currentTimeMillis();
@@ -107,10 +107,9 @@ public class SubscriptionRenewalScheduler {
                     subscription.getIdolId(),
                     amount,
                     orderId,
-                    orderName
-            );
+                    orderName);
 
-            log.info("빌링키 자동결제 성공: subscriptionId={}, orderId={}, amount={}", 
+            log.info("빌링키 자동결제 성공: subscriptionId={}, orderId={}, amount={}",
                     subscription.getId(), orderId, amount);
 
             // 결제 성공 이벤트 발행 (선택사항)
@@ -119,12 +118,13 @@ public class SubscriptionRenewalScheduler {
                     null,
                     "SUBSCRIPTION_RENEWAL_BILLING_KEY",
                     subscription.getId(),
-                    amount
+                    amount,
+                    0 // dummy agencyId
             );
             kafkaTemplate.send("payment.completed", event.toJson());
 
         } catch (Exception e) {
-            log.error("빌링키 자동결제 실패: subscriptionId={}, orderId={}, amount={}, error={}", 
+            log.error("빌링키 자동결제 실패: subscriptionId={}, orderId={}, amount={}, error={}",
                     subscription.getId(), orderId, amount, e.getMessage(), e);
             throw e;
         }
@@ -139,11 +139,12 @@ public class SubscriptionRenewalScheduler {
                 null,
                 "SUBSCRIPTION_RENEWAL",
                 subscription.getId(),
-                subscription.getPlan().getAmount()
+                subscription.getPlan().getAmount(),
+                0 // dummy agencyId
         );
 
         kafkaTemplate.send("payment.requested", event.toJson());
-        log.info("구독 갱신 결제 요청 발행: subscriptionId={}, amount={}", 
+        log.info("구독 갱신 결제 요청 발행: subscriptionId={}, amount={}",
                 subscription.getId(), subscription.getPlan().getAmount());
     }
 
@@ -170,7 +171,7 @@ public class SubscriptionRenewalScheduler {
             for (Subscription subscription : expiredSubscriptions) {
                 subscription.expire();
                 subscriptionRepository.save(subscription);
-                log.info("구독 만료 처리: subscriptionId={}, userId={}", 
+                log.info("구독 만료 처리: subscriptionId={}, userId={}",
                         subscription.getId(), subscription.getUserId());
             }
 

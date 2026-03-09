@@ -46,7 +46,11 @@ const AdminHistoryModal: React.FC<AdminHistoryModalProps> = ({ userId, type, onC
     }, [userId, type]);
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleString("ko-KR");
+        if (!dateString) return "-";
+        const parseString = dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString + 'Z';
+        const date = new Date(parseString);
+        const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+        return kstDate.toISOString().replace('T', ' ').substring(0, 16);
     };
 
     return (

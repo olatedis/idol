@@ -15,26 +15,22 @@ import org.springframework.transaction.annotation.Transactional;
 @AllArgsConstructor
 public class ReservationEventConsumer {
 
-    private final PaymentService paymentService;
+        private final PaymentService paymentService;
 
-    @KafkaListener(
-            topics = "payment.requested",
-            groupId = "payment-service"
-    )
-    public void consume(String message) {
+        @KafkaListener(topics = "payment.requested", groupId = "payment-service")
+        public void consume(String message) {
 
-        PaymentEvent event =
-                PaymentEvent.fromJson(message);
+                PaymentEvent event = PaymentEvent.fromJson(message);
 
-        PaymentCreateRequest payment = new PaymentCreateRequest(
-                event.getUserId(),
-                event.getAmount(),
-                event.getDomain(),
-                event.getTargetId(),
-                event.getReservationIds()
-        );
+                PaymentCreateRequest payment = new PaymentCreateRequest(
+                                event.getUserId(),
+                                event.getAmount(),
+                                event.getDomain(),
+                                event.getTargetId(),
+                                event.getAgencyId(),
+                                event.getReservationIds());
 
-        paymentService.createPayment(payment);
+                paymentService.createPayment(payment);
 
-    }
+        }
 }

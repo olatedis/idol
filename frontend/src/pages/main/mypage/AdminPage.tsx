@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import AdminReportQueue from "./AdminReportQueue";
 import AdminUserSearch from "./AdminUserSearch";
+import AdminAgencyTab from "./AdminAgencyTab";
 
 const AdminPage: React.FC = () => {
-    const [subTab, setSubTab] = useState<"reports" | "search">("reports");
+    const [subTab, setSubTab] = useState<"reports" | "search" | "agencies">("reports");
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -32,12 +33,19 @@ const AdminPage: React.FC = () => {
                 >
                     유저 검색
                 </button>
+                <button
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${subTab === "agencies" ? "text-idol border-b-2 border-idol" : "text-gray-500 hover:text-gray-700"}`}
+                    onClick={() => setSubTab("agencies")}
+                >
+                    소속사 관리
+                </button>
             </div>
 
             {/* 컨텐츠 영역 */}
             <div className="pt-2">
                 {subTab === "reports" && <AdminReportQueue />}
                 {subTab === "search" && <AdminUserSearch />}
+                {subTab === "agencies" && <AdminAgencyTab />}
             </div>
         </div>
     );

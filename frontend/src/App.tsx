@@ -87,7 +87,6 @@ function App() {
                 <Route path="/payment" element={<PaymentPage />} />
                 <Route path="/payment/complete" element={<PaymentComplete />} />
 
-
             </Routes>
         </BrowserRouter>
     );

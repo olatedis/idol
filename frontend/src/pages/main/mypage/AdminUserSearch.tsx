@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../../../api/axios";
 import AdminHistoryModal from "./AdminHistoryModal";
+import Swal from 'sweetalert2';
 
 interface AdminUserDto {
     userId: number;
@@ -39,13 +40,15 @@ const AdminUserSearch: React.FC = () => {
             setPaginatedUsers(res.data.content);
             setTotalPages(res.data.totalPages);
 
-            const initialForms: Record<number, any> = {};
-            res.data.content.forEach((u: AdminUserDto) => {
-                if (!actionForms[u.userId]) {
-                    initialForms[u.userId] = { newStatus: u.status === 'ACTIVE' ? "SUSPENDED" : "ACTIVE", durationDays: 7, reason: "" };
-                }
+            setActionForms(prev => {
+                const updated = { ...prev };
+                res.data.content.forEach((u: AdminUserDto) => {
+                    if (!updated[u.userId]) {
+                        updated[u.userId] = { newStatus: u.status === 'ACTIVE' ? "SUSPENDED" : "ACTIVE", durationDays: 7, reason: "" };
+                    }
+                });
+                return updated;
             });
-            setActionForms(prev => ({ ...prev, ...initialForms }));
         } catch (err) {
             console.error("Failed to fetch paginated users", err);
         } finally {
@@ -70,11 +73,15 @@ const AdminUserSearch: React.FC = () => {
         try {
             const res = await api.get(`/admin/users/search?keyword=${encodeURIComponent(keyword)}`);
             setUsers(res.data);
-            const initialForms: Record<number, any> = {};
-            res.data.forEach((u: AdminUserDto) => {
-                initialForms[u.userId] = { newStatus: u.status === 'ACTIVE' ? "SUSPENDED" : "ACTIVE", durationDays: 7, reason: "" };
+            setActionForms(prev => {
+                const updated = { ...prev };
+                res.data.forEach((u: AdminUserDto) => {
+                    if (!updated[u.userId]) {
+                        updated[u.userId] = { newStatus: u.status === 'ACTIVE' ? "SUSPENDED" : "ACTIVE", durationDays: 7, reason: "" };
+                    }
+                });
+                return updated;
             });
-            setActionForms(initialForms);
         } catch (err) {
             console.error("Search failed", err);
         } finally {
@@ -99,7 +106,10 @@ const AdminUserSearch: React.FC = () => {
     const handleApplyAction = async (userId: number) => {
         const form = actionForms[userId];
         if (!form.reason) {
-            alert("상태 변경 사유를 입력해주세요.");
+            Swal.fire({
+                icon: 'warning',
+                text: '상태 변경 사유를 입력해주세요.'
+            });
             return;
         }
 
@@ -110,20 +120,34 @@ const AdminUserSearch: React.FC = () => {
                 reason: form.reason,
                 durationDays: form.newStatus === "SUSPENDED" ? (form.durationDays === "" ? null : form.durationDays) : null
             });
-            alert("상태가 변경되었습니다.");
+            Swal.fire({
+                icon: 'success',
+                title: '완료',
+                text: '상태가 변경되었습니다.',
+                timer: 1500,
+                showConfirmButton: false
+            });
             if (hasSearched) {
                 handleSearch(); // 재검색
             } else {
                 fetchPaginatedUsers(currentPage); // 현재 페이지 재로딩
             }
         } catch (err: any) {
-            alert(err?.response?.data?.message || "상태 변경에 실패했습니다.");
+            console.error("상태 변경 에러", err);
+            Swal.fire({
+                icon: 'error',
+                title: '오류',
+                text: err?.response?.data?.message || "상태 변경에 실패했습니다."
+            });
         }
     };
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return "-";
-        return new Date(dateString).toLocaleString("ko-KR");
+        const parseString = dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString + 'Z';
+        const date = new Date(parseString);
+        const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+        return kstDate.toISOString().replace('T', ' ').substring(0, 16);
     };
 
     const displayUsers = hasSearched ? users : paginatedUsers;
@@ -203,7 +227,7 @@ const AdminUserSearch: React.FC = () => {
                                             <div className="flex space-x-2">
                                                 <select
                                                     className="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-idol"
-                                                    value={actionForms[u.userId]?.newStatus}
+                                                    value={actionForms[u.userId]?.newStatus || "ACTIVE"}
                                                     onChange={(e) => handleActionChange(u.userId, "newStatus", e.target.value)}
                                                 >
                                                     <option value="ACTIVE">활성 (ACTIVE)</option>
@@ -211,10 +235,10 @@ const AdminUserSearch: React.FC = () => {
                                                     <option value="RESTRICTED">제한 (RESTRICTED)</option>
                                                     <option value="BANNED">영구정지 (BANNED)</option>
                                                 </select>
-                                                {actionForms[u.userId]?.newStatus === "SUSPENDED" && (
+                                                {(actionForms[u.userId]?.newStatus || "ACTIVE") === "SUSPENDED" && (
                                                     <select
                                                         className="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-idol"
-                                                        value={actionForms[u.userId]?.durationDays}
+                                                        value={actionForms[u.userId]?.durationDays ?? 7}
                                                         onChange={(e) => handleActionChange(u.userId, "durationDays", e.target.value === "" ? "" : Number(e.target.value))}
                                                     >
                                                         <option value={1}>1일</option>
@@ -225,12 +249,12 @@ const AdminUserSearch: React.FC = () => {
                                                     </select>
                                                 )}
                                             </div>
-                                            <div className="flex space-x-2">
+                                            <div className="flex space-x-2 mt-2">
                                                 <input
                                                     type="text"
                                                     placeholder="변경 사유 입력"
                                                     className="border border-gray-300 rounded px-2 py-1 text-xs flex-1 focus:outline-none focus:border-idol"
-                                                    value={actionForms[u.userId]?.reason}
+                                                    value={actionForms[u.userId]?.reason || ""}
                                                     onChange={(e) => handleActionChange(u.userId, "reason", e.target.value)}
                                                 />
                                                 <button

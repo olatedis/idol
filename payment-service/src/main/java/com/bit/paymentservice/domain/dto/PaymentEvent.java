@@ -17,6 +17,7 @@ public class PaymentEvent {
     private PaymentDomain domain;
     private int targetId;
     private int amount;
+    private int agencyId;
     private List<Integer> reservationIds;
     private List<Integer> seatIds;
 
@@ -36,4 +37,3 @@ public class PaymentEvent {
         }
     }
 }
-

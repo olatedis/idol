@@ -92,4 +92,21 @@ public class PaymentController {
         log.info("내 결제 내역 전체 목록 조회 컨트롤러 진입: userId={}", userId);
         return ResponseEntity.ok(paymentService.findMyPayments(userId));
     }
+
+    @GetMapping("/agency/{agencyId}/revenue")
+    public ResponseEntity<AgencyRevenueDto> getAgencyRevenue(
+            @RequestHeader(value = "X-Role", required = false) String role,
+            @PathVariable int agencyId) {
+        if (!"ADMIN".equals(role) && !"AGENCY".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        long total = paymentRepository.sumAmountByAgencyIdAndStatusCompleted(agencyId);
+        long concert = paymentRepository.sumAmountByAgencyIdAndStatusCompletedAndDomain(agencyId,
+                com.bit.paymentservice.domain.enumtype.PaymentDomain.CONCERT);
+        long subscription = paymentRepository.sumAmountByAgencyIdAndStatusCompletedAndDomain(agencyId,
+                com.bit.paymentservice.domain.enumtype.PaymentDomain.SUBSCRIPTION);
+
+        AgencyRevenueDto dto = new AgencyRevenueDto(agencyId, total, concert, subscription);
+        return ResponseEntity.ok(dto);
+    }
 }

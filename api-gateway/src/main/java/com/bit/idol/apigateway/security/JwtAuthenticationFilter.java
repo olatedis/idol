@@ -18,6 +18,7 @@ import reactor.core.publisher.Mono;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 
 @Slf4j
 @Component
@@ -25,10 +26,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final JwtTokenProvider jwtTokenProvider;
     private final List<String> whiteListPath;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
+    private final ReactiveStringRedisTemplate redisTemplate;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, JwtProperties jwtProperties) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, JwtProperties jwtProperties,
+            ReactiveStringRedisTemplate redisTemplate) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.whiteListPath = jwtProperties.getWhiteListPath();
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -91,6 +95,20 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         log.info("User authenticated: userId={}, username={}, role={}", userId, username, role);
 
+        return redisTemplate.opsForValue().get("user:info:id::" + userId)
+                .flatMap(userJson -> {
+                    if (userJson.contains("\"status\":\"SUSPENDED\"") || userJson.contains("\"status\":\"BANNED\"")) {
+                        log.warn("Access denied for suspended/banned user: {}", userId);
+                        exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                        return exchange.getResponse().setComplete();
+                    }
+                    return mutateAndForward(exchange, chain, userId, username, nickname, role);
+                })
+                .switchIfEmpty(Mono.defer(() -> mutateAndForward(exchange, chain, userId, username, nickname, role)));
+    }
+
+    private Mono<Void> mutateAndForward(ServerWebExchange exchange, GatewayFilterChain chain, String userId,
+            String username, String nickname, String role) {
         ServerHttpRequest.Builder builder = exchange.getRequest().mutate()
                 .header("X-User-Id", userId)
                 .header("X-Role", role);
@@ -106,7 +124,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         ServerWebExchange mutatedExchange = exchange.mutate().request(builder.build()).build();
         return chain.filter(mutatedExchange);
-
     }
 
     @Override

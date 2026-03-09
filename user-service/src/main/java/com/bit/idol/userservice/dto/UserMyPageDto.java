@@ -1,6 +1,7 @@
 package com.bit.idol.userservice.dto;
 
 import com.bit.idol.userservice.entity.Role;
+import com.bit.idol.userservice.entity.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,7 +24,9 @@ public class UserMyPageDto {
     private Role role;
     private String provider;
     private LocalDateTime createdAt;
+    private UserStatus status;
 
     // 타 서비스 데이터 (Aggregation)
     private int subscriptionCount; // 구독 중인 아이돌 수
+    private Integer agencyId; // AGENCY 롤을 가진 유저의 소속사 ID
 }

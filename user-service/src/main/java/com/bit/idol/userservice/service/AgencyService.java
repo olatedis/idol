@@ -2,7 +2,10 @@ package com.bit.idol.userservice.service;
 
 import com.bit.idol.userservice.dto.agency.AgencyCreateRequest;
 import com.bit.idol.userservice.dto.agency.AgencyDto;
+import com.bit.idol.userservice.dto.agency.AgencyUpdateRequest;
 import com.bit.idol.userservice.entity.Agency;
+import com.bit.idol.userservice.entity.AgencyAccount;
+import com.bit.idol.userservice.repository.AgencyAccountRepository;
 import com.bit.idol.userservice.repository.AgencyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,7 @@ import java.util.List;
 public class AgencyService {
 
     private final AgencyRepository agencyRepository;
+    private final AgencyAccountRepository agencyAccountRepository;
 
     @Transactional
     public AgencyDto createAgency(AgencyCreateRequest request) {
@@ -35,5 +39,30 @@ public class AgencyService {
         return agencyRepository.findAll().stream()
                 .map(AgencyDto::fromEntity)
                 .toList();
+    }
+
+    @Transactional
+    public AgencyDto updateAgency(int agencyId, AgencyUpdateRequest request) {
+        Agency agency = agencyRepository.findById(agencyId)
+                .orElseThrow(() -> new RuntimeException("소속사를 찾을 수 없습니다."));
+
+        agency.setName(request.getName());
+        return AgencyDto.fromEntity(agency);
+    }
+
+    @Transactional
+    public void deleteAgency(int agencyId) {
+        Agency agency = agencyRepository.findById(agencyId)
+                .orElseThrow(() -> new RuntimeException("소속사를 찾을 수 없습니다."));
+
+        // 연쇄 삭제: 해당 소속사의 소속사 계정(AgencyAccount)들 모두 삭제
+        List<AgencyAccount> accounts = agencyAccountRepository.findByAgency_Id(agencyId);
+        if (!accounts.isEmpty()) {
+            agencyAccountRepository.deleteAll(accounts);
+            log.info("소속사 연쇄 삭제: agencyId={}의 계정 {}개 삭제됨", agencyId, accounts.size());
+        }
+
+        agencyRepository.delete(agency);
+        log.info("소속사 삭제 완료: agencyId={}", agencyId);
     }
 }

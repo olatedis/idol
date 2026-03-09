@@ -56,7 +56,7 @@ public class User {
 
     // --- 신고 및 제재 필드 ---
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(length = 50, nullable = false)
     @Builder.Default
     private UserStatus status = UserStatus.ACTIVE; // 기본값: 정상
 
