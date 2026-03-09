@@ -1,4 +1,4 @@
-import type { NotificationListResponse } from "../types/notification";
+import type {NotificationListResponse} from "../types/notification";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -20,6 +20,91 @@ export const getNotificationList = async (
 
     if (!response.ok) {
         throw new Error("알림 목록 조회 실패");
+    }
+
+    return response.json();
+};
+
+export const readAllNotifications = async (accessToken: string): Promise<{ updatedCount: number }> => {
+    const response = await fetch(`${API_BASE_URL}/notify/notifications/read-all`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error("전체 읽음 처리 실패");
+    }
+
+    return response.json();
+};
+
+export const readOneNotification = async (
+    accessToken: string,
+    notificationId: number
+): Promise<{ updatedCount: number }> => {
+    const response = await fetch(`${API_BASE_URL}/notify/notifications/${notificationId}/read`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error("단건 읽음 처리 실패");
+    }
+
+    return response.json();
+};
+
+export type NotificationPreferenceResponse = {
+    userId: number;
+    chatEnabled: boolean;
+    voteEnabled: boolean;
+    ticketEnabled: boolean;
+    noticeEnabled: boolean;
+};
+
+export type UpdateNotificationPreferenceRequest = {
+    chatEnabled: boolean;
+    voteEnabled: boolean;
+    ticketEnabled: boolean;
+    noticeEnabled: boolean;
+};
+
+export const getNotificationPreference = async (
+    accessToken: string
+): Promise<NotificationPreferenceResponse> => {
+    const response = await fetch(`${API_BASE_URL}/notify/preferences`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error("알림 설정 조회 실패");
+    }
+
+    return response.json();
+};
+
+export const updateNotificationPreference = async (
+    accessToken: string,
+    body: UpdateNotificationPreferenceRequest
+): Promise<NotificationPreferenceResponse> => {
+    const response = await fetch(`${API_BASE_URL}/notify/preferences`, {
+        method: "PUT",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+        throw new Error("알림 설정 수정 실패");
     }
 
     return response.json();

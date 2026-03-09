@@ -83,8 +83,23 @@ public class NotificationService {
         dto.redirectUrl = n.getRedirectUrl();
         dto.occurredAt = n.getOccurredAt().format(ISO);
 
+        dto.readAt = (n.getReadAt() == null) ? null : n.getReadAt().format(ISO);
+        dto.isRead = (n.getReadAt() != null);
+
         dto.args = parseArgs(n.getArgsJson());
         return dto;
+    }
+
+    // 알림 전체 읽음
+    @Transactional
+    public int markAllAsRead(int userId) {
+        return repo.updateAllAsRead(userId, LocalDateTime.now());
+    }
+
+    // 알림 단건 읽음
+    @Transactional
+    public int markOneAsRead(int userId, int notificationId) {
+        return repo.updateOneAsRead(userId, notificationId, LocalDateTime.now());
     }
 
     private Map<String, String> parseArgs(String json) {

@@ -10,7 +10,7 @@ type GroupSubscriptionDto = {
     groupId: number;
 };
 
-const GroupServicePage: React.FC = () => {
+const DefaultServicePage: React.FC = () => {
     const navigate = useNavigate();
     const { groupId } = useParams();
     const location = useLocation();
@@ -158,4 +158,4 @@ const GroupServicePage: React.FC = () => {
     );
 };
 
-export default GroupServicePage;
+export default DefaultServicePage;

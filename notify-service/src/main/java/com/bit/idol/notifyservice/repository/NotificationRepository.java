@@ -38,4 +38,28 @@ public interface NotificationRepository extends JpaRepository<Notification, Inte
         WHERE n.receiverId = :receiverId
     """)
     int deleteAllByReceiverId(@Param("receiverId") int receiverId);
+
+
+    @Modifying
+    @Query("""
+    update Notification n
+       set n.readAt = :readAt
+     where n.receiverId = :userId
+       and n.readAt is null
+""")
+    int updateAllAsRead(@Param("userId") int userId, @Param("readAt") LocalDateTime readAt);
+
+    @Modifying
+    @Query("""
+    update Notification n
+       set n.readAt = :readAt
+     where n.notificationId = :notificationId
+       and n.receiverId = :userId
+       and n.readAt is null
+""")
+    int updateOneAsRead(
+            @Param("userId") int userId,
+            @Param("notificationId") int notificationId,
+            @Param("readAt") LocalDateTime readAt
+    );
 }

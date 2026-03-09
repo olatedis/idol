@@ -6,6 +6,8 @@ import com.bit.idol.notifyservice.service.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/notify")
 public class NotifyController {
@@ -34,5 +36,24 @@ public class NotifyController {
             @PathVariable("id") int notificationId
     ) {
         return ResponseEntity.ok(notificationService.getOne(userId, notificationId));
+    }
+
+    // 알림 전체 읽음
+    @PostMapping("/notifications/read-all")
+    public ResponseEntity<Map<String, Integer>> readAll(
+            @RequestHeader("X-User-Id") int userId
+    ) {
+        int updatedCount = notificationService.markAllAsRead(userId);
+        return ResponseEntity.ok(Map.of("updatedCount", updatedCount));
+    }
+
+    // 알림 단건 읽음
+    @PostMapping("/notifications/{id}/read")
+    public ResponseEntity<Map<String, Integer>> readOne(
+            @RequestHeader("X-User-Id") int userId,
+            @PathVariable("id") int notificationId
+    ) {
+        int updatedCount = notificationService.markOneAsRead(userId, notificationId);
+        return ResponseEntity.ok(Map.of("updatedCount", updatedCount));
     }
 }
