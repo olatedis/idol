@@ -14,7 +14,7 @@ public class PaymentEvent {
     private String domain;
     private int targetId;
     private int amount;
-
+    private int agencyId;
 
     public String toJson() {
         try {
@@ -32,4 +32,3 @@ public class PaymentEvent {
         }
     }
 }
-

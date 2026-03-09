@@ -46,7 +46,8 @@ public class PaymentService {
                 request.getDomain(),
                 request.getTargetId(),
                 request.getUserId(),
-                request.getReservationIds());
+                request.getReservationIds(),
+                request.getAgencyId());
 
         paymentRepository.save(payment);
         log.info("결제 준비 완료: orderId={}, userId={}, amount={}, domain={}, reservationIds={}",

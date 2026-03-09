@@ -73,8 +73,9 @@ public class PaymentTransactionService {
                         payment.getDomain(),
                         payment.getTargetId(),
                         payment.getAmount(),
+                        payment.getAgencyId(),
                         payment.deserializeReservationIds(),
-                        null)));  // seatIds는 reserve-service에서 추가됨
+                        null))); // seatIds는 reserve-service에서 추가됨
     }
 
     @Transactional
