@@ -2,9 +2,10 @@ package com.bit.reserveservice.api;
 
 import com.bit.reserveservice.application.ReservationService;
 import com.bit.reserveservice.domain.dto.RequestReservation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-
+@Slf4j
 @RestController
 @RequestMapping("/reservations")
 public class ReservationController {
