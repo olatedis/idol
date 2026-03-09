@@ -565,6 +565,8 @@ const ChatPage: React.FC = () => {
     );
 
     const isOtherIdolRoom = user?.role === 'IDOL' && myIdolId !== null && selectedIdolId !== myIdolId;
+    const isRestricted = user?.status === 'RESTRICTED';
+    const isInputDisabled = isOtherIdolRoom || isSending || isUploading || isRestricted;
 
     // Phase 2: 채팅방 레이아웃 
     const renderChatRoom = () => (
@@ -816,11 +818,11 @@ const ChatPage: React.FC = () => {
                     </div>
                 )}
                 <div className="flex justify-center items-center h-full max-w-full m-0 p-0">
-                    <div className={`flex items-center rounded-full border p-1 px-3 w-full transition-all shadow-inner ${(isOtherIdolRoom || isSending || isUploading) ? 'bg-gray-200 border-gray-300 opacity-70 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus-within:ring-2 focus-within:ring-[var(--color-idol-bg)] focus-within:border-[var(--color-idol-point)]'}`}>
+                    <div className={`flex items-center rounded-full border p-1 px-3 w-full transition-all shadow-inner ${isInputDisabled ? 'bg-gray-200 border-gray-300 opacity-70 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus-within:ring-2 focus-within:ring-[var(--color-idol-bg)] focus-within:border-[var(--color-idol-point)]'}`}>
                         {/* 더하기 버튼 (미디어 업로드 로직으로 변경됨) */}
                         <button
-                            className={`p-2 transition-colors active:scale-95 flex-shrink-0 ${(isOtherIdolRoom || isSending || isUploading) ? 'text-gray-400 cursor-not-allowed' : 'text-gray-500 hover:text-[var(--color-idol-dark)]'}`}
-                            disabled={isOtherIdolRoom || isUploading || isSending}
+                            className={`p-2 transition-colors active:scale-95 flex-shrink-0 ${isInputDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-500 hover:text-[var(--color-idol-dark)]'}`}
+                            disabled={isInputDisabled}
                             onClick={() => fileInputRef.current?.click()}
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -837,20 +839,20 @@ const ChatPage: React.FC = () => {
                         />
                         <input
                             type="text"
-                            placeholder={isOtherIdolRoom ? "자신의 채팅방에서만 메시지를 보낼 수 있습니다." : isSending ? "도배 방지: 3초 후 입력 가능합니다." : "메시지 전송"}
+                            placeholder={isRestricted ? "활동이 제한되어 메시지를 보낼 수 없습니다." : isOtherIdolRoom ? "자신의 채팅방에서만 메시지를 보낼 수 있습니다." : isSending ? "도배 방지: 3초 후 입력 가능합니다." : "메시지 전송"}
                             value={newMessage}
                             onChange={(e) => {
                                 setNewMessage(e.target.value);
                                 handleTyping();
                             }}
                             onKeyDown={handleKeyDown}
-                            disabled={isOtherIdolRoom || isSending || isUploading}
-                            className={`flex-1 bg-transparent border-none focus:ring-0 px-3 py-3 text-[15px] outline-none ${(isOtherIdolRoom || isSending || isUploading) ? 'text-gray-500 cursor-not-allowed' : 'text-gray-800'}`}
+                            disabled={isInputDisabled}
+                            className={`flex-1 bg-transparent border-none focus:ring-0 px-3 py-3 text-[15px] outline-none ${isInputDisabled ? 'text-gray-500 cursor-not-allowed' : 'text-gray-800'}`}
                         />
                         <button
                             onClick={handleSendMessage}
-                            disabled={!newMessage.trim() || isOtherIdolRoom || isSending || isUploading}
-                            className={`ml-2 px-4 py-2 font-medium rounded-full flex items-center justify-center shadow-md transition-all sm:active:scale-95 min-w-14 ${(isOtherIdolRoom || isSending || isUploading) ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] hover:from-[var(--color-idol-dark)] hover:to-[var(--color-idol-dark)] text-white disabled:opacity-50'}`}
+                            disabled={!newMessage.trim() || isInputDisabled}
+                            className={`ml-2 px-4 py-2 font-medium rounded-full flex items-center justify-center shadow-md transition-all sm:active:scale-95 min-w-14 ${isInputDisabled ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] hover:from-[var(--color-idol-dark)] hover:to-[var(--color-idol-dark)] text-white disabled:opacity-50'}`}
                         >
                             전송
                         </button>

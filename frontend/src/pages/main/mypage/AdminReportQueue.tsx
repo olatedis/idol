@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../../../api/axios";
+import Swal from 'sweetalert2';
 import AdminHistoryModal from "./AdminHistoryModal";
 
 interface AdminUserDto {
@@ -55,7 +56,10 @@ const AdminReportQueue: React.FC = () => {
     const handleApplyAction = async (userId: number) => {
         const form = actionForms[userId];
         if (!form.reason) {
-            alert("제재 사유를 입력해주세요.");
+            Swal.fire({
+                icon: 'warning',
+                text: '제재 사유를 입력해주세요.'
+            });
             return;
         }
 
@@ -66,10 +70,20 @@ const AdminReportQueue: React.FC = () => {
                 reason: form.reason,
                 durationDays: form.newStatus === "SUSPENDED" ? (form.durationDays === "" ? null : form.durationDays) : null
             });
-            alert("상태가 변경되었습니다.");
+            Swal.fire({
+                icon: 'success',
+                title: '완료',
+                text: '상태가 변경되었습니다.',
+                timer: 1500,
+                showConfirmButton: false
+            });
             fetchQueue();
         } catch (err: any) {
-            alert(err?.response?.data?.message || "상태 변경에 실패했습니다.");
+            Swal.fire({
+                icon: 'error',
+                title: '오류',
+                text: err?.response?.data?.message || "상태 변경에 실패했습니다."
+            });
         }
     };
 
@@ -118,17 +132,17 @@ const AdminReportQueue: React.FC = () => {
                                         <div className="flex space-x-2">
                                             <select
                                                 className="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-idol"
-                                                value={actionForms[u.userId]?.newStatus}
+                                                value={actionForms[u.userId]?.newStatus || "SUSPENDED"}
                                                 onChange={(e) => handleActionChange(u.userId, "newStatus", e.target.value)}
                                             >
                                                 <option value="SUSPENDED">정지 (SUSPENDED)</option>
                                                 <option value="RESTRICTED">제한 (RESTRICTED)</option>
                                                 <option value="BANNED">영구정지 (BANNED)</option>
                                             </select>
-                                            {actionForms[u.userId]?.newStatus === "SUSPENDED" && (
+                                            {(actionForms[u.userId]?.newStatus || "SUSPENDED") === "SUSPENDED" && (
                                                 <select
                                                     className="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-idol"
-                                                    value={actionForms[u.userId]?.durationDays}
+                                                    value={actionForms[u.userId]?.durationDays ?? 7}
                                                     onChange={(e) => handleActionChange(u.userId, "durationDays", e.target.value === "" ? "" : Number(e.target.value))}
                                                 >
                                                     <option value={1}>1일</option>
@@ -139,12 +153,12 @@ const AdminReportQueue: React.FC = () => {
                                                 </select>
                                             )}
                                         </div>
-                                        <div className="flex space-x-2">
+                                        <div className="flex space-x-2 mt-2">
                                             <input
                                                 type="text"
                                                 placeholder="제재 사유 입력"
                                                 className="border border-gray-300 rounded px-2 py-1 text-xs flex-1 focus:outline-none focus:border-idol"
-                                                value={actionForms[u.userId]?.reason}
+                                                value={actionForms[u.userId]?.reason || ""}
                                                 onChange={(e) => handleActionChange(u.userId, "reason", e.target.value)}
                                             />
                                             <button

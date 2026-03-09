@@ -271,6 +271,10 @@ const GroupPostDetailPage: React.FC = () => {
             alert("로그인이 필요합니다.");
             return;
         }
+        if (user?.status === "RESTRICTED") {
+            alert("활동 제한 상태에서는 댓글을 작성할 수 없습니다.");
+            return;
+        }
 
         if (submittingComment) return;
         setSubmittingComment(true);
@@ -626,17 +630,18 @@ const GroupPostDetailPage: React.FC = () => {
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") onSubmitComment();
                             }}
-                            placeholder="댓글을 입력하세요"
+                            placeholder={user?.status === "RESTRICTED" ? "활동이 제한되어 댓글을 작성할 수 없습니다." : "댓글을 입력하세요"}
+                            disabled={user?.status === "RESTRICTED"}
                             className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none
-                            focus:border-gray-300 focus:ring-2 focus:ring-gray-100 transition"
+                            focus:border-gray-300 focus:ring-2 focus:ring-gray-100 transition disabled:bg-gray-100 disabled:text-gray-500"
                         />
 
                         <button
                             type="button"
                             onClick={onSubmitComment}
-                            disabled={submittingComment}
+                            disabled={submittingComment || user?.status === "RESTRICTED"}
                             className="px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold
-                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
+                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
                         >
                             {submittingComment ? "등록 중..." : "등록"}
                         </button>

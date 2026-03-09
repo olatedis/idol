@@ -1,7 +1,7 @@
-import React, {useEffect, useMemo, useState} from "react";
-import {useNavigate, useParams} from "react-router-dom";
-import {useAuthStore} from "../../stores/authStore";
-import {api} from "../../api/axios";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuthStore } from "../../stores/authStore";
+import { api } from "../../api/axios";
 
 type CommentResponse = {
     commentId: number;
@@ -60,9 +60,9 @@ const formatDateToKST = (dateString: string) => {
 };
 
 const IdolPostDetailPage: React.FC = () => {
-    const {groupId, idolId, postId} = useParams();
+    const { groupId, idolId, postId } = useParams();
     const navigate = useNavigate();
-    const {accessToken, user} = useAuthStore();
+    const { accessToken, user } = useAuthStore();
 
     const [data, setData] = useState<PostResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -250,12 +250,13 @@ const IdolPostDetailPage: React.FC = () => {
         if (!data || !postId) return;
         if (!commentInput.trim()) return;
         if (!accessToken) return alert("로그인이 필요합니다.");
+        if (user?.status === "RESTRICTED") return alert("활동 제한 상태에서는 댓글을 작성할 수 없습니다.");
 
         if (submittingComment) return;
         setSubmittingComment(true);
 
         try {
-            await api.post(`/board/posts/${postId}/comments`, {content: commentInput.trim()});
+            await api.post(`/board/posts/${postId}/comments`, { content: commentInput.trim() });
             setCommentInput("");
 
             const detail = await fetchDetail();
@@ -338,7 +339,7 @@ const IdolPostDetailPage: React.FC = () => {
 
         try {
             // [중요] IdolPostDetailPage는 삭제 엔드포인트가 /board/comments/{id} 형태라서 동일하게 맞춤
-            await api.put(`/board/posts/comments/${editingCommentId}`, {content: trimmed});
+            await api.put(`/board/posts/comments/${editingCommentId}`, { content: trimmed });
             const detail = await fetchDetail();
             setData(detail);
 
@@ -400,7 +401,7 @@ const IdolPostDetailPage: React.FC = () => {
                 </div>
 
                 <div className="px-6 py-5 border-t border-gray-100">
-                    <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{__html: data.content}}/>
+                    <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{ __html: data.content }} />
 
                     <div className="mt-8 flex justify-center gap-10">
                         <button
@@ -564,16 +565,17 @@ const IdolPostDetailPage: React.FC = () => {
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") onSubmitComment();
                             }}
-                            placeholder="댓글을 입력하세요"
-                            className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none"
+                            placeholder={user?.status === "RESTRICTED" ? "활동이 제한되어 댓글을 작성할 수 없습니다." : "댓글을 입력하세요"}
+                            disabled={user?.status === "RESTRICTED"}
+                            className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none disabled:bg-gray-100 disabled:text-gray-500"
                         />
 
                         <button
                             type="button"
                             onClick={onSubmitComment}
-                            disabled={submittingComment}
+                            disabled={submittingComment || user?.status === "RESTRICTED"}
                             className="px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold
-                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
+                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
                         >
                             {submittingComment ? "등록 중..." : "등록"}
                         </button>

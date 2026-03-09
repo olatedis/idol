@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { api } from "../../api/axios";
 import { useAuthStore } from "../../stores/authStore";
 import { useParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
 import { showSuccessToast, showErrorToast, showConfirm } from "../../utils/alert";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
@@ -12,6 +12,7 @@ interface CandidateDto {
     name: string;
     image: string;
     voteCount: number;
+    delta?: number;
 }
 
 interface VoteInfo {
@@ -38,6 +39,17 @@ interface RankingDto {
 }
 
 type TabType = 'OPEN' | 'CLOSED' | 'MY';
+
+const AnimatedNumber = ({ value }: { value: number }) => {
+    const spring = useSpring(value, { mass: 0.8, stiffness: 75, damping: 15 });
+    const display = useTransform(spring, (current) => Math.round(current).toLocaleString());
+
+    useEffect(() => {
+        spring.set(value);
+    }, [spring, value]);
+
+    return <motion.span>{display}</motion.span>;
+};
 
 const VotePage: React.FC = () => {
     const { user } = useAuthStore();
@@ -153,8 +165,11 @@ const VotePage: React.FC = () => {
 
             const updatedCandidates = prev.candidates.map(c => {
                 const ranking = rankingList.find(r => r.candidateNumber === c.number);
-                return ranking ? { ...c, voteCount: ranking.score } : c;
+                return ranking ? { ...c, voteCount: ranking.score, delta: ranking.delta } : c;
             });
+
+            // 점수순(내림차순) 정렬 적용 (Framer Motion이 layout 스와핑 애니메이션 자동 실행)
+            updatedCandidates.sort((a, b) => b.voteCount - a.voteCount);
 
             return { ...prev, candidates: updatedCandidates };
         });
@@ -206,6 +221,9 @@ const VotePage: React.FC = () => {
             setSelectedCandidate(null);
 
             const { data } = await api.get(`/api/votes/${voteId}`);
+            if (data.candidates) {
+                data.candidates.sort((a: CandidateDto, b: CandidateDto) => b.voteCount - a.voteCount);
+            }
             setSelectedVote(data);
 
             if (user) {
@@ -572,6 +590,8 @@ const VotePage: React.FC = () => {
                                         const isSelected = selectedCandidate === candidate.number;
                                         return (
                                             <motion.div
+                                                layout
+                                                layoutId={`candidate-${candidate.number}`}
                                                 whileHover={!hasVoted ? { scale: 1.05, y: -5 } : {}}
                                                 whileTap={!hasVoted ? { scale: 0.95 } : {}}
                                                 key={candidate.number}
@@ -603,9 +623,23 @@ const VotePage: React.FC = () => {
                                                                 className={`h-full rounded-full ${isSelected ? 'bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)]' : 'bg-[var(--color-idol-point)]/40'}`}
                                                             ></motion.div>
                                                         </div>
-                                                        <p className={`text-center font-bold text-sm ${isSelected ? 'text-[var(--color-idol-dark)]' : 'text-gray-500'}`}>
-                                                            {candidate.voteCount.toLocaleString()} 표
-                                                        </p>
+                                                        <div className={`relative flex justify-center items-center text-center font-bold text-sm gap-1 ${isSelected ? 'text-[var(--color-idol-dark)]' : 'text-gray-500'}`}>
+                                                            <AnimatedNumber value={candidate.voteCount} /> 표
+                                                            <AnimatePresence>
+                                                                {candidate.delta != null && candidate.delta > 0 ? (
+                                                                    <motion.span
+                                                                        key={candidate.voteCount}
+                                                                        initial={{ opacity: 0, y: 10, scale: 0.5 }}
+                                                                        animate={{ opacity: 1, y: -15, scale: 1.2, rotate: [0, -10, 10, 0] }}
+                                                                        exit={{ opacity: 0, y: -25, scale: 0.8 }}
+                                                                        transition={{ duration: 1.2, ease: "easeOut" }}
+                                                                        className="absolute left-[60%] -top-2 text-[10px] font-black text-white bg-rose-500 px-2 py-0.5 rounded-full shadow-lg pointer-events-none z-10"
+                                                                    >
+                                                                        +{candidate.delta}
+                                                                    </motion.span>
+                                                                ) : null}
+                                                            </AnimatePresence>
+                                                        </div>
                                                     </div>
                                                 </div>
 

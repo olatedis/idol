@@ -14,6 +14,14 @@ type PaymentDto = {
     cancelReason?: string;
 };
 
+const formatKstDateTime = (dateString?: string) => {
+    if (!dateString) return "-";
+    const parseString = dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString + 'Z';
+    const date = new Date(parseString);
+    const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+    return kstDate.toISOString().replace('T', ' ').substring(0, 16);
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const PaymentHistoryTab: React.FC = () => {
@@ -131,7 +139,7 @@ const PaymentHistoryTab: React.FC = () => {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {payment.paymentDate ? payment.paymentDate.split('T').join(' ').substring(0, 16) : '-'}
+                                    {formatKstDateTime(payment.paymentDate)}
                                 </td>
                             </tr>
                         ))}

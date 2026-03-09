@@ -5,6 +5,7 @@ export interface PaymentReadyRequest {
     amount: number;
     domain: 'SUBSCRIPTION' | 'CONCERT';
     targetId: number;
+    agencyId: number;
     reservationIds?: number[];
 }
 
@@ -29,4 +30,9 @@ export const getIdol = (idolId: number) => {
 
 export const authorizeBillingKey = (body: { idolId: number; authKey: string; plan: string; customerKey: string }) => {
     return api.post('/subscriptions/billing/authorize', body).then(r => r.data);
-};
+}
+
+export const getAgencyRevenue = async (agencyId: number): Promise<any> => {
+    const res = await api.get(`/payments/agency/${agencyId}/revenue`);
+    return res.data;
+};;
