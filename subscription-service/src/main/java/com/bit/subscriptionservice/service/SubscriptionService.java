@@ -33,7 +33,6 @@ public class SubscriptionService {
     private final StringRedisTemplate redisTemplate;
     private final ApplicationEventPublisher eventPublisher; // 추가됨
 
-
     private static final String KEY_PREFIX_IDOL = "sub:";
     private static final String KEY_PREFIX_GROUP = "gsub:";
 
@@ -72,21 +71,19 @@ public class SubscriptionService {
                 null,
                 "SUBSCRIPTION",
                 subscription.getId(),
-                request.getPlan().getAmount()
+                request.getPlan().getAmount(),
+                0 // agencyId
         );
 
         // 이벤트 발행 (커밋 후 실행됨)
         eventPublisher.publishEvent(new PaymentRequestEvent(event));
 
-        log.info("개인(아이돌) 구독 준비 완료: userId={}, idolId={}, plan={}, amount={}", 
+        log.info("개인(아이돌) 구독 준비 완료: userId={}, idolId={}, plan={}, amount={}",
                 userId, request.getIdolId(), request.getPlan(), request.getPlan().getAmount());
         return SubscriptionDto.fromEntity(subscription);
     }
 
-    @KafkaListener(
-            topics = "payment.completed",
-            groupId = "subscription-service"
-    )
+    @KafkaListener(topics = "payment.completed", groupId = "subscription-service")
     @Transactional
     public void consume(String message) {
 
@@ -98,14 +95,12 @@ public class SubscriptionService {
 
         int subscriptionId = event.getTargetId();
 
-        Subscription subscription =
-                subscriptionRepository
-                        .findByUserIdAndIdolIdAndStatus(
-                                subscriptionId,
-                                event.getUserId(),
-                                SubscriptionStatus.PENDING
-                        )
-                        .orElseThrow();
+        Subscription subscription = subscriptionRepository
+                .findByUserIdAndIdolIdAndStatus(
+                        subscriptionId,
+                        event.getUserId(),
+                        SubscriptionStatus.PENDING)
+                .orElseThrow();
 
         subscription.activate();
 
@@ -115,7 +110,7 @@ public class SubscriptionService {
         args.put("idolId", String.valueOf(subscription.getIdolId()));
         args.put("startAt", subscription.getStartedAt().toString());
         args.put("expiredAt", subscription.getExpiredAt().toString());
-        
+
         SubscriptionEvent subEvent = SubscriptionEvent.builder()
                 .eventId(uuid)
                 .type("IDOL_SUB_STARTED")
@@ -153,7 +148,7 @@ public class SubscriptionService {
         Map<String, String> args = new HashMap<>();
         args.put("userId", String.valueOf(subscription.getUserId()));
         args.put("idolId", String.valueOf(subscription.getIdolId()));
-        
+
         SubscriptionEvent subEvent = SubscriptionEvent.builder()
                 .eventId(uuid)
                 .type("IDOL_SUB_END")
@@ -192,8 +187,7 @@ public class SubscriptionService {
         boolean active = subscriptionRepository.existsByUserIdAndIdolIdAndStatus(
                 userId,
                 idolId,
-                SubscriptionStatus.ACTIVE
-        );
+                SubscriptionStatus.ACTIVE);
 
         if (active) {
             redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
@@ -238,7 +232,7 @@ public class SubscriptionService {
         String uuid = UUID.randomUUID().toString();
         Map<String, String> args = new HashMap<>();
         args.put("groupId", String.valueOf(gs.getGroupId()));
-        
+
         SubscriptionEvent subEvent = SubscriptionEvent.builder()
                 .eventId(uuid)
                 .type("GROUP_SUB_STARTED")
@@ -277,7 +271,7 @@ public class SubscriptionService {
         Map<String, String> args = new HashMap<>();
         args.put("userId", String.valueOf(gs.getUserId()));
         args.put("groupId", String.valueOf(gs.getGroupId()));
-        
+
         SubscriptionEvent subEvent = SubscriptionEvent.builder()
                 .eventId(uuid)
                 .type("GROUP_SUB_END")
@@ -316,8 +310,7 @@ public class SubscriptionService {
         boolean active = groupSubscriptionRepository.existsByUserIdAndGroupIdAndStatus(
                 userId,
                 groupId,
-                SubscriptionStatus.ACTIVE
-        );
+                SubscriptionStatus.ACTIVE);
 
         if (active) {
             redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
@@ -344,21 +337,18 @@ public class SubscriptionService {
         return KEY_PREFIX_GROUP + userId + ":" + groupId;
     }
 
-
     public boolean isActiveIdolSubscriber(int userId, int idolId) {
         return subscriptionRepository.existsByUserIdAndIdolIdAndStatus(
                 userId,
                 idolId,
-                SubscriptionStatus.ACTIVE
-        );
+                SubscriptionStatus.ACTIVE);
     }
 
     public boolean isActiveGroupSubscriber(int userId, int groupId) {
         return groupSubscriptionRepository.existsByUserIdAndGroupIdAndStatus(
                 userId,
                 groupId,
-                SubscriptionStatus.ACTIVE
-        );
+                SubscriptionStatus.ACTIVE);
     }
 
     // 아이돌 구독자 수 조회
