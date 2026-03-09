@@ -86,4 +86,9 @@ public class ReservationHandler {
             throw e;
         }
     }
+
+    // 조회용 헬퍼
+    public java.util.List<com.bit.reserveservice.domain.entity.Reservation> findByUser(int userId) {
+        return reservationRepository.findAllByUserId(userId);
+    }
 }
