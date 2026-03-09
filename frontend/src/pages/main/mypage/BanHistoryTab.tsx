@@ -29,10 +29,11 @@ const BanHistoryTab: React.FC = () => {
     }, []);
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleString("ko-KR", {
-            year: "numeric", month: "2-digit", day: "2-digit",
-            hour: "2-digit", minute: "2-digit"
-        });
+        if (!dateString) return "-";
+        const parseString = dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString + 'Z';
+        const date = new Date(parseString);
+        const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+        return kstDate.toISOString().replace('T', ' ').substring(0, 16);
     };
 
     if (loading) {
@@ -66,8 +67,8 @@ const BanHistoryTab: React.FC = () => {
                         <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                                 <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${record.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                                        record.status === 'RESTRICTED' ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-red-100 text-red-700'
+                                    record.status === 'RESTRICTED' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-red-100 text-red-700'
                                     }`}>
                                     {record.status === 'ACTIVE' ? '제재 해제 (ACTIVE)' :
                                         record.status === 'RESTRICTED' ? '활동 제한 (RESTRICTED)' :
