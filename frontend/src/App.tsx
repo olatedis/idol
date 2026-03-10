@@ -80,8 +80,6 @@ function App() {
                 {/* 전체 콘서트 */}
                 <Route path="/concert" element={<GlobalConcertPage />} />
 
-                {/*    테스트중*/}
-                <Route path="/idol/subscribe" element={<IdolSubscribe />} />
                 {/* 아이돌 구독 페이지 (그룹/아이돌 선택) */}
                 <Route path="/idol/subscribe" element={<IdolSubscribe />} />
 
