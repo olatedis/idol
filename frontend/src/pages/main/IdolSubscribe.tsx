@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Header from '../main/Header';
-import { getIdol, fetchGroups, fetchGroupIdols, subscribeGroup } from '../../api/payment';
-import { useAuthStore } from '../../stores/authStore';
+import Header from './Header.tsx';
+import { getIdol, fetchGroups, fetchGroupIdols, subscribeGroup } from '../../api/payment.ts';
+import { useAuthStore } from '../../stores/authStore.ts';
 
 interface GroupDto { groupId: number; name: string; groupImage?: string; }
 interface IdolDto { id: number; stageName: string; profileImage?: string; }

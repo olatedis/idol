@@ -113,7 +113,7 @@ const PaymentPage: React.FC = () => {
                                                     headers: { 'X-User-Id': String(user.userId) }
                                                 });
                                             }
-                                            try { sessionStorage.removeItem('pendingReservations'); } catch { }
+                                            try { sessionStorage.removeItem('pendingReservations'); } catch {}
                                         }
                                     } catch (e) {
                                         console.error('예약 취소 실패', e);
