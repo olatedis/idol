@@ -41,7 +41,7 @@ const PaymentPage: React.FC = () => {
             if (!TossPayments) throw new Error('TossPayments not available');
 
             const toss = TossPayments(clientKey);
-            const userId = Number(localStorage.getItem('userId') || '1');
+            const userId = Number(localStorage.getItem('userId'));
 
             if (domain === 'CONCERT') {
                 if (!concert || seats.length === 0) return;

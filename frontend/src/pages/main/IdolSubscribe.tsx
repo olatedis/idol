@@ -6,7 +6,14 @@ import { getIdol, fetchGroups, fetchGroupIdols, subscribeGroup } from '../../api
 import { useAuthStore } from '../../stores/authStore.ts';
 
 interface GroupDto { groupId: number; name: string; groupImage?: string; }
-interface IdolDto { id: number; stageName: string; profileImage?: string; }
+interface IdolDto {
+    id: number;
+    stageName: string;
+    profileImage?: string;
+    agencyId: number;
+    groupId: number;
+
+}
 
 const IdolSubscribe: React.FC = () => {
     const location = useLocation();
@@ -44,6 +51,7 @@ const IdolSubscribe: React.FC = () => {
             state: {
                 domain: 'SUBSCRIPTION',
                 idolId: selectedIdol.id,
+                agencyId:selectedIdol.agencyId,
                 plan
             }
         });
