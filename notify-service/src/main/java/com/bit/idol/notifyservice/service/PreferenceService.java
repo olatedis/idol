@@ -26,10 +26,11 @@ public class PreferenceService {
     public PreferenceResponse update(int userId, UpdatePreferenceRequest req) {
         NotificationPreference pref = repo.findById(userId).orElseGet(() -> NotificationPreference.create(userId));
 
+        pref.setAllEnabled(req.allEnabled);
         pref.setChatEnabled(req.chatEnabled);
         pref.setVoteEnabled(req.voteEnabled);
         pref.setTicketEnabled(req.ticketEnabled);
-        pref.setNoticeEnabled(req.noticeEnabled);
+        pref.setBoardEnabled(req.boardEnabled);
 
         repo.save(pref);
         return toResponse(pref);
@@ -37,11 +38,37 @@ public class PreferenceService {
 
     private PreferenceResponse toResponse(NotificationPreference p) {
         PreferenceResponse res = new PreferenceResponse();
+
         res.userId = p.getUserId();
+        res.allEnabled = p.isAllEnabled();
         res.chatEnabled = p.isChatEnabled();
         res.voteEnabled = p.isVoteEnabled();
         res.ticketEnabled = p.isTicketEnabled();
-        res.noticeEnabled = p.isNoticeEnabled();
+        res.boardEnabled = p.isBoardEnabled();
+
         return res;
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isEnabledForType(int userId, String type) {
+
+        NotificationPreference pref =
+                repo.findById(userId)
+                        .orElseGet(() -> repo.save(NotificationPreference.create(userId)));
+
+        if (!pref.isAllEnabled()) {
+            return false;
+        }
+
+        if ("IDOL_MESSAGE".equals(type)) {
+            return pref.isChatEnabled();
+        }
+
+        if ("BOARD_NEW_POST".equals(type)
+                || "BOARD_ADMIN_NOTICE".equals(type)) {
+            return pref.isBoardEnabled();
+        }
+
+        return true;
     }
 }

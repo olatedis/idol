@@ -1,9 +1,9 @@
-// src/main/java/com/bit/idol/notifyservice/kafka/NotificationEventHandler.java
 package com.bit.idol.notifyservice.kafka;
 
 import com.bit.idol.notifyservice.entity.Notification;
 import com.bit.idol.notifyservice.repository.NotificationRepository;
 import com.bit.idol.notifyservice.service.IdolMessageStackService;
+import com.bit.idol.notifyservice.service.PreferenceService; // 추가
 import com.bit.idol.notifyservice.sse.IdolMessageStackSsePublisher;
 import com.bit.idol.notifyservice.sse.NotificationSsePublisher;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -26,16 +26,20 @@ public class NotificationEventHandler {
     private final IdolMessageStackService stackService;
     private final IdolMessageStackSsePublisher stackSsePublisher;
 
+    private final PreferenceService preferenceService;
+
     public NotificationEventHandler(ObjectMapper om,
                                     NotificationRepository notificationRepo,
                                     NotificationSsePublisher ssePublisher,
                                     IdolMessageStackService stackService,
-                                    IdolMessageStackSsePublisher stackSsePublisher) {
+                                    IdolMessageStackSsePublisher stackSsePublisher,
+                                    PreferenceService preferenceService) { // 수정
         this.om = om;
         this.notificationRepo = notificationRepo;
         this.ssePublisher = ssePublisher;
         this.stackService = stackService;
         this.stackSsePublisher = stackSsePublisher;
+        this.preferenceService = preferenceService;
     }
 
     @Transactional
@@ -70,6 +74,11 @@ public class NotificationEventHandler {
             try {
                 receiverId = Integer.parseInt(targetId);
             } catch (Exception e) {
+                return;
+            }
+
+            // 알림 설정에 따라 저장 자체를 막음
+            if (!preferenceService.isEnabledForType(receiverId, type)) {
                 return;
             }
 

@@ -33,25 +33,50 @@ const NotificationPreferenceTab: React.FC = () => {
     }, [accessToken]);
 
     const handleToggle = async (
-        key: "chatEnabled" | "voteEnabled" | "ticketEnabled" | "noticeEnabled"
+        key: "allEnabled" | "chatEnabled" | "voteEnabled" | "ticketEnabled" | "boardEnabled"
     ) => {
         if (!accessToken || !preference || saving) return;
 
-        const nextValue = !preference[key];
-        const nextPreference = {
-            ...preference,
-            [key]: nextValue,
-        };
+        let nextPreference: NotificationPreferenceResponse = {...preference};
+
+        if (key === "allEnabled") {
+            const nextAllEnabled = !preference.allEnabled;
+
+            nextPreference = {
+                ...preference,
+                allEnabled: nextAllEnabled,
+                chatEnabled: nextAllEnabled,
+                voteEnabled: nextAllEnabled,
+                ticketEnabled: nextAllEnabled,
+                boardEnabled: nextAllEnabled,
+            };
+        } else {
+            const nextValue = !preference[key as keyof NotificationPreferenceResponse];
+
+            nextPreference = {
+                ...preference,
+                [key]: nextValue,
+            };
+
+            const hasAnyEnabled =
+                nextPreference.chatEnabled ||
+                nextPreference.voteEnabled ||
+                nextPreference.ticketEnabled ||
+                nextPreference.boardEnabled;
+
+            nextPreference.allEnabled = hasAnyEnabled;
+        }
 
         setPreference(nextPreference);
 
         try {
             setSaving(true);
             const saved = await updateNotificationPreference(accessToken, {
+                allEnabled: nextPreference.allEnabled,
                 chatEnabled: nextPreference.chatEnabled,
                 voteEnabled: nextPreference.voteEnabled,
                 ticketEnabled: nextPreference.ticketEnabled,
-                noticeEnabled: nextPreference.noticeEnabled,
+                boardEnabled: nextPreference.boardEnabled,
             });
             setPreference(saved);
         } catch (error) {
@@ -73,6 +98,11 @@ const NotificationPreferenceTab: React.FC = () => {
 
     const items = [
         {
+            key: "allEnabled" as const,
+            title: "전체 알림",
+            desc: "모든 알림을 한 번에 켜거나 끕니다.",
+        },
+        {
             key: "chatEnabled" as const,
             title: "채팅 알림",
             desc: "아이돌 채팅/메시지 관련 알림을 받습니다.",
@@ -88,9 +118,9 @@ const NotificationPreferenceTab: React.FC = () => {
             desc: "티켓/굿즈 오픈 및 구매 관련 알림을 받습니다.",
         },
         {
-            key: "noticeEnabled" as const,
-            title: "공지 알림",
-            desc: "공식 게시글, 공지 관련 알림을 받습니다.",
+            key: "boardEnabled" as const,
+            title: "게시판 알림",
+            desc: "그룹 공식글, 아이돌 공식글, 공지사항 알림을 받습니다.",
         },
     ];
 
@@ -112,19 +142,22 @@ const NotificationPreferenceTab: React.FC = () => {
                         <div className="text-sm font-semibold text-gray-800">{item.title}</div>
                         <div className="mt-1 text-sm text-gray-500">{item.desc}</div>
                     </div>
-
                     <button
                         onClick={() => handleToggle(item.key)}
-                        disabled={saving}
+                        disabled={saving || (item.key !== "allEnabled" && !preference.allEnabled)}
                         className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${
-                            preference[item.key] ? "bg-idol" : "bg-gray-300"
-                        } ${saving ? "opacity-60 cursor-not-allowed" : ""}`}
+                            preference[item.key as keyof NotificationPreferenceResponse] ? "bg-idol" : "bg-gray-300"
+                        } ${
+                            saving || (item.key !== "allEnabled" && !preference.allEnabled)
+                                ? "opacity-60 cursor-not-allowed"
+                                : ""
+                        }`}
                     >
-        <span
-            className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
-                preference[item.key] ? "translate-x-6" : "translate-x-1"
-            }`}
-        />
+                        <span
+                            className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
+                                preference[item.key as keyof NotificationPreferenceResponse] ? "translate-x-6" : "translate-x-1"
+                            }`}
+                        />
                     </button>
                 </div>
             ))}

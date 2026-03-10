@@ -204,7 +204,7 @@ const Header: React.FC = () => {
             try {
                 setLoadingNotifications(true);
                 const data = await getNotificationList(accessToken, 20);
-                setNotifications(data.items ?? []);
+                setNotifications((data.items ?? []).filter(n => !n.isRead));
                 setNextCursor(data.nextCursor ?? null);
                 setHasNext(data.hasNext ?? false);
             } catch (error) {
@@ -234,7 +234,7 @@ const Header: React.FC = () => {
                             isRead: false,
                             readAt: null,
                         },
-                        ...prev,
+                        ...prev.filter(n => !n.isRead),
                     ]);
                     triggerBellAnimation();
                 },
