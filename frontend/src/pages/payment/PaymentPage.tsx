@@ -77,7 +77,7 @@ const PaymentPage: React.FC = () => {
                     amount,
                     domain: 'SUBSCRIPTION',
                     targetId: subscriptionId,
-                    agencyId: 0
+                    agencyId: location.state.agencyId,
                 });
 
                 toss.requestPayment('카드', {
