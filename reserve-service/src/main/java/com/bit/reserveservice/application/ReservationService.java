@@ -1,9 +1,12 @@
 package com.bit.reserveservice.application;
 
+import com.bit.reserveservice.domain.entity.Reservation;
 import com.bit.reserveservice.infra.redis.SeatLockRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -30,4 +33,7 @@ public class ReservationService {
         cancellationHandler.cancelReservationByUser(userId, reservationId);
     }
 
+    public List<Reservation> findByUser(int userId) {
+       return reservationHandler.findByUser(userId);
+    }
 }

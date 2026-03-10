@@ -12,7 +12,7 @@ import IdolPage from "./pages/2-1/IdolPage.tsx";
 import GroupPostWritePage from "./pages/3-1/board/group/GroupPostWritePage.tsx";
 import GroupPostDetailPage from "./pages/3-1/board/group/GroupPostDetailPage.tsx";
 import OAuthKakao from "./pages/auth/OAuthKakao.tsx";
-import IdolSubscribe from "./pages/payment/IdolSubscribe.tsx";
+import IdolSubscribe from "./pages/main/IdolSubscribe.tsx";
 import PaymentPage from "./pages/payment/PaymentPage.tsx";
 import PaymentComplete from "./pages/payment/PaymentComplete.tsx";
 import VotePage from "./pages/3-1/vote/VotePage.tsx";
@@ -80,8 +80,8 @@ function App() {
                 {/* 전체 콘서트 */}
                 <Route path="/concert" element={<GlobalConcertPage />} />
 
-                {/*    테스트중*/}
-                <Route path="/idol/:idolId/subscribe" element={<IdolSubscribe />} />
+                {/* 아이돌 구독 페이지 (그룹/아이돌 선택) */}
+                <Route path="/idol/subscribe" element={<IdolSubscribe />} />
 
                 {/* 결제 플로우 */}
                 <Route path="/payment" element={<PaymentPage />} />

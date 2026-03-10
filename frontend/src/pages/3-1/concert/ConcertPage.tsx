@@ -287,7 +287,6 @@ const ConcertPage: React.FC = () => {
         try {
             const reservationIds: number[] = [];
 
-            // TODO: api.post로 바꾸기
             for (const seat of chosenSeats) {
                 const res = await api.post(`${API_BASE_URL}/reservations`, {
                     userId: user.userId,
@@ -312,6 +311,7 @@ const ConcertPage: React.FC = () => {
             // 이동: 결제 페이지로 reservationIds 포함하여 전달
             navigate('/payment', {
                 state: {
+                    domain: "concert",
                     concert: selectedConcert,
                     seats: chosenSeats,
                     totalPrice,

@@ -10,6 +10,7 @@ const PaymentComplete: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [status, setStatus] = useState<'processing' | 'success' | 'failed'>('processing');
+    const [pending, setPending] = useState<any>(null);
     const { user } = useAuthStore();
     const userId = user?.userId
 
@@ -22,13 +23,14 @@ const PaymentComplete: React.FC = () => {
         const amount = Number(amountStr);
         const authKey = qs.get('authKey') || qs.get('auth_key') || '';
         // 이전 페이지에서 저장한 대기중 구독 정보를 사용 (sessionStorage)
-        let pending: { idolId?: number; plan?: string; customerKey?: string } | null = null;
+        let pendingLocal: { idolId?: number; plan?: string; customerKey?: string; subscriptionId?: number } | null = null;
         try {
             const raw = sessionStorage.getItem('pendingSubscription');
-            if (raw) pending = JSON.parse(raw);
+            if (raw) pendingLocal = JSON.parse(raw);
         } catch (e) {
             console.warn('sessionStorage read failed', e);
         }
+        setPending(pendingLocal);
 
         const cancelPendingReservations = async () => {
             try {
@@ -66,6 +68,8 @@ const PaymentComplete: React.FC = () => {
                 })
                 .catch(async () => {
                     await cancelPendingReservations();
+                    // also clear any pending subscription data
+                    try { sessionStorage.removeItem('pendingSubscription'); } catch {}
                     setStatus('failed');
                 });
         } else {
@@ -75,8 +79,6 @@ const PaymentComplete: React.FC = () => {
                 return;
             }
 
-            // const userId = Number(localStorage.getItem('auth-storage') || '1');
-
             confirmPayment({ paymentKey, orderId, amount }, userId)
                 .then(() => {
                     try { sessionStorage.removeItem('pendingSubscription'); } catch { }
@@ -85,6 +87,22 @@ const PaymentComplete: React.FC = () => {
                 })
                 .catch(async () => {
                     await cancelPendingReservations();
+                    // cancel pending subscription if exists
+                    try {
+                        const raw = sessionStorage.getItem('pendingSubscription');
+                        if (raw && userId) {
+                            const info = JSON.parse(raw) as any;
+                            if (info.subscriptionId) {
+                                await fetch(`${API_BASE_URL}/subscriptions/${info.subscriptionId}`, {
+                                    method: 'DELETE',
+                                    headers: { 'X-User-Id': String(userId) }
+                                });
+                            }
+                        }
+                        try { sessionStorage.removeItem('pendingSubscription'); } catch {}
+                    } catch (e) {
+                        console.error('구독 취소 실패', e);
+                    }
                     setStatus('failed');
                 });
         }
@@ -100,9 +118,13 @@ const PaymentComplete: React.FC = () => {
                         {status === 'success' && (
                             <div>
                                 <h3 className="text-xl font-semibold">결제 완료</h3>
-                                <p className="mt-3">구독이 정상적으로 등록되었습니다.</p>
+                                <p className="mt-3">
+                                    {pending?.subscriptionId ? '구독이 정상적으로 등록되었습니다.' : '결제가 정상적으로 완료되었습니다.'}
+                                </p>
                                 <div className="mt-6">
-                                    <button onClick={() => navigate('/idol')} className="py-2 px-4 rounded bg-idol-point text-white">아이돌 목록으로</button>
+                                    <button onClick={() => navigate(pending?.subscriptionId ? '/idol' : '/')} className="py-2 px-4 rounded bg-idol-point text-white">
+                                        {pending?.subscriptionId ? '아이돌 목록으로' : '메인으로'}
+                                    </button>
                                 </div>
                             </div>
                         )}

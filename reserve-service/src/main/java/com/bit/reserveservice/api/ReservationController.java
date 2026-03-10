@@ -2,9 +2,10 @@ package com.bit.reserveservice.api;
 
 import com.bit.reserveservice.application.ReservationService;
 import com.bit.reserveservice.domain.dto.RequestReservation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-
+@Slf4j
 @RestController
 @RequestMapping("/reservations")
 public class ReservationController {
@@ -21,9 +22,17 @@ public class ReservationController {
             @RequestHeader("X-User-Id") int userId,
             @RequestBody RequestReservation requestReservation
     ) {
+        // 로그를 찍어 호출 여부 확인
+        log.info("예약 API 호출: userId={}, concertId={}, seatId={}, price={}",
+                userId,
+                requestReservation.getConcertId(),
+                requestReservation.getSeatId(),
+                requestReservation.getPrice());
         try {
-            return reservationService
+            int savedId = reservationService
                     .reserve(userId, requestReservation.getConcertId(), requestReservation.getSeatId(), requestReservation.getPrice());
+            log.info("예약 서비스 반환 id={}", savedId);
+            return savedId;
         } catch (IllegalStateException | IllegalArgumentException e) {
             // 클라이언트 오류로 처리
             throw new ReservationException(e.getMessage());
@@ -37,6 +46,16 @@ public class ReservationController {
             @PathVariable int reservationId
     ) {
         reservationService.cancel(userId, reservationId);
+    }
+
+    // **디버그용**: 현재 사용자의 모든 예약 목록을 반환
+    // 네트워크 탭으로 호출하면 실제 DB에 어떤 레코드가 있는지 확인할 수 있습니다.
+    @GetMapping("/me")
+    public java.util.List<com.bit.reserveservice.domain.entity.Reservation> myReservations(
+            @RequestHeader("X-User-Id") int userId
+    ) {
+        log.info("예약 조회 API 호출 - userId={}", userId);
+        return reservationService.findByUser(userId);
     }
 
     // 에러 응답 변환
