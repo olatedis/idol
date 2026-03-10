@@ -35,7 +35,7 @@ export const authorizeBillingKey = (body: { idolId: number; authKey: string; pla
 export const getAgencyRevenue = async (agencyId: number): Promise<any> => {
     const res = await api.get(`/payments/agency/${agencyId}/revenue`);
     return res.data;
-};;
+};
 
 // fetch available groups for subscription
 export const fetchGroups = () => {
@@ -52,4 +52,16 @@ export const subscribeGroup = (userId: number, groupId: number) => {
     const headers: any = {};
     if (userId) headers['X-User-Id'] = userId;
     return api.post('/subscriptions/groups', { groupId, autoRenew: true }, { headers }).then(r => r.data);
+};
+
+export interface SubscriptionCreateRequest {
+    idolId: number;
+    plan: 'MONTHLY' | 'ANNUAL';
+    autoRenew: boolean;
+}
+
+export const createSubscription = (userId: number | undefined, body: SubscriptionCreateRequest) => {
+    const headers: any = { 'Content-Type': 'application/json' };
+    if (userId) headers['X-User-Id'] = userId;
+    return api.post('/subscriptions', body, { headers }).then(r => r.data);
 };

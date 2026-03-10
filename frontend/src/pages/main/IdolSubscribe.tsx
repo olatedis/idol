@@ -40,7 +40,13 @@ const IdolSubscribe: React.FC = () => {
 
     const handleChoose = (plan: 'MONTHLY' | 'ANNUAL') => {
         if (!selectedIdol) return;
-        navigate(`/payment`, { state: { domain: 'SUBSCRIPTION', idolId: selectedIdol.id, plan } });
+        navigate(`/payment`, {
+            state: {
+                domain: 'SUBSCRIPTION',
+                idolId: selectedIdol.id,
+                plan
+            }
+        });
     };
 
     const openGroup = (group: GroupDto) => {
