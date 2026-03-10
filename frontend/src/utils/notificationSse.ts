@@ -7,7 +7,6 @@ type NotificationHandlers = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// 추가
 const parseSseChunk = (
     chunk: string,
     handlers: NotificationHandlers
