@@ -58,6 +58,7 @@ public class SubscriptionService {
                 .userId(userId)
                 .idolId(request.getIdolId())
                 .status(SubscriptionStatus.PENDING)
+                .startedAt(LocalDateTime.now())
                 .plan(request.getPlan())
                 .autoRenew(request.isAutoRenew())
                 .build();
