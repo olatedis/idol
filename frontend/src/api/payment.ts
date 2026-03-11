@@ -48,10 +48,10 @@ export const fetchGroupIdols = (groupId: number) => {
 };
 
 // subscribe to an entire group (free)
-export const subscribeGroup = (userId: number, groupId: number) => {
+export const subscribeGroup = (userId: number, groupId: number, groupName: string) => {
     const headers: any = {};
     if (userId) headers['X-User-Id'] = userId;
-    return api.post('/subscriptions/groups', { groupId, autoRenew: true }, { headers }).then(r => r.data);
+    return api.post('/subscriptions/groups', { groupId, groupName, autoRenew: true }, { headers }).then(r => r.data);
 };
 
 export interface SubscriptionCreateRequest {

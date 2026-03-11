@@ -13,6 +13,9 @@ public class GroupSubscriptionCreateRequest {
     @NotNull
     private int groupId;
 
+    @NotNull
+    private String groupName;
+
     private boolean autoRenew;
 }
 
