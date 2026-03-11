@@ -93,6 +93,34 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.findMyPayments(userId));
     }
 
+    /**
+     * 결제 취소: READY 상태인 대기 결제를 삭제한다.
+     */
+    @DeleteMapping("/{orderId}")
+    public ResponseEntity<Void> deletePendingPayment(
+            @RequestHeader("X-User-Id") int userId,
+            @PathVariable String orderId) {
+        try {
+            // optional: could check user owns it
+            Payment payment = paymentRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new IllegalArgumentException("결제 정보가 없습니다."));
+            if (payment.getUserId() != userId) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            paymentService.deletePending(orderId);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("결제 삭제 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalStateException e) {
+            log.warn("결제 삭제 실패 - 상태 오류: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        } catch (Exception e) {
+            log.error("결제 삭제 실패 - 서버 오류: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @GetMapping("/agency/{agencyId}/revenue")
     public ResponseEntity<AgencyRevenueDto> getAgencyRevenue(
             @RequestHeader(value = "X-Role", required = false) String role,
