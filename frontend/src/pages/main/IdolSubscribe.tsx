@@ -66,7 +66,7 @@ const IdolSubscribe: React.FC = () => {
     const handleGroupSubscribe = async () => {
         if (!selectedGroup) return;
         try {
-            await subscribeGroup(user?.userId || 0, selectedGroup.groupId);
+            await subscribeGroup(user?.userId || 0, selectedGroup.groupId, selectedGroup.name);
             alert('그룹 구독이 완료되었습니다.');
             setGroupModalOpen(false);
         } catch (e) {

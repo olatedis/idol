@@ -274,6 +274,7 @@ public class SubscriptionService {
         GroupSubscription gs = GroupSubscription.builder()
                 .userId(userId)
                 .groupId(request.getGroupId())
+                .groupName(request.getGroupName())
                 .status(SubscriptionStatus.ACTIVE)
                 .startedAt(now)
                 .autoRenew(request.isAutoRenew())
