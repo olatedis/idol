@@ -160,6 +160,13 @@ public class SubscriptionController {
             log.info("빌링키 발급 성공: userId={}, idolId={}, plan={}",
                     userId, request.getIdolId(), request.getPlan());
 
+            // 정기 결제으로 처리되는 경우, 이미 PENDING 상태로 생성된 구독이 있을 수 있음
+            try {
+                subscriptionService.activatePendingSubscription(userId, request.getIdolId());
+            } catch (Exception e) {
+                log.warn("빌링키 발급 후 구독 활성화 실패: {}", e.getMessage());
+            }
+
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new BillingKeyAuthResponse(
                             billingKey.getId(),

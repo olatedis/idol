@@ -4,7 +4,9 @@ import Header from '../main/Header';
 import { useAuthStore } from "../../stores/authStore";
 import { createPaymentReady, getIdol, createSubscription } from '../../api/payment';
 import { loadTossPaymentsScript } from '../../utils/tossPayments';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { api } from '../../api/axios';
+
+// base url is handled by axios instance
 
 const PaymentPage: React.FC = () => {
     const location = useLocation();
@@ -32,7 +34,23 @@ const PaymentPage: React.FC = () => {
     }, [domain, idolId]);
     const { user } = useAuthStore();
 
+    const [readyOrderId, setReadyOrderId] = useState<string | null>(null);
+
+    const deletePending = async (orderId: string) => {
+        try {
+            await api.delete(`/payments/${orderId}`, {
+                headers: { 'X-User-Id': String(user?.userId) }
+            });
+        } catch (e) {
+            console.error('pending delete failed', e);
+        }
+    };
+
     const handlePay = async () => {
+        if (!user || !user.userId) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
         setLoading(true);
         try {
             await loadTossPaymentsScript();
@@ -56,6 +74,7 @@ const PaymentPage: React.FC = () => {
                     agencyId: concert.agencyId,
                     reservationIds
                 });
+                setReadyOrderId(ready.orderId);
 
                 toss.requestPayment('카드', {
                     amount: ready.amount,
@@ -67,26 +86,56 @@ const PaymentPage: React.FC = () => {
             } else if (domain === 'SUBSCRIPTION') {
                 if (!idolId || !plan) return;
                 // 먼저 백엔드에 pending 구독을 생성
-                const createRes: any = await createSubscription(user?.userId, { idolId: idolId!, plan: plan!, autoRenew: true });
+                const createRes = await createSubscription(user?.userId, { idolId: idolId!, plan: plan!, autoRenew: true });
                 const subscriptionId = createRes.subscriptionId;
-                try { sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId, plan, subscriptionId })); } catch (e) {}
 
-                const amount = plan === 'ANNUAL' ? 89100 : 9900;
-                const ready = await createPaymentReady({
-                    userId,
-                    amount,
-                    domain: 'SUBSCRIPTION',
-                    targetId: subscriptionId,
-                    agencyId: location.state.agencyId,
-                });
+                // 생성을 저장할 session (customerKey은 월정기결제시 사용)
+                const customerKey = crypto.randomUUID();
+                try { sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId, plan, subscriptionId, customerKey })); } catch (e) {}
 
-                toss.requestPayment('카드', {
-                    amount: ready.amount,
-                    orderId: ready.orderId,
-                    orderName: `${idol?.stageName || '아이돌'} 구독`,
-                    successUrl: `${window.location.origin}/payment/complete`,
-                    failUrl: `${window.location.origin}/payment/complete?fail=true`
-                });
+                if (plan === 'MONTHLY') {
+                    // 월간 구독은 빌링키 발급으로 처리 (정기결제)
+                    console.log('billing auth call', { toss });
+                    const billingFunc = toss.requestBillingAuth;
+                    if (typeof billingFunc === 'function') {
+                        await billingFunc('카드', {
+                            customerKey,
+                            successUrl: `${window.location.origin}/payment/complete?type=billing`,
+                            failUrl: `${window.location.origin}/payment/complete?type=billing&fail=true`
+                        });
+                    } else {
+                        // fallback to global function if instance method missing
+                        const globalFunc = (window as any).requestBillingAuth;
+                        if (typeof globalFunc === 'function') {
+                            await globalFunc(clientKey, '카드', {
+                                customerKey,
+                                successUrl: `${window.location.origin}/payment/complete?type=billing`,
+                                failUrl: `${window.location.origin}/payment/complete?type=billing&fail=true`
+                            });
+                        } else {
+                            throw new Error('Billing auth method unavailable');
+                        }
+                    }
+                } else {
+                    // 연간 구독은 일시불 처리
+                    const amount = 89100;
+                    const ready = await createPaymentReady({
+                        userId,
+                        amount,
+                        domain: 'SUBSCRIPTION',
+                        targetId: subscriptionId,
+                        agencyId: location.state.agencyId,
+                    });
+                    setReadyOrderId(ready.orderId);
+
+                    toss.requestPayment('카드', {
+                        amount: ready.amount,
+                        orderId: ready.orderId,
+                        orderName: `${idol?.stageName || '아이돌'} 구독`,
+                        successUrl: `${window.location.origin}/payment/complete`,
+                        failUrl: `${window.location.origin}/payment/complete?fail=true`
+                    });
+                }
             }
         } catch (e) {
             console.error(e);
@@ -162,8 +211,7 @@ const PaymentPage: React.FC = () => {
                                         if (domain === 'CONCERT') {
                                             if (reservationIds && reservationIds.length > 0 && user?.userId) {
                                                 for (const id of reservationIds) {
-                                                    await fetch(`${API_BASE_URL}/reservations/${id}`, {
-                                                        method: 'DELETE',
+                                                    await api.delete(`/reservations/${id}`, {
                                                         headers: { 'X-User-Id': String(user.userId) }
                                                     });
                                                 }
@@ -174,13 +222,16 @@ const PaymentPage: React.FC = () => {
                                             if (raw && user?.userId) {
                                                 const info = JSON.parse(raw);
                                                 if (info.subscriptionId) {
-                                                    await fetch(`${API_BASE_URL}/subscriptions/${info.subscriptionId}`, {
-                                                        method: 'DELETE',
+                                                    await api.delete(`/subscriptions/${info.subscriptionId}`, {
                                                         headers: { 'X-User-Id': String(user.userId) }
                                                     });
                                                 }
                                             }
                                             try { sessionStorage.removeItem('pendingSubscription'); } catch {}
+                                        }
+                                        if (readyOrderId) {
+                                            await deletePending(readyOrderId);
+                                            setReadyOrderId(null);
                                         }
                                     } catch (e) {
                                         console.error('취소 처리 실패', e);
