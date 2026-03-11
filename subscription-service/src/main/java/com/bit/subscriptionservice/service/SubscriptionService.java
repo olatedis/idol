@@ -83,6 +83,41 @@ public class SubscriptionService {
         return SubscriptionDto.fromEntity(subscription);
     }
 
+    /**
+     * 빌링키 발급 이후 PENDING 상태인 구독을 활성화한다.
+     * (정기결제 흐름에서 사용)
+     */
+    @Transactional
+    public void activatePendingSubscription(int userId, int idolId) {
+        Subscription subscription = subscriptionRepository
+                .findByUserIdAndIdolIdAndStatus(userId, idolId, SubscriptionStatus.PENDING)
+                .orElseThrow(() -> new RuntimeException("활성화할 구독 정보가 없습니다."));
+
+        subscription.activate();
+
+        // publish same event as in Kafka listener
+        String uuid = UUID.randomUUID().toString();
+        Map<String, String> args = new HashMap<>();
+        args.put("userId", String.valueOf(subscription.getUserId()));
+        args.put("idolId", String.valueOf(subscription.getIdolId()));
+        args.put("startAt", subscription.getStartedAt().toString());
+        args.put("expiredAt", subscription.getExpiredAt().toString());
+
+        SubscriptionEvent subEvent = SubscriptionEvent.builder()
+                .eventId(uuid)
+                .type("IDOL_SUB_STARTED")
+                .targetType(SubscriptionEvent.TargetType.USER)
+                .targetId(String.valueOf(subscription.getUserId()))
+                .args(args)
+                .redirectUrl("/subscription")
+                .occurredAt(LocalDateTime.now())
+                .build();
+
+        eventPublisher.publishEvent(new SubscriptionEventWrapper("IDOL_SUB_STARTED", subEvent));
+
+        log.info("PENDING 구독 활성화 (billing): userId={}, idolId={}", userId, idolId);
+    }
+
     @KafkaListener(topics = "payment.completed", groupId = "subscription-service")
     @Transactional
     public void consume(String message) {

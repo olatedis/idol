@@ -33,6 +33,10 @@ const PaymentPage: React.FC = () => {
     const { user } = useAuthStore();
 
     const handlePay = async () => {
+        if (!user || !user.userId) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
         setLoading(true);
         try {
             await loadTossPaymentsScript();
@@ -69,24 +73,37 @@ const PaymentPage: React.FC = () => {
                 // 먼저 백엔드에 pending 구독을 생성
                 const createRes: any = await createSubscription(user?.userId, { idolId: idolId!, plan: plan!, autoRenew: true });
                 const subscriptionId = createRes.subscriptionId;
-                try { sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId, plan, subscriptionId })); } catch (e) {}
 
-                const amount = plan === 'ANNUAL' ? 89100 : 9900;
-                const ready = await createPaymentReady({
-                    userId,
-                    amount,
-                    domain: 'SUBSCRIPTION',
-                    targetId: subscriptionId,
-                    agencyId: location.state.agencyId,
-                });
+                // 생성을 저장할 session (customerKey은 월정기결제시 사용)
+                const customerKey = crypto.randomUUID();
+                try { sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId, plan, subscriptionId, customerKey })); } catch (e) {}
 
-                toss.requestPayment('카드', {
-                    amount: ready.amount,
-                    orderId: ready.orderId,
-                    orderName: `${idol?.stageName || '아이돌'} 구독`,
-                    successUrl: `${window.location.origin}/payment/complete`,
-                    failUrl: `${window.location.origin}/payment/complete?fail=true`
-                });
+                if (plan === 'MONTHLY') {
+                    // 월간 구독은 빌링키 발급으로 처리 (정기결제)
+                    toss.requestBillingAuth('카드', {
+                        customerKey,
+                        successUrl: `${window.location.origin}/payment/complete?type=billing`,
+                        failUrl: `${window.location.origin}/payment/complete?type=billing&fail=true`
+                    });
+                } else {
+                    // 연간 구독은 일시불 처리
+                    const amount = 89100;
+                    const ready = await createPaymentReady({
+                        userId,
+                        amount,
+                        domain: 'SUBSCRIPTION',
+                        targetId: subscriptionId,
+                        agencyId: location.state.agencyId,
+                    });
+
+                    toss.requestPayment('카드', {
+                        amount: ready.amount,
+                        orderId: ready.orderId,
+                        orderName: `${idol?.stageName || '아이돌'} 구독`,
+                        successUrl: `${window.location.origin}/payment/complete`,
+                        failUrl: `${window.location.origin}/payment/complete?fail=true`
+                    });
+                }
             }
         } catch (e) {
             console.error(e);
