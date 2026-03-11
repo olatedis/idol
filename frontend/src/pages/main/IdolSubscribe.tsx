@@ -50,7 +50,7 @@ const IdolSubscribe: React.FC = () => {
         navigate(`/payment`, {
             state: {
                 domain: 'SUBSCRIPTION',
-                idolId: selectedIdol.id,
+                idolId: selectedIdol.idolId,
                 agencyId:selectedIdol.agencyId,
                 plan
             }

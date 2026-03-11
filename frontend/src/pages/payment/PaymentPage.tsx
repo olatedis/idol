@@ -71,7 +71,7 @@ const PaymentPage: React.FC = () => {
             } else if (domain === 'SUBSCRIPTION') {
                 if (!idolId || !plan) return;
                 // 먼저 백엔드에 pending 구독을 생성
-                const createRes: any = await createSubscription(user?.userId, { idolId: idolId!, plan: plan!, autoRenew: true });
+                const createRes = await createSubscription(user?.userId, { idolId: idolId!, plan: plan!, autoRenew: true });
                 const subscriptionId = createRes.subscriptionId;
 
                 // 생성을 저장할 session (customerKey은 월정기결제시 사용)
