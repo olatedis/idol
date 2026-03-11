@@ -7,6 +7,8 @@
     --color-idol-dark: #D14D72;
     --color-idol-bg: #FFF8DB;
 
+    --color-idol-mid: #E86F82;
+
 }
 @layer utilities {
     .scrollbar-hide {

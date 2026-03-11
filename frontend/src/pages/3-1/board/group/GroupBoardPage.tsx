@@ -324,7 +324,7 @@ const GroupBoardPage: React.FC = () => {
                             className={[
                                 "px-3 py-2 rounded-full text-sm font-semibold border transition",
                                 isActiveFilter(f)
-                                    ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
+                                    ? "bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] text-white border-transparent shadow-md shadow-[var(--color-idol-point)]/20 hover:brightness-90"
                                     : "bg-white text-gray-800 border-gray-200 hover:bg-gray-200 active:scale-[0.99]",
                             ].join(" ")}
                         >
@@ -349,10 +349,10 @@ const GroupBoardPage: React.FC = () => {
                         {idolOpen && (
                             <div
                                 className="
-                                    absolute left-0 mt-2 w-56
-                                    rounded-2xl border border-gray-200 bg-white shadow-lg overflow-hidden
-                                    z-50
-                                "
+                                absolute left-0 mt-2 w-56
+                                rounded-2xl border border-[var(--color-idol)]/20 bg-white shadow-lg overflow-hidden
+                                z-50
+                            "
                             >
                                 {idolLoading ? (
                                     <div className="px-4 py-3 text-sm text-gray-600">불러오는 중...</div>
@@ -366,10 +366,10 @@ const GroupBoardPage: React.FC = () => {
                                                 type="button"
                                                 onClick={() => onClickIdolBoard(i.idolId)}
                                                 className="
-                                                    w-full text-left px-4 py-3 text-sm
-                                                    hover:bg-gray-50 active:bg-gray-100
-                                                    transition
-                                                "
+                                                w-full text-left px-4 py-3 text-sm
+                                                hover:bg-gray-50 active:bg-gray-100
+                                                transition
+                                            "
                                             >
                                                 {idolLabel(i)}
                                             </button>
@@ -387,7 +387,7 @@ const GroupBoardPage: React.FC = () => {
                         className={[
                             "px-3 py-2 rounded-full text-sm font-semibold border transition",
                             sort === "latest"
-                                ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
+                                ? "bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] text-white border-transparent shadow-md shadow-[var(--color-idol-point)]/20 hover:brightness-90"
                                 : "bg-white border-gray-200 hover:bg-gray-200 active:scale-[0.99]",
                         ].join(" ")}
                     >
@@ -399,7 +399,7 @@ const GroupBoardPage: React.FC = () => {
                         className={[
                             "px-3 py-2 rounded-full text-sm font-semibold border transition",
                             sort === "top"
-                                ? "bg-[#1FBFB8] text-white border-[#1FBFB8]"
+                                ? "bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] text-white border-transparent shadow-md shadow-[var(--color-idol-point)]/20 hover:brightness-90"
                                 : "bg-white border-gray-200 hover:bg-gray-200 active:scale-[0.99]",
                         ].join(" ")}
                     >
@@ -410,9 +410,17 @@ const GroupBoardPage: React.FC = () => {
 
             {/* 검색창 */}
             <div className="flex justify-center">
-                <div className="w-full max-w-xl flex items-center border border-blue-400 rounded-sm bg-white overflow-hidden">
-
-
+                <div
+                    className="
+                    w-full max-w-xl flex items-center
+                    rounded-2xl bg-white overflow-hidden
+                    border border-[var(--color-idol)]/25
+                    shadow-sm
+                    focus-within:border-[var(--color-idol)]/60
+                    focus-within:shadow-[0_0_0_4px_rgba(255,146,146,0.12)]
+                    transition
+                "
+                >
                     <input
                         value={inputQ}
                         onChange={(e) => setInputQ(e.target.value)}
@@ -421,12 +429,24 @@ const GroupBoardPage: React.FC = () => {
                             applySearch();
                         }}
                         placeholder="단어 위주로 검색하시면 보다 정확한 결과를 얻을 수 있습니다."
-                        className="flex-1 h-12 px-4 text-sm outline-none"
+                        className="
+                        flex-1 h-12 px-4 text-sm
+                        bg-[var(--color-idol-bg)]/20 text-gray-700
+                        placeholder:text-gray-400
+                        outline-none
+                    "
                     />
 
                     <button
                         type="button"
-                        className="h-12 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition"
+                        className="
+                        h-12 px-4 text-sm font-semibold
+                        text-[var(--color-idol-point)]
+                        hover:bg-[var(--color-idol-bg)]
+                        hover:text-[var(--color-idol-dark)]
+                        active:bg-[var(--color-idol-bg)]
+                        transition
+                    "
                         onClick={() => {
                             applySearch();
                         }}
@@ -461,13 +481,13 @@ const GroupBoardPage: React.FC = () => {
                             type="button"
                             onClick={() => onClickRow(p)}
                             className="
-                                w-full text-left
-                                grid grid-cols-[90px_1fr_120px_140px_90px_90px]
-                                px-4 py-3
-                                border-b border-gray-100 last:border-b-0
-                                hover:bg-gray-50 active:bg-gray-100
-                                transition-colors
-                            "
+                            w-full text-left
+                            grid grid-cols-[90px_1fr_120px_140px_90px_90px]
+                            px-4 py-3
+                            border-b border-gray-100 last:border-b-0
+                            hover:bg-[var(--color-idol-bg)]/35 active:bg-[var(--color-idol-bg)]/60
+                            transition-colors
+                        "
                         >
                             <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
 
@@ -475,16 +495,15 @@ const GroupBoardPage: React.FC = () => {
                                 <div className="text-sm font-semibold text-gray-900 truncate">
                                     {p.title}
                                     {Number((p as any).commentCount) > 0 && (
-                                        <span className="ml-3 text-gray-500 text-sm font-normal">
-                                            [ {Number((p as any).commentCount)} ]
-                                        </span>
+                                        <span className="ml-3 text-[var(--color-idol-dark)]/80 text-sm font-normal">
+                                        [ {Number((p as any).commentCount)} ]
+                                    </span>
                                     )}
                                 </div>
                             </div>
 
                             <div className="text-sm text-gray-700 tabular-nums">{p.authorId}</div>
 
-                            {/* 작성일은 KST 기준으로 표시 */}
                             <div className="text-sm text-gray-600">{formatDateToKST(p.createdAt)}</div>
 
                             <div className="text-sm text-gray-700 text-right tabular-nums">{p.viewCount}</div>
@@ -508,13 +527,13 @@ const GroupBoardPage: React.FC = () => {
                     type="button"
                     onClick={scrollTop}
                     className="
-                        w-12 h-12 rounded-full
-                        bg-gray-100 border border-gray-200
-                        shadow-md
-                        text-gray-800 font-semibold
-                        hover:bg-gray-200 active:scale-[0.99]
-                        transition
-                    "
+                    w-12 h-12 rounded-full
+                    bg-gray-100 border border-gray-200
+                    shadow-md
+                    text-gray-800 font-semibold
+                    hover:bg-gray-200 active:scale-[0.99]
+                    transition
+                "
                 >
                     ↑
                 </button>
@@ -523,12 +542,13 @@ const GroupBoardPage: React.FC = () => {
                     type="button"
                     onClick={onClickWrite}
                     className="
-                        px-5 py-3 rounded-2xl
-                        bg-[#1FBFB8] text-white text-sm font-semibold
-                        shadow-md
-                        hover:bg-[#17AFA8] active:scale-[0.99]
-                        transition
-                    "
+                    px-5 py-3 rounded-2xl
+                    bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)]
+                    text-white text-sm font-semibold
+                    shadow-md shadow-[var(--color-idol-point)]/20
+                    hover:brightness-90 active:scale-[0.99]
+                    transition
+                "
                 >
                     글쓰기
                 </button>
