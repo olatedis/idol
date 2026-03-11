@@ -52,7 +52,6 @@ const parseSseChunk = (
     }
 };
 
-// 수정
 export const connectNotificationSse = async (
     accessToken: string,
     handlers: NotificationHandlers
