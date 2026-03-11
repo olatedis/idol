@@ -60,17 +60,19 @@ export const readOneNotification = async (
 
 export type NotificationPreferenceResponse = {
     userId: number;
+    allEnabled: boolean;
     chatEnabled: boolean;
     voteEnabled: boolean;
     ticketEnabled: boolean;
-    noticeEnabled: boolean;
+    boardEnabled: boolean;
 };
 
 export type UpdateNotificationPreferenceRequest = {
+    allEnabled: boolean;
     chatEnabled: boolean;
     voteEnabled: boolean;
     ticketEnabled: boolean;
-    noticeEnabled: boolean;
+    boardEnabled: boolean;
 };
 
 export const getNotificationPreference = async (

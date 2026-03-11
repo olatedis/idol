@@ -25,7 +25,6 @@ const Header: React.FC = () => {
     const [idolMessageStacks, setIdolMessageStacks] = useState<IdolMessageStackPayload[]>([]);
     const [loadingNotifications, setLoadingNotifications] = useState(false);
 
-    // 추가
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [hasNext, setHasNext] = useState(false);
     const [loadingMoreNotifications, setLoadingMoreNotifications] = useState(false);
@@ -34,7 +33,6 @@ const Header: React.FC = () => {
 
     const notificationRef = useRef<HTMLDivElement | null>(null);
 
-    // 추가
     const notificationListRef = useRef<HTMLDivElement | null>(null);
 
     const unreadCount = notifications.filter((item) => !item.isRead).length;
@@ -140,7 +138,6 @@ const Header: React.FC = () => {
         }).format(utcDate);
     };
 
-    // 추가
     const getNotificationLabel = (notification: NotificationItem) => {
         const boardType = notification.args?.boardType;
 
@@ -153,7 +150,6 @@ const Header: React.FC = () => {
         return "알림";
     };
 
-    // 추가
     const getNotificationIcon = (notification: NotificationItem) => {
         const boardType = notification.args?.boardType;
 
@@ -164,7 +160,6 @@ const Header: React.FC = () => {
         return "🔔";
     };
 
-    // 추가
     const triggerBellAnimation = () => {
         setBellAnimating(true);
         window.setTimeout(() => {
@@ -172,7 +167,6 @@ const Header: React.FC = () => {
         }, 900);
     };
 
-    // 추가
     const loadMoreNotifications = async () => {
         if (!accessToken || !hasNext || !nextCursor || loadingMoreNotifications) return;
 
@@ -204,7 +198,7 @@ const Header: React.FC = () => {
             try {
                 setLoadingNotifications(true);
                 const data = await getNotificationList(accessToken, 20);
-                setNotifications(data.items ?? []);
+                setNotifications((data.items ?? []).filter(n => !n.isRead));
                 setNextCursor(data.nextCursor ?? null);
                 setHasNext(data.hasNext ?? false);
             } catch (error) {
@@ -234,7 +228,7 @@ const Header: React.FC = () => {
                             isRead: false,
                             readAt: null,
                         },
-                        ...prev,
+                        ...prev.filter(n => !n.isRead),
                     ]);
                     triggerBellAnimation();
                 },
@@ -272,7 +266,6 @@ const Header: React.FC = () => {
         };
     }, [isNotificationOpen]);
 
-    // 추가
     useEffect(() => {
         const el = notificationListRef.current;
         if (!el || !isNotificationOpen) return;

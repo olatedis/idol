@@ -375,7 +375,7 @@ const IdolPostDetailPage: React.FC = () => {
                                     type="button"
                                     onClick={onClickEdit}
                                     className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
-                             hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
+                         hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
                                 >
                                     수정
                                 </button>
@@ -384,7 +384,7 @@ const IdolPostDetailPage: React.FC = () => {
                                     onClick={onClickDelete}
                                     disabled={deletingPost}
                                     className="px-4 py-2 rounded-full border border-red-200 text-sm font-semibold text-red-600
-                             hover:bg-red-50 hover:border-red-300 active:scale-[0.99] transition disabled:opacity-60"
+                         hover:bg-red-50 hover:border-red-300 active:scale-[0.99] transition disabled:opacity-60"
                                 >
                                     {deletingPost ? "삭제 중..." : "삭제"}
                                 </button>
@@ -412,7 +412,10 @@ const IdolPostDetailPage: React.FC = () => {
                                 "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition",
                                 "hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0",
                                 "disabled:opacity-60",
-                                likeActive ? "bg-[#1FBFB8] border-[#1FBFB8] text-white" : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
+                                /* 수정: 추천 버튼 색상 변경 */
+                                likeActive
+                                    ? "bg-[var(--color-idol-mid)] border-transparent text-white shadow-md shadow-[var(--color-idol-point)]/20"
+                                    : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
                             ].join(" ")}
                         >
                             <span className="text-xl">👍</span>
@@ -427,7 +430,10 @@ const IdolPostDetailPage: React.FC = () => {
                                 "w-16 h-16 rounded-full border flex flex-col items-center justify-center transition",
                                 "hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0",
                                 "disabled:opacity-60",
-                                dislikeActive ? "bg-[#1FBFB8] border-[#1FBFB8] text-white" : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
+                                /* 수정: 비추천 버튼 색상 변경 */
+                                dislikeActive
+                                    ? "bg-[var(--color-idol-mid)] border-transparent text-white shadow-md shadow-[var(--color-idol-point)]/20"
+                                    : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
                             ].join(" ")}
                         >
                             <span className="text-xl">👎</span>
@@ -440,7 +446,7 @@ const IdolPostDetailPage: React.FC = () => {
                             type="button"
                             onClick={() => navigate(`/group/${groupId}/idol/${idolId}/board`)}
                             className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
-                         hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
+                     hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
                         >
                             목록으로
                         </button>
@@ -471,8 +477,7 @@ const IdolPostDetailPage: React.FC = () => {
                             return (
                                 <div key={c.commentId} className="px-6 py-4">
                                     <div className="flex items-center justify-between gap-3">
-                                        <div
-                                            className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
                                             <span className="font-medium text-gray-800">{nickname}</span>
 
                                             {/* [수정] 댓글 시간 KST 표시(수정되면 updatedAt 표시) */}
@@ -490,7 +495,7 @@ const IdolPostDetailPage: React.FC = () => {
                                                     onClick={() => onClickEditComment(c)}
                                                     disabled={deletingCommentId === c.commentId || updatingCommentId !== null}
                                                     className="px-3 py-1.5 rounded-full border border-gray-200 text-xs font-semibold text-gray-700
-                                   hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition disabled:opacity-60"
+                               hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition disabled:opacity-60"
                                                 >
                                                     수정
                                                 </button>
@@ -502,7 +507,7 @@ const IdolPostDetailPage: React.FC = () => {
                                                     onClick={() => onClickDeleteComment(c.commentId)}
                                                     disabled={deletingCommentId === c.commentId || updatingCommentId !== null}
                                                     className="px-3 py-1.5 rounded-full border border-red-200 text-xs font-semibold text-red-600
-                                   hover:bg-red-50 hover:border-red-300 active:scale-[0.99] transition disabled:opacity-60"
+                               hover:bg-red-50 hover:border-red-300 active:scale-[0.99] transition disabled:opacity-60"
                                                 >
                                                     {deletingCommentId === c.commentId ? "삭제 중..." : "삭제"}
                                                 </button>
@@ -530,7 +535,7 @@ const IdolPostDetailPage: React.FC = () => {
                                                     onClick={onCancelEditComment}
                                                     disabled={updatingCommentId !== null}
                                                     className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
-                                                    hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition disabled:opacity-60"
+                                                hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition disabled:opacity-60"
                                                 >
                                                     취소
                                                 </button>
@@ -539,8 +544,8 @@ const IdolPostDetailPage: React.FC = () => {
                                                     type="button"
                                                     onClick={onSubmitEditComment}
                                                     disabled={updatingCommentId !== null}
-                                                    className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold
-                                                    hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
+                                                    className="px-4 py-2 rounded-full bg-[var(--color-idol-mid)] text-white text-sm font-semibold
+                                                hover:bg-[var(--color-idol-dark)] active:scale-[0.99] transition disabled:opacity-60"
                                                 >
                                                     {updatingCommentId === c.commentId ? "저장 중..." : "저장"}
                                                 </button>
@@ -574,8 +579,8 @@ const IdolPostDetailPage: React.FC = () => {
                             type="button"
                             onClick={onSubmitComment}
                             disabled={submittingComment || user?.status === "RESTRICTED"}
-                            className="px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold
-                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
+                            className="px-4 py-3 rounded-2xl bg-[var(--color-idol-mid)] text-white text-sm font-semibold
+                     hover:bg-[var(--color-idol-dark)] active:scale-[0.99] transition disabled:opacity-60 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
                         >
                             {submittingComment ? "등록 중..." : "등록"}
                         </button>

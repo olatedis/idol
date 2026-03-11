@@ -17,6 +17,9 @@ public class NotificationPreference {
     @Column(name = "user_id", nullable = false)
     private int userId;
 
+    @Column(name = "all_enabled", nullable = false)
+    private boolean allEnabled = true;
+
     @Column(name = "chat_enabled", nullable = false)
     private boolean chatEnabled = true;
 
@@ -26,8 +29,8 @@ public class NotificationPreference {
     @Column(name = "ticket_enabled", nullable = false)
     private boolean ticketEnabled = true;
 
-    @Column(name = "notice_enabled", nullable = false)
-    private boolean noticeEnabled = true;
+    @Column(name = "board_enabled", nullable = false)
+    private boolean boardEnabled = true;
 
     public static NotificationPreference create(int userId) {
         NotificationPreference p = new NotificationPreference();

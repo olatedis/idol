@@ -102,8 +102,8 @@ const IdolPostWritePage: React.FC = () => {
                             type="button"
                             onClick={onSubmit}
                             disabled={submitting}
-                            className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold
-                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
+                            className="px-4 py-2 rounded-full bg-[var(--color-idol-mid)] text-white text-sm font-semibold
+                                hover:bg-[var(--color-idol-dark)] active:scale-[0.99] transition disabled:opacity-60"
                         >
                             {submitting ? "등록 중..." : "등록"}
                         </button>

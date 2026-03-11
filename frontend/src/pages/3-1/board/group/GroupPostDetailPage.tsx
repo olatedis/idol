@@ -475,7 +475,7 @@ const GroupPostDetailPage: React.FC = () => {
                                 "hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0",
                                 "disabled:opacity-60",
                                 likeActive
-                                    ? "bg-[#1FBFB8] border-[#1FBFB8] text-white"
+                                    ? "bg-[var(--color-idol-mid)] border-transparent text-white shadow-md shadow-[var(--color-idol-point)]/20"
                                     : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
                             ].join(" ")}
                         >
@@ -492,7 +492,7 @@ const GroupPostDetailPage: React.FC = () => {
                                 "hover:-translate-y-[1px] hover:shadow-sm active:translate-y-0",
                                 "disabled:opacity-60",
                                 dislikeActive
-                                    ? "bg-[#1FBFB8] border-[#1FBFB8] text-white"
+                                    ? "bg-[var(--color-idol-mid)] border-transparent text-white shadow-md shadow-[var(--color-idol-point)]/20"
                                     : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50",
                             ].join(" ")}
                         >
@@ -506,7 +506,7 @@ const GroupPostDetailPage: React.FC = () => {
                             type="button"
                             onClick={goToList}
                             className="px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold
- hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
+                     hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99] transition"
                         >
                             목록으로
                         </button>
@@ -604,8 +604,8 @@ const GroupPostDetailPage: React.FC = () => {
                                                     type="button"
                                                     onClick={onSubmitEditComment}
                                                     disabled={updatingCommentId !== null}
-                                                    className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold
-                                                    hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
+                                                    className="px-4 py-2 rounded-full bg-[var(--color-idol-mid)] text-white text-sm font-semibold
+                                                        shadow-md shadow-[var(--color-idol-point)]/20 hover:brightness-95 active:scale-[0.99] transition disabled:opacity-60"
                                                 >
                                                     {updatingCommentId === c.commentId ? "저장 중..." : "저장"}
                                                 </button>
@@ -640,8 +640,8 @@ const GroupPostDetailPage: React.FC = () => {
                             type="button"
                             onClick={onSubmitComment}
                             disabled={submittingComment || user?.status === "RESTRICTED"}
-                            className="px-4 py-3 rounded-2xl bg-[#1FBFB8] text-white text-sm font-semibold
-                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
+                            className="px-4 py-3 rounded-2xl bg-[var(--color-idol-mid)] text-white text-sm font-semibold
+shadow-md shadow-[var(--color-idol-point)]/20 hover:brightness-95 active:scale-[0.99] transition disabled:opacity-60 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
                         >
                             {submittingComment ? "등록 중..." : "등록"}
                         </button>

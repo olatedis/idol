@@ -1,8 +1,8 @@
-import { Editor } from "@toast-ui/react-editor";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { api } from "../../../../api/axios.ts";
-import { useAuthStore } from "../../../../stores/authStore.ts";
+import {Editor} from "@toast-ui/react-editor";
+import React, {useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate, useParams, useSearchParams} from "react-router-dom";
+import {api} from "../../../../api/axios.ts";
+import {useAuthStore} from "../../../../stores/authStore.ts";
 
 type BoardKind = "official" | "fan";
 
@@ -19,7 +19,7 @@ function resolveBoardType(type: BoardKind): string {
 }
 
 const GroupPostWritePage: React.FC = () => {
-    const { groupId } = useParams();
+    const {groupId} = useParams();
     const [sp] = useSearchParams();
     const navigate = useNavigate();
 
@@ -33,7 +33,7 @@ const GroupPostWritePage: React.FC = () => {
 
     const editorRef = useRef<Editor>(null);
 
-    const { accessToken, user } = useAuthStore();
+    const {accessToken, user} = useAuthStore();
 
     // USER는 GROUP_OFFICIAL 글쓰기 진입 자체 차단 (/write 직접 접근 포함)
     useEffect(() => {
@@ -139,8 +139,8 @@ const GroupPostWritePage: React.FC = () => {
                             type="button"
                             onClick={onSubmit}
                             disabled={submitting}
-                            className="px-4 py-2 rounded-full bg-[#1FBFB8] text-white text-sm font-semibold
-                         hover:bg-[#17AFA8] active:scale-[0.99] transition disabled:opacity-60"
+                            className="px-4 py-2 rounded-full bg-[var(--color-idol-mid)] text-white text-sm font-semibold
+                          hover:bg-[var(--color-idol-dark)] active:scale-[0.99] transition disabled:opacity-60"
                         >
                             {submitting ? "등록 중..." : "등록"}
                         </button>
