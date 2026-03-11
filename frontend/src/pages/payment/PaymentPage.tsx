@@ -4,7 +4,9 @@ import Header from '../main/Header';
 import { useAuthStore } from "../../stores/authStore";
 import { createPaymentReady, getIdol, createSubscription } from '../../api/payment';
 import { loadTossPaymentsScript } from '../../utils/tossPayments';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { api } from '../../api/axios';
+
+// base url is handled by axios instance
 
 const PaymentPage: React.FC = () => {
     const location = useLocation();
@@ -31,6 +33,18 @@ const PaymentPage: React.FC = () => {
         }
     }, [domain, idolId]);
     const { user } = useAuthStore();
+
+    const [readyOrderId, setReadyOrderId] = useState<string | null>(null);
+
+    const deletePending = async (orderId: string) => {
+        try {
+            await api.delete(`/payments/${orderId}`, {
+                headers: { 'X-User-Id': String(user?.userId) }
+            });
+        } catch (e) {
+            console.error('pending delete failed', e);
+        }
+    };
 
     const handlePay = async () => {
         if (!user || !user.userId) {
@@ -60,6 +74,7 @@ const PaymentPage: React.FC = () => {
                     agencyId: concert.agencyId,
                     reservationIds
                 });
+                setReadyOrderId(ready.orderId);
 
                 toss.requestPayment('카드', {
                     amount: ready.amount,
@@ -111,6 +126,7 @@ const PaymentPage: React.FC = () => {
                         targetId: subscriptionId,
                         agencyId: location.state.agencyId,
                     });
+                    setReadyOrderId(ready.orderId);
 
                     toss.requestPayment('카드', {
                         amount: ready.amount,
@@ -195,8 +211,7 @@ const PaymentPage: React.FC = () => {
                                         if (domain === 'CONCERT') {
                                             if (reservationIds && reservationIds.length > 0 && user?.userId) {
                                                 for (const id of reservationIds) {
-                                                    await fetch(`${API_BASE_URL}/reservations/${id}`, {
-                                                        method: 'DELETE',
+                                                    await api.delete(`/reservations/${id}`, {
                                                         headers: { 'X-User-Id': String(user.userId) }
                                                     });
                                                 }
@@ -207,13 +222,16 @@ const PaymentPage: React.FC = () => {
                                             if (raw && user?.userId) {
                                                 const info = JSON.parse(raw);
                                                 if (info.subscriptionId) {
-                                                    await fetch(`${API_BASE_URL}/subscriptions/${info.subscriptionId}`, {
-                                                        method: 'DELETE',
+                                                    await api.delete(`/subscriptions/${info.subscriptionId}`, {
                                                         headers: { 'X-User-Id': String(user.userId) }
                                                     });
                                                 }
                                             }
                                             try { sessionStorage.removeItem('pendingSubscription'); } catch {}
+                                        }
+                                        if (readyOrderId) {
+                                            await deletePending(readyOrderId);
+                                            setReadyOrderId(null);
                                         }
                                     } catch (e) {
                                         console.error('취소 처리 실패', e);

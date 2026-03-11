@@ -56,6 +56,30 @@ public class PaymentService {
         return new PaymentCreateResponse(orderId, payment.getAmount());
     }
 
+    @Transactional
+    public void deletePending(String orderId) {
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("결제 정보가 없습니다."));
+        if (payment.getStatus() != com.bit.paymentservice.domain.enumtype.PaymentStatus.READY) {
+            throw new IllegalStateException("삭제할 수 없는 상태의 결제입니다.");
+        }
+
+        // 추가: SUBSCRIPTION 도메인의 경우 연관된 PENDING 구독도 삭제
+        if (payment.getDomain() == com.bit.paymentservice.domain.enumtype.PaymentDomain.SUBSCRIPTION) {
+            try {
+                // API Gateway를 경유하여 구독 서비스에 요청
+                String url = "http://localhost:8000/subscriptions/" + payment.getTargetId();
+                new org.springframework.web.client.RestTemplate().delete(url);
+                log.info("연관된 pending 구독 삭제 요청 성공: subscriptionId={}", payment.getTargetId());
+            } catch (Exception e) {
+                log.warn("연관된 pending 구독 삭제 실패: subscriptionId={}, error={}", payment.getTargetId(), e.getMessage());
+            }
+        }
+
+        paymentRepository.delete(payment);
+        log.info("Pending 결제 삭제: orderId={}", orderId);
+    }
+
     // 트랜잭션 분리: 검증(DB) -> 외부호출(No TX) -> 업데이트(DB)
     public void confirm(PaymentConfirmDto dto, int requestUserId) {
         log.info("결제 승인 요청: orderId={}, requestUserId={}", dto.getOrderId(), requestUserId);

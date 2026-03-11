@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../main/Header';
 import { confirmPayment, authorizeBillingKey } from '../../api/payment';
 import { useAuthStore } from "../../stores/authStore.ts";
+import { api } from '../../api/axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const PaymentComplete: React.FC = () => {
     const location = useLocation();
@@ -40,14 +40,25 @@ const PaymentComplete: React.FC = () => {
                 const ids = parsed?.reservationIds || [];
                 if (ids.length === 0) return;
                 for (const id of ids) {
-                    await fetch(`${API_BASE_URL}/reservations/${id}`, {
-                        method: 'DELETE',
+                    await api.delete(`/reservations/${id}`, {
                         headers: { 'X-User-Id': String(userId) }
                     });
                 }
                 try { sessionStorage.removeItem('pendingReservations'); } catch {}
             } catch (e) {
                 console.error('예약 취소 실패', e);
+            }
+        };
+
+        const deletePendingPayment = async () => {
+            if (orderId && userId) {
+                try {
+                    await api.delete(`/payments/${orderId}`, {
+                        headers: { 'X-User-Id': String(userId) }
+                    });
+                } catch (e) {
+                    console.error('pending payment delete failed', e);
+                }
             }
         };
 
@@ -70,6 +81,8 @@ const PaymentComplete: React.FC = () => {
                     await cancelPendingReservations();
                     // also clear any pending subscription data
                     try { sessionStorage.removeItem('pendingSubscription'); } catch {}
+                    // delete possible pending payment
+                    await deletePendingPayment();
                     setStatus('failed');
                 });
         } else {
@@ -93,8 +106,7 @@ const PaymentComplete: React.FC = () => {
                         if (raw && userId) {
                             const info = JSON.parse(raw) as any;
                             if (info.subscriptionId) {
-                                await fetch(`${API_BASE_URL}/subscriptions/${info.subscriptionId}`, {
-                                    method: 'DELETE',
+                                await api.delete(`/subscriptions/${info.subscriptionId}`, {
                                     headers: { 'X-User-Id': String(userId) }
                                 });
                             }
@@ -103,6 +115,8 @@ const PaymentComplete: React.FC = () => {
                     } catch (e) {
                         console.error('구독 취소 실패', e);
                     }
+                    // also clean pending payment record
+                    await deletePendingPayment();
                     setStatus('failed');
                 });
         }
