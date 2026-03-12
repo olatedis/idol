@@ -19,7 +19,4 @@ public interface GroupRepository extends JpaRepository<Group, Integer> {
     Optional<Group> findByIdWithAgency(@Param("id") int id);
 
     List<Group> findByAgency_Id(int agencyId);
-
-    // 소속사 ID로 그룹 목록 조회
-    List<Group> findByAgencyId(int agencyId);
 }

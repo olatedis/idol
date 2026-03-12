@@ -24,21 +24,7 @@ public class GroupService {
     private final GroupRepository groupRepository; // 추가됨
     private final com.bit.idol.userservice.repository.IdolRepository idolRepository;
     private final com.bit.idol.userservice.repository.AgencyAccountRepository agencyAccountRepository;
-    private final AgencyAccountRepository agencyAccountRepository;
 
-    // 에이전시 계정이 관리하는 그룹 목록 조회
-    public List<GroupDto> getManagedGroups(int userId) {
-        // 1. 유저 ID로 소속사 계정 정보 조회
-        AgencyAccount agencyAccount = agencyAccountRepository.findByUser_Id(userId)
-                .orElseThrow(() -> new RuntimeException("Agency account not found for user: " + userId));
-
-        // 2. 해당 소속사가 소유한 그룹 목록 조회
-        List<Group> groups = groupRepository.findByAgencyId(agencyAccount.getAgency().getId());
-
-        return groups.stream()
-                .map(group -> GroupDto.fromEntity(group, null))
-                .collect(Collectors.toList());
-    }
 
     // 그룹 소속 아이돌 목록 조회 (기존 메서드 유지)
     public List<IdolDto> getIdolsByGroup(int groupId) {

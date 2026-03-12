@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.bit.idol.userservice.service.InternalValidationService;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -19,11 +18,6 @@ public class GroupController {
     private final GroupService groupService;
     private final InternalValidationService internalValidationService;
 
-    // 에이전시가 관리하는 그룹 목록 조회
-    @GetMapping("/managed")
-    public ResponseEntity<List<GroupDto>> getManagedGroups(@RequestHeader("X-User-Id") int userId) {
-        return ResponseEntity.ok(groupService.getManagedGroups(userId));
-    }
 
     // 그룹 상세 조회 (추가됨)
     @GetMapping("/{groupId}")
