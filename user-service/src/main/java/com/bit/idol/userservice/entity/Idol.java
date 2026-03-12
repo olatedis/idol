@@ -25,6 +25,7 @@ public class Idol {
 
     @ManyToOne(fetch = FetchType.LAZY) // 그룹 연관관계 추가
     @JoinColumn(name = "group_id")
+    @Setter
     private Group group;
 
     @Setter
