@@ -191,8 +191,8 @@ public class ChatService {
                     .lastMessage(lastMessage)
                     .lastMessageTime(lastMessageTime)
                     .unreadCount(unreadCount)
-                    .isSubscribed(finalSubscribedIdolIds.contains(idol.getIdolId()))
-                    .isOnline(isIdolOnline(idolId))
+                    .subscribed(finalSubscribedIdolIds.contains(idol.getIdolId()))
+                    .online(isIdolOnline(idolId))
                     .build();
         }).collect(Collectors.toList());
     }
@@ -566,6 +566,30 @@ public class ChatService {
             redisTemplate.convertAndSend("/sub/idol/" + idolId, statusMessage);
             log.info("아이돌 접속 상태 브로드캐스트 전송: idolId={}, event={}", idolId,
                     turnedOn ? "User Joined" : "All Users Disconnected");
+
+            // 아이돌 최초 접속 시 구독자 알림 발행
+            if (turnedOn) {
+                try {
+                    String idolName = userFeignClient.getAllIdols().stream()
+                            .filter(idol -> idol.getIdolId() == idolId)
+                            .findFirst()
+                            .map(idol -> idol.getStageName())
+                            .orElse("아이돌");
+                    com.bit.idol.chatservice.dto.notification.NotificationEventDto notifyEvent =
+                            com.bit.idol.chatservice.dto.notification.NotificationEventDto.builder()
+                                    .eventId(java.util.UUID.randomUUID().toString())
+                                    .type("CHAT_IDOL_ONLINE")
+                                    .targetType(com.bit.idol.chatservice.dto.notification.TargetType.IDOL_SUB)
+                                    .targetId(String.valueOf(idolId))
+                                    .args(java.util.Map.of("idolName", idolName))
+                                    .redirectUrl("/chat/room/" + idolId)
+                                    .occurredAt(java.time.LocalDateTime.now())
+                                    .build();
+                    notificationProducer.send(notifyEvent);
+                } catch (Exception e) {
+                    log.error("아이돌 접속 알림 발행 실패: idolId={}, err={}", idolId, e.getMessage());
+                }
+            }
         }
     }
 

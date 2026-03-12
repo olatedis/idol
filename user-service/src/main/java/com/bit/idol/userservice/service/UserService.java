@@ -393,6 +393,19 @@ public class UserService {
             log.warn("유저 자동 활동 제한 처리: userId={}", userId);
         }
 
+        // 신고 4회 도달 시 경고 알림
+        if (user.getReportCount() == 4) {
+            NotificationEventDto event = NotificationEventDto.builder()
+                    .eventId(UUID.randomUUID().toString())
+                    .type("REPORT_RECEIVED")
+                    .targetType(TargetType.USER)
+                    .targetId(String.valueOf(userId))
+                    .args(java.util.Map.of("reportCount", String.valueOf(user.getReportCount())))
+                    .occurredAt(java.time.LocalDateTime.now())
+                    .build();
+            notificationProducer.send(event);
+        }
+
         // 이벤트 발행
         eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
         updateUsernameCache(user);
@@ -432,6 +445,21 @@ public class UserService {
         updateUsernameCache(user);
 
         log.info("유저 상태 변경 완료: userId={}, status={}", userId, newStatus);
+
+        // 상태 변경 알림 발행
+        NotificationEventDto statusEvent = NotificationEventDto.builder()
+                .eventId(UUID.randomUUID().toString())
+                .type("ACCOUNT_STATUS_CHANGED")
+                .targetType(TargetType.USER)
+                .targetId(String.valueOf(userId))
+                .args(java.util.Map.of(
+                        "status", newStatus.name(),
+                        "reason", reason != null ? reason : ""
+                ))
+                .occurredAt(java.time.LocalDateTime.now())
+                .build();
+        notificationProducer.send(statusEvent);
+
         return UserDto.fromEntity(user);
     }
 

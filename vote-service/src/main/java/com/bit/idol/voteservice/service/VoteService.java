@@ -6,10 +6,12 @@ import com.bit.idol.voteservice.dto.UserDto;
 import com.bit.idol.voteservice.dto.VoteInfo;
 import com.bit.idol.voteservice.dto.VoteListDto;
 import com.bit.idol.voteservice.dto.event.VoteEvent;
+import com.bit.idol.voteservice.dto.notification.NotificationEventDto;
 import com.bit.idol.voteservice.dto.notification.TargetType;
 import com.bit.idol.voteservice.entity.Vote;
 import com.bit.idol.voteservice.entity.VoteRecord;
 import com.bit.idol.voteservice.entity.VoteStatus;
+import com.bit.idol.voteservice.producer.NotificationProducer;
 import com.bit.idol.voteservice.repository.CandidateRepository;
 import com.bit.idol.voteservice.repository.VoteRecordRepository;
 import com.bit.idol.voteservice.repository.VoteRepository;
@@ -47,6 +49,7 @@ public class VoteService {
     private final CandidateRepository candidateRepository;
     private final UserFeignClient userFeignClient;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationProducer notificationProducer;
 
     @Value("${spring.kafka.topic.vote}")
     private String voteTopic;
@@ -107,6 +110,16 @@ public class VoteService {
 
         eventPublisher.publishEvent(new VoteEvent(savedVote, "VOTE_OPENED", targetType, targetId));
 
+        // RankingService 동기화용 Redis 키 설정
+        try {
+            redisTemplate.opsForValue().set("vote:title:" + savedVote.getId(), savedVote.getTitle(), Duration.ofDays(7));
+            if (savedVote.getTargetGroupId() != null) {
+                redisTemplate.opsForValue().set("vote:group:" + savedVote.getId(), String.valueOf(savedVote.getTargetGroupId()), Duration.ofDays(7));
+            }
+        } catch (Exception e) {
+            log.error("RankingService 동기화 Redis 키 설정 실패: {}", e.getMessage());
+        }
+
         return VoteInfo.from(savedVote);
     }
 
@@ -120,6 +133,32 @@ public class VoteService {
 
         String rankingKey = "vote:ranking:" + vote.getId();
         String prevScoreKey = "vote:ranking:prev:" + vote.getId();
+
+        // 1위 후보자 존재 시 VOTE_RESULT 알림 발행
+        try {
+            String topCandidate = redisTemplate.opsForZSet().reverseRange(rankingKey, 0, 0) != null
+                    ? redisTemplate.opsForZSet().reverseRange(rankingKey, 0, 0).stream().findFirst().orElse(null)
+                    : null;
+            if (topCandidate != null) {
+                TargetType targetType2 = vote.getTargetGroupId() != null ? TargetType.GROUP_SUB : TargetType.ALL;
+                String targetId2 = vote.getTargetGroupId() != null ? String.valueOf(vote.getTargetGroupId()) : null;
+                NotificationEventDto voteResultEvent = NotificationEventDto.builder()
+                        .eventId(java.util.UUID.randomUUID().toString())
+                        .type("VOTE_RESULT")
+                        .targetType(targetType2)
+                        .targetId(targetId2)
+                        .args(java.util.Map.of(
+                                "voteTitle", vote.getTitle(),
+                                "winnerName", "후보 " + topCandidate
+                        ))
+                        .redirectUrl("/vote/" + vote.getId())
+                        .occurredAt(java.time.LocalDateTime.now())
+                        .build();
+                notificationProducer.send(voteResultEvent);
+            }
+        } catch (Exception e) {
+            log.error("VOTE_RESULT 알림 발행 실패: {}", e.getMessage());
+        }
 
         // ZSET, 이전 점수 해시, 그리고 활성화 투표 목록에서 해당 voteId 제거
         redisTemplate.delete(rankingKey);
@@ -180,6 +219,28 @@ public class VoteService {
         } catch (Exception e) {
             redisTemplate.delete(redisKey);
             throw e;
+        }
+
+        // 투표 완료 알림 발행
+        try {
+            VoteInfo voteInfo2 = voteReader.getVoteInfo(voteId);
+            String candidateName = candidateRepository.findByVoteIdAndNumber(voteId, candidateNumber)
+                    .map(c -> c.getName()).orElse("후보 " + candidateNumber);
+            NotificationEventDto submitEvent = NotificationEventDto.builder()
+                    .eventId(java.util.UUID.randomUUID().toString())
+                    .type("MY_VOTE_SUBMITTED")
+                    .targetType(TargetType.USER)
+                    .targetId(String.valueOf(userId))
+                    .args(java.util.Map.of(
+                            "voteTitle", voteInfo2.getTitle(),
+                            "candidateName", candidateName
+                    ))
+                    .redirectUrl("/vote/" + voteId)
+                    .occurredAt(java.time.LocalDateTime.now())
+                    .build();
+            notificationProducer.send(submitEvent);
+        } catch (Exception e) {
+            log.error("MY_VOTE_SUBMITTED 알림 발행 실패: {}", e.getMessage());
         }
 
         return "투표가 완료되었습니다.";

@@ -36,8 +36,9 @@ public class AuthController {
     private final StringRedisTemplate redisTemplate;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto request) {
-        LoginResponseDto response = authService.login(request.getUsername(), request.getPassword());
+    public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto request, HttpServletRequest httpRequest) {
+        String clientIp = getClientIp(httpRequest);
+        LoginResponseDto response = authService.login(request.getUsername(), request.getPassword(), clientIp);
         log.info("로그인 성공: username={}", request.getUsername());
         return ResponseEntity.ok(response);
     }
