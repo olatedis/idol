@@ -7,7 +7,7 @@ import { useAuthStore } from '../../stores/authStore.ts';
 
 interface GroupDto { groupId: number; name: string; groupImage?: string; }
 interface IdolDto {
-    id: number;
+    idolId: number;
     stageName: string;
     profileImage?: string;
     agencyId: number;
@@ -39,7 +39,7 @@ const IdolSubscribe: React.FC = () => {
                 })
                 .catch(() => null);
             // open idol modal right away (will be replaced when data arrives)
-            setSelectedIdol({ id: idolId, stageName: '', profileImage: '' } as any);
+            setSelectedIdol({ idolId: idolId, stageName: '', profileImage: '' } as any);
         } else {
             fetchGroups().then(setGroups).catch(() => {});
         }
@@ -50,7 +50,7 @@ const IdolSubscribe: React.FC = () => {
         navigate(`/payment`, {
             state: {
                 domain: 'SUBSCRIPTION',
-                idolId: selectedIdol.id,
+                idolId: selectedIdol.idolId,
                 agencyId:selectedIdol.agencyId,
                 plan
             }
