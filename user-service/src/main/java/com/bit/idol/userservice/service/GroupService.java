@@ -2,8 +2,10 @@ package com.bit.idol.userservice.service;
 
 import com.bit.idol.userservice.dto.group.GroupDto;
 import com.bit.idol.userservice.dto.idol.IdolDto;
+import com.bit.idol.userservice.entity.AgencyAccount;
 import com.bit.idol.userservice.entity.Group;
 import com.bit.idol.userservice.entity.GroupMember;
+import com.bit.idol.userservice.repository.AgencyAccountRepository;
 import com.bit.idol.userservice.repository.GroupMemberRepository;
 import com.bit.idol.userservice.repository.GroupRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class GroupService {
     private final GroupRepository groupRepository; // 추가됨
     private final com.bit.idol.userservice.repository.IdolRepository idolRepository;
     private final com.bit.idol.userservice.repository.AgencyAccountRepository agencyAccountRepository;
+
 
     // 그룹 소속 아이돌 목록 조회 (기존 메서드 유지)
     public List<IdolDto> getIdolsByGroup(int groupId) {
@@ -88,7 +91,7 @@ public class GroupService {
     @Transactional
     public void removeMemberFromGroup(int groupId, int idolId) {
         groupMemberRepository.deleteByGroup_IdAndIdol_Id(groupId, idolId);
-        
+
         com.bit.idol.userservice.entity.Idol idol = idolRepository.findById(idolId)
                 .orElseThrow(() -> new RuntimeException("Idol not found"));
         idol.setGroup(null);

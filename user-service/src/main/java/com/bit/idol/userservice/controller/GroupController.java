@@ -18,6 +18,7 @@ public class GroupController {
     private final GroupService groupService;
     private final InternalValidationService internalValidationService;
 
+
     // 그룹 상세 조회 (추가됨)
     @GetMapping("/{groupId}")
     public ResponseEntity<GroupDto> getGroup(@PathVariable int groupId) {
@@ -57,7 +58,7 @@ public class GroupController {
         if (!"AGENCY".equals(role)) {
             return ResponseEntity.status(403).build();
         }
-        
+
         if (!internalValidationService.canAgencyManageGroup(userId, groupId)) {
             return ResponseEntity.status(403).build();
         }

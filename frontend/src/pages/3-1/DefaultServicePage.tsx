@@ -4,7 +4,6 @@ import Header from "../main/Header";
 import { useAuthStore } from "../../stores/authStore";
 import { api } from "../../api/axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 type GroupSubscriptionDto = {
     groupId: number;
@@ -21,19 +20,24 @@ const DefaultServicePage: React.FC = () => {
 
     const [guardChecking, setGuardChecking] = useState(true);
 
+    const user = useAuthStore((state) => state.user);
+    const accessToken = useAuthStore((state) => state.accessToken);
+
     useEffect(() => {
         const run = async () => {
-            // Zustand store에서 토큰과 유저 정보를 가져옵니다.
-            const { accessToken, user } = useAuthStore.getState();
-
             if (!accessToken) {
-                alert("로그인이 필요합니다.");
-                navigate(-1);
+                // 토큰이 없을 때 (로그아웃 등)는 메인으로 리다이렉트
+                navigate("/");
                 return;
             }
 
-            // 아이돌 권한, 관리자, 또는 소속사인 경우 소속 그룹 구독 검증을 프리패스합니다.
-            if (user?.role === "IDOL" || user?.role === "ADMIN" || user?.role === "AGENCY") {
+            // 아직 유저 정보가 로드되지 않았다면 대기
+            if (!user) return;
+            
+            const role = user.role?.toUpperCase() || "";
+
+            // 관리자나 아이돌은 모든 그룹 프리패스
+            if (role === "ADMIN" || role.includes("IDOL")) {
                 setGuardChecking(false);
                 return;
             }
@@ -44,47 +48,52 @@ const DefaultServicePage: React.FC = () => {
                 return;
             }
 
-            if (!API_BASE_URL) {
-                alert("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
-                navigate(-1);
-                return;
-            }
-
             try {
-                const res = await api.get(`/subscriptions/groups/me`);
-
-                // Axios는 기본값으로 성공(2xx) 시 res.data에 JSON이 반환됨
-                const json = res.data;
-
-                const subscribedGroupIds: number[] = Array.isArray(json)
-                    ? (json as GroupSubscriptionDto[])
-                        .map((x) => Number((x as any)?.groupId))
-                        .filter((v) => Number.isFinite(v))
-                    : [];
-
                 const gid = Number(groupId);
-                const isSubscribed = subscribedGroupIds.includes(gid);
+                let hasAccess = false;
 
-                if (!isSubscribed) {
-                    alert("구독하지 않은 그룹입니다.");
+                if (role === "AGENCY") {
+                    // 에이전시는 관리하는 그룹 목록을 조회하여 확인
+                    const res = await api.get("/groups/managed");
+                    const managedGroups = res.data;
+                    const managedGroupIds: number[] = Array.isArray(managedGroups)
+                        ? managedGroups.map((g: any) => Number(g.groupId ?? g.id))
+                        : [];
+                    hasAccess = managedGroupIds.includes(gid);
+                    
+                    if (!hasAccess) {
+                        alert(`해당 그룹(ID: ${gid})에 대한 관리 권한이 없습니다.`);
+                        navigate(-1);
+                        return;
+                    }
+                } else {
+                    // 일반 유저는 구독 정보를 조회합니다.
+                    const res = await api.get(`/subscriptions/groups/me`);
+                    const json = res.data;
+                    const subscribedGroupIds: number[] = Array.isArray(json)
+                        ? (json as GroupSubscriptionDto[])
+                            .map((x) => Number((x as any)?.groupId))
+                            .filter((v) => Number.isFinite(v))
+                        : [];
+                    hasAccess = subscribedGroupIds.includes(gid);
 
-                    // TODO: 구독 안내/구독 유도 페이지 라우트가 생기면 그쪽으로 이동
-                    // navigate(`/groups/${gid}/subscribe`);
-
-                    // 임시 UX: 이전 화면(2-1)로 되돌림
-                    navigate(-1);
-                    return;
+                    if (!hasAccess) {
+                        alert("구독하지 않은 그룹입니다.");
+                        navigate(-1);
+                        return;
+                    }
                 }
 
                 setGuardChecking(false);
-            } catch {
-                alert("구독 확인 중 오류가 발생했습니다.");
+            } catch (err) {
+                console.error("Permission check failed:", err);
+                alert("권한 확인 중 오류가 발생했습니다.");
                 navigate(-1);
             }
         };
 
         run();
-    }, [API_BASE_URL, groupId, navigate]);
+    }, [accessToken, user, groupId, navigate]);
 
     const tabs = [
         { label: "게시판", to: "board" },
@@ -109,11 +118,10 @@ const DefaultServicePage: React.FC = () => {
             <div className={`pt-[80px] ${isChatRoute ? "h-[100dvh] flex flex-col" : ""}`}>
                 {/* 세미 헤더 */}
                 <div
-                    className={`${
-                        isChatRoute
+                    className={`${isChatRoute
                             ? "bg-white/80 backdrop-blur-md border-b border-gray-200/50 pb-4 pt-2 shrink-0"
                             : "sticky top-[80px] z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow-[0_4px_30px_rgba(0,0,0,0.05)] pb-4 pt-2"
-                    }`}
+                        }`}
                 >
                     <nav
                         className="

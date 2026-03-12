@@ -1,8 +1,11 @@
 package com.bit.idol.authservice.service;
 
 import com.bit.idol.authservice.client.UserFeignClient;
+import com.bit.idol.authservice.dto.notification.NotificationEventDto;
+import com.bit.idol.authservice.dto.notification.TargetType;
 import com.bit.idol.authservice.dto.response.LoginResponseDto;
 import com.bit.idol.authservice.model.UserDto;
+import com.bit.idol.authservice.producer.NotificationProducer;
 import com.bit.idol.authservice.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -13,8 +16,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -25,9 +31,10 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final StringRedisTemplate redisTemplate;
+    private final NotificationProducer notificationProducer;
 
     @CircuitBreaker(name = "user-service", fallbackMethod = "loginFallback")
-    public LoginResponseDto login(String username, String password) {
+    public LoginResponseDto login(String username, String password, String clientIp) {
         // 1. 사용자 정보 조회 (Feign)
         UserDto user = userFeignClient.getUserInfo(username);
 
@@ -54,18 +61,48 @@ public class AuthService {
 
         // 4. 비밀번호 검증
         if (!bCryptPasswordEncoder.matches(password, user.getPassword())) {
-            // 실패 시 카운트 증가 및 30분 제한 설정
-            redisTemplate.opsForValue().increment(failKey);
+            long newFailCount = Optional.ofNullable(redisTemplate.opsForValue().increment(failKey)).orElse(1L);
             redisTemplate.expire(failKey, 30, java.util.concurrent.TimeUnit.MINUTES);
-            int newFailCount = failCount + 1;
+            // 5회 실패 시 잠금 알림
+            if (newFailCount >= 5) {
+                NotificationEventDto lockEvent = NotificationEventDto.builder()
+                        .eventId(UUID.randomUUID().toString())
+                        .type("LOGIN_FAIL_LOCKED")
+                        .targetType(TargetType.USER)
+                        .targetId(String.valueOf(user.getUserId()))
+                        .args(Map.of("lockUntil", LocalDateTime.now().plusMinutes(30).toString()))
+                        .occurredAt(LocalDateTime.now())
+                        .build();
+                notificationProducer.send(lockEvent);
+                log.warn("계정 잠금 알림 발행: userId={}", user.getUserId());
+            }
             throw new RuntimeException("비밀번호가 일치하지 않습니다. (실패 " + newFailCount + "회/5회 남음)");
         }
 
         // 5. 성공 시 카운트 초기화
         redisTemplate.delete(failKey);
 
-        // 4. 토큰 생성
+        // 6. 새 기기/IP 로그인 감지
         String userId = String.valueOf(user.getUserId());
+        if (clientIp != null) {
+            String lastIpKey = "login:last-ip:" + userId;
+            String lastIp = redisTemplate.opsForValue().get(lastIpKey);
+            if (lastIp != null && !lastIp.equals(clientIp)) {
+                NotificationEventDto event = NotificationEventDto.builder()
+                        .eventId(UUID.randomUUID().toString())
+                        .type("LOGIN_NEW_DEVICE")
+                        .targetType(TargetType.USER)
+                        .targetId(userId)
+                        .args(Map.of("ip", clientIp, "loginAt", LocalDateTime.now().toString()))
+                        .occurredAt(LocalDateTime.now())
+                        .build();
+                notificationProducer.send(event);
+                log.info("새 기기/IP 로그인 알림 발행: userId={}, newIp={}", userId, clientIp);
+            }
+            redisTemplate.opsForValue().set(lastIpKey, clientIp);
+        }
+
+        // 4. 토큰 생성
         String accessToken = jwtTokenProvider.createAccessToken(userId, user.getUsername(), user.getNickname(),
                 user.getRole());
         String refreshToken = jwtTokenProvider.createRefreshToken(userId);
@@ -148,7 +185,7 @@ public class AuthService {
         return tokens;
     }
 
-    public LoginResponseDto loginFallback(String username, String password, Throwable t) {
+    public LoginResponseDto loginFallback(String username, String password, String clientIp, Throwable t) {
         log.error("user-service 통신 장애 (로그인 시도 중): {}", t.getMessage());
         throw new RuntimeException("현재 로그인 서비스를 이용할 수 없습니다. 잠시 후 다시 시도해주세요.");
     }

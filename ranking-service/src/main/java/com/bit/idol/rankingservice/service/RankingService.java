@@ -1,6 +1,9 @@
 package com.bit.idol.rankingservice.service;
 
 import com.bit.idol.rankingservice.dto.RankingDto;
+import com.bit.idol.rankingservice.dto.notification.NotificationEventDto;
+import com.bit.idol.rankingservice.dto.notification.TargetType;
+import com.bit.idol.rankingservice.producer.NotificationProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -18,6 +21,7 @@ public class RankingService {
 
     private final RedisTemplate<String, String> redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationProducer notificationProducer;
 
     // 랭킹 업데이트 (Kafka Consumer가 호출)
     public void updateRanking(int voteId, int candidateNumber, int scoreDelta) {
@@ -99,5 +103,42 @@ public class RankingService {
         // 4. WebSocket 전송
         String destination = "/topic/votes/" + voteId + "/ranking";
         messagingTemplate.convertAndSend(destination, rankingList);
+
+        // 5. 1위 변경 시 알림 발행
+        if (!rankingList.isEmpty()) {
+            String prevLeaderKey = "vote:ranking:prev-leader:" + voteId;
+            String currentLeader = String.valueOf(rankingList.get(0).getCandidateNumber());
+            String prevLeader = redisTemplate.opsForValue().get(prevLeaderKey);
+
+            if (prevLeader != null && !prevLeader.equals(currentLeader)) {
+                try {
+                    // voteId로 vote 제목 조회(없으면 ID로 대체)
+                    String voteTitle = redisTemplate.opsForValue().get("vote:title:" + voteId);
+                    if (voteTitle == null) voteTitle = "투표 #" + voteId;
+
+                    NotificationEventDto event = NotificationEventDto.builder()
+                            .eventId(java.util.UUID.randomUUID().toString())
+                            .type("RANKING_CHANGED")
+                            .targetType(TargetType.GROUP_SUB)
+                            .targetId(redisTemplate.opsForValue().get("vote:group:" + voteId))
+                            .args(java.util.Map.of(
+                                    "voteTitle", voteTitle,
+                                    "newLeaderName", currentLeader,
+                                    "prevLeaderName", prevLeader
+                            ))
+                            .redirectUrl("/vote/" + voteId)
+                            .occurredAt(java.time.LocalDateTime.now())
+                            .build();
+                    notificationProducer.send(event);
+                    log.info("랜킹 1위 변경 알림 발행: voteId={}, prev={}, new={}", voteId, prevLeader, currentLeader);
+                } catch (Exception e) {
+                    log.error("랜킹 변경 알림 발행 실패: {}", e.getMessage());
+                }
+            }
+
+            if (currentLeader != null) {
+                redisTemplate.opsForValue().set(prevLeaderKey, currentLeader);
+            }
+        }
     }
 }
