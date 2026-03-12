@@ -67,7 +67,21 @@ public class PostService {
         Post post = new Post();
         post.setBoardType(req.getBoardType());
         post.setIdolId(req.getIdolId());
-        post.setGroupId(req.getGroupId());
+
+        // 수정: IDOL_OFFICIAL은 idolId로 소속 groupId를 조회해서 자동 세팅
+        if (req.getBoardType() == BoardType.IDOL_OFFICIAL) {
+            Idol idol = idolRepository.findById(req.getIdolId().intValue())
+                    .orElseThrow(() -> new RuntimeException("아이돌 정보를 찾을 수 없습니다."));
+
+            if (idol.getGroupId() == null) {
+                throw new RuntimeException("해당 아이돌의 소속 그룹 정보가 없습니다.");
+            }
+
+            post.setGroupId(idol.getGroupId().longValue());
+        } else {
+            post.setGroupId(req.getGroupId());
+        }
+
         post.setAuthorId(userId);
         post.setTitle(requireNonBlank(req.getTitle()));
         post.setContent(requireNonBlank(req.getContent()));
@@ -239,8 +253,9 @@ public class PostService {
         if (boardType == BoardType.IDOL_OFFICIAL) {
             if (idolId == null)
                 throw new RuntimeException("아이돌 게시판에는 아이돌 ID가 필수입니다.");
-            if (groupId != null)
-                throw new RuntimeException("아이돌 게시판에는 그룹 ID가 없어야 합니다.");
+
+            // 수정: IDOL_OFFICIAL의 groupId는 프론트 입력값이 아니라
+            // 백엔드에서 idolId 기준으로 자동 세팅하므로 여기서는 검사하지 않음
             return;
         }
 

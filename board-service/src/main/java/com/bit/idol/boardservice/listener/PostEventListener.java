@@ -91,6 +91,11 @@ public class PostEventListener {
 
         String redirectUrl;
         if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
+            // 수정: IDOL_OFFICIAL은 저장 시점에 groupId가 자동 세팅되어 있어야 함
+            if (post.getGroupId() == null) {
+                throw new RuntimeException("IDOL_OFFICIAL 게시글의 groupId가 없습니다.");
+            }
+
             redirectUrl = "/group/" + post.getGroupId()
                     + "/idol/" + post.getIdolId()
                     + "/board/" + post.getPostId();
