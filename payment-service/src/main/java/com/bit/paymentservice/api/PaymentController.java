@@ -25,7 +25,7 @@ public class PaymentController {
 
     @PostMapping("/confirm")
     public ResponseEntity<Void> confirm(
-            @RequestHeader(value = "X-User-Id", required = true) int userId,
+            @RequestHeader(value = "X-User-Id") int userId,
             @RequestBody PaymentConfirmDto dto) {
         try {
             log.info("결제 승인 컨트롤러 호출: orderId={}, userId={}", dto.getOrderId(), userId);

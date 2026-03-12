@@ -59,6 +59,11 @@ public class Subscription {
         }
         this.status = SubscriptionStatus.ACTIVE;
         this.startedAt = LocalDateTime.now();
+        if(plan == SubscriptionPlan.MONTHLY){
+            this.expiredAt = LocalDateTime.now().plusMonths(1);
+        }else if(plan == SubscriptionPlan.ANNUAL){
+            this.expiredAt = LocalDateTime.now().plusYears(1);
+        }
         this.nextRenewalAt = LocalDateTime.now().plusMonths(plan.getDurationInMonths());
     }
 
