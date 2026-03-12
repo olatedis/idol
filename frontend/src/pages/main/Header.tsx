@@ -10,6 +10,8 @@ import {
 import { connectNotificationSse } from "../../utils/notificationSse";
 import type { IdolMessageStackPayload, NotificationItem } from "../../types/notification";
 
+import { showSuccessToast } from "../../utils/alert";
+
 const Header: React.FC = () => {
     const navigate = useNavigate();
     const { user, logout, accessToken } = useAuthStore();
@@ -41,7 +43,7 @@ const Header: React.FC = () => {
 
     const handleLogout = () => {
         logout();
-        alert("로그아웃되었습니다.");
+        showSuccessToast("로그아웃되었습니다.");
         navigate("/");
         setIsMenuOpen(false);
     };

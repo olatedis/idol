@@ -27,8 +27,8 @@ const DefaultServicePage: React.FC = () => {
             const { accessToken, user } = useAuthStore.getState();
 
             if (!accessToken) {
-                alert("로그인이 필요합니다.");
-                navigate(-1);
+                // 로그아웃 시나 권한 만료 시 불필요한 alert를 제거하고 메인으로 리다이렉트합니다.
+                navigate("/");
                 return;
             }
 
@@ -51,34 +51,38 @@ const DefaultServicePage: React.FC = () => {
             }
 
             try {
-                const res = await api.get(`/subscriptions/groups/me`);
-
-                // Axios는 기본값으로 성공(2xx) 시 res.data에 JSON이 반환됨
-                const json = res.data;
-
-                const subscribedGroupIds: number[] = Array.isArray(json)
-                    ? (json as GroupSubscriptionDto[])
-                        .map((x) => Number((x as any)?.groupId))
-                        .filter((v) => Number.isFinite(v))
-                    : [];
-
+                let isSubscribed = false;
                 const gid = Number(groupId);
-                const isSubscribed = subscribedGroupIds.includes(gid);
+
+                if (user?.role === "AGENCY") {
+                    // 에이전시는 관리하는 그룹 목록을 조회합니다.
+                    const res = await api.get("/groups/managed");
+                    const managedGroups = res.data;
+                    const managedGroupIds: number[] = Array.isArray(managedGroups)
+                        ? managedGroups.map((g: any) => Number(g.id))
+                        : [];
+                    isSubscribed = managedGroupIds.includes(gid);
+                } else {
+                    // 일반 유저는 구독 정보를 조회합니다.
+                    const res = await api.get(`/subscriptions/groups/me`);
+                    const json = res.data;
+                    const subscribedGroupIds: number[] = Array.isArray(json)
+                        ? (json as GroupSubscriptionDto[])
+                            .map((x) => Number((x as any)?.groupId))
+                            .filter((v) => Number.isFinite(v))
+                        : [];
+                    isSubscribed = subscribedGroupIds.includes(gid);
+                }
 
                 if (!isSubscribed) {
-                    alert("구독하지 않은 그룹입니다.");
-
-                    // TODO: 구독 안내/구독 유도 페이지 라우트가 생기면 그쪽으로 이동
-                    // navigate(`/groups/${gid}/subscribe`);
-
-                    // 임시 UX: 이전 화면(2-1)로 되돌림
+                    alert(user?.role === "AGENCY" ? "관리 권한이 없는 그룹입니다." : "구독하지 않은 그룹입니다.");
                     navigate(-1);
                     return;
                 }
 
                 setGuardChecking(false);
             } catch {
-                alert("구독 확인 중 오류가 발생했습니다.");
+                alert("권한 확인 중 오류가 발생했습니다.");
                 navigate(-1);
             }
         };

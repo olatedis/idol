@@ -106,8 +106,8 @@ const ChatPage: React.FC = () => {
                     lastMessage: roomData.lastMessage || null,
                     lastMessageAt: roomData.lastMessageAt || null,
                     unreadCount: roomData.unreadCount || 0,
-                    isSubscribed: roomData.subscribed !== undefined ? roomData.subscribed : (roomData.isSubscribed || false),
-                    isOnline: roomData.online !== undefined ? roomData.online : (roomData.isOnline || false)
+                    isSubscribed: roomData.subscribed || false,
+                    isOnline: roomData.online || false
                 };
             });
 
