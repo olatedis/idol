@@ -7,22 +7,6 @@ interface AdminHistoryModalProps {
     onClose: () => void;
 }
 
-interface ReportDto {
-    id: number;
-    reporterId: number;
-    targetUserId: number;
-    reason: string;
-    description: string;
-    createdAt: string;
-}
-
-interface BanHistoryDto {
-    id: number;
-    userId: number;
-    status: string;
-    reason: string;
-    createdAt: string;
-}
 
 const AdminHistoryModal: React.FC<AdminHistoryModalProps> = ({ userId, type, onClose }) => {
     const [data, setData] = useState<any[]>([]);

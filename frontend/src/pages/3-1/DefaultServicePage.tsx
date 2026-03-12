@@ -32,8 +32,8 @@ const DefaultServicePage: React.FC = () => {
                 return;
             }
 
-            // 아이돌 권한이거나 관리자인 경우 소속 그룹 구독 검증을 프리패스합니다.
-            if (user?.role === "IDOL" || user?.role === "ADMIN") {
+            // 아이돌 권한, 관리자, 또는 소속사인 경우 소속 그룹 구독 검증을 프리패스합니다.
+            if (user?.role === "IDOL" || user?.role === "ADMIN" || user?.role === "AGENCY") {
                 setGuardChecking(false);
                 return;
             }

@@ -53,21 +53,28 @@ const IdolPage: React.FC = () => {
         }
     };
 
-    // 구독 목록 조회 → 그룹 상세 조회
+    // 구독 목록 또는 관리 목록 조회
     const fetchGroupSubscriptions = async () => {
         if (!isLoggedIn) return;
 
         try {
-            const { data: subs } = await api.get<GroupSubscriptionDto[]>("/subscriptions/groups/me");
+            if (user?.role === "AGENCY") {
+                // 에이전시 계정은 관리 중인 그룹 목록을 서버에서 직접 조회
+                const { data: managedGroups } = await api.get<GroupDto[]>("/groups/managed");
+                setSubscribedGroups(managedGroups);
+            } else {
+                // 일반/아이돌 계정은 구독한 그룹 목록 조회
+                const { data: subs } = await api.get<GroupSubscriptionDto[]>("/subscriptions/groups/me");
 
-            const groupPromises = subs.map(sub =>
-                api.get(`/groups/${sub.groupId}`).then(res => res.data)
-            );
+                const groupPromises = subs.map(sub =>
+                    api.get<GroupDto>(`/groups/${sub.groupId}`).then(res => res.data)
+                );
 
-            const groupResults = await Promise.all(groupPromises);
-            setSubscribedGroups(groupResults);
+                const groupResults = await Promise.all(groupPromises);
+                setSubscribedGroups(groupResults);
+            }
         } catch (error) {
-            console.error("구독 목록 조회 실패:", error);
+            console.error("그룹 목록 조회 실패:", error);
         }
     };
 
@@ -130,7 +137,7 @@ const IdolPage: React.FC = () => {
                 {/* 구독중인 그룹 */}
                 <section className="my-8 relative">
                     <div className="bg-idol rounded-lg py-3 text-center text-white font-semibold mb-8">
-                        구독중인 그룹
+                        {user?.role === "AGENCY" ? "관리중인 그룹" : "구독중인 그룹"}
                     </div>
 
                     {isLoggedIn ? (
@@ -164,7 +171,7 @@ const IdolPage: React.FC = () => {
                                     ))
                                 ) : (
                                     <div className="w-full text-center py-10 text-gray-500">
-                                        구독 중인 그룹이 없습니다.
+                                        {user?.role === "AGENCY" ? "관리 중인 그룹이 없습니다." : "구독 중인 그룹이 없습니다."}
                                     </div>
                                 )}
                             </div>

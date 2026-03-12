@@ -204,7 +204,7 @@ const ChatPage: React.FC = () => {
                     // 1. 메시지 삭제
                     if (parsed.type === "DELETE") {
                         setMessages((prev) => prev.map(m => m.id === parsed.id ? { ...m, content: "삭제된 메시지입니다.", type: "DELETED" } : m));
-                        return; // 메시지 배열에 새로 추가하지 않고 종료
+                        return;
                     }
 
                     // 2. 공지사항 고정/해제
@@ -222,34 +222,49 @@ const ChatPage: React.FC = () => {
                         setMessages((prev) => prev.map(m => m.id === parsed.id ? { ...m, reactions: parsed.reactions } : m));
                         return;
                     }
-                    // --- 이벤트 핸들링 끝 ---
 
-                    // 내가 보낸 메시지가 에코되어 돌아올 경우 렌더링 중복 방지 (Optimistic UI와 충돌 방지)
-                    if (String(parsed.senderId) === String(user.userId)) {
-                        return; // 이미 화면에 그렸으므로 무시
-                    }
-
-                    // 아이돌 접속 상태 실시간 변경 이벤트 처리
+                    // 4. 아이돌 접속 상태 실시간 변경 이벤트 처리
                     if (parsed.type === "STATUS") {
                         setIsIdolOnline(parsed.content === "ON");
                         return;
                     }
 
-                    // 아이돌 타이핑 상태 실시간 변경 이벤트 처리
+                    // 5. 아이돌 타이핑 상태 실시간 변경 이벤트 처리
                     if (parsed.type === "TYPING") {
                         setIsIdolTyping(true);
                         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                         typingTimeoutRef.current = setTimeout(() => setIsIdolTyping(false), 3000);
                         return;
                     }
+                    // --- 이벤트 핸들링 끝 ---
 
                     setMessages((prev) => {
-                        // 혹시 모를 중복 ID 제거 (동일한 메시지 ID가 이미 있으면 추가 안 함)
-                        if (parsed.id && prev.some(m => m.id === parsed.id)) return prev;
-                        return [...prev, parsed];
+                        // 1. 서버에서 온 진짜 ID가 이미 목록에 있는지 확인 (중복 방지)
+                        if (parsed.id && !String(parsed.id).startsWith("temp-") && prev.some(m => m.id === parsed.id)) {
+                            return prev;
+                        }
+
+                        // 2. 내가 보낸 메시지인 경우, 기존의 Optimistic UI(temp-) 메시지를 서버 데이터로 교체
+                        if (String(parsed.senderId) === String(user.userId) && parsed.id && !String(parsed.id).startsWith("temp-")) {
+                            // 가장 최근의 매칭되는 임시 메시지 찾기
+                            const lastTempIndex = [...prev].reverse().findIndex(m => 
+                                String(m.id).startsWith("temp-") && 
+                                (m.content === parsed.content || m.type !== "TEXT") // 미디어는 URL이 다를 수 있으므로 타입으로 체크
+                            );
+                            
+                            if (lastTempIndex !== -1) {
+                                const realIndex = prev.length - 1 - lastTempIndex;
+                                const newMessages = [...prev];
+                                newMessages[realIndex] = { ...parsed, me: true };
+                                return newMessages;
+                            }
+                        }
+
+                        // 3. 남이 보낸 메시지이거나 매칭되는 임시 메시지가 없는 경우 새로 추가
+                        return [...prev, { ...parsed, me: String(parsed.senderId) === String(user.userId) }];
                     });
                     setTimeout(scrollToBottom, 100);
-                    setIsIdolTyping(false); // 메시지가 도착하면 타이핑 표시 즉시 제거
+                    setIsIdolTyping(false); 
                 };
 
                 // 공지성 및 아이돌 발송 메시지용 공용 채널
@@ -258,9 +273,18 @@ const ChatPage: React.FC = () => {
                 // 에러 발생 및 도배 방지 시 서버 브로드캐스팅 수신
                 client.subscribe(`/queue/errors/${user.userId}`, (message: any) => {
                     const errorPayload = JSON.parse(message.body);
-                    alert(`전송 제한: ${errorPayload.message}`);
+                    console.error("STOMP Error Received:", errorPayload);
+
+                    if (errorPayload.code === "RATE_LIMIT") {
+                        alert(`전송 제한: ${errorPayload.message}`);
+                    } else if (errorPayload.code === "FORBIDDEN") {
+                        alert(`권한 오류: ${errorPayload.message}`);
+                    } else {
+                        alert(`서버 오류: ${errorPayload.message || "메시지 전송 중 문제가 발생했습니다."}`);
+                    }
+
                     // Optimistic UI로 올라간 실패한 임시 메시지 즉각 롤백(제거)
-                    setMessages(prev => prev.filter(m => m.id === undefined || !String(m.id).startsWith("temp-")));
+                    setMessages(prev => prev.filter(m => !String(m.id).startsWith("temp-")));
                 });
 
                 // IDOL 권한일 경우 팬들이 나에게 보내는 프라이빗 큐 채널 추가 구독
@@ -467,8 +491,10 @@ const ChatPage: React.FC = () => {
         }
     };
 
-    // 엔터키 전송 지원
+    // 엔터키 전송 지원 (한글 IME 중복 발송 방지 포함)
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.nativeEvent.isComposing) return; // IME 조합 중이면 엔터키 이벤트 무시 (중복 발송 방지)
+        
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
@@ -783,8 +809,8 @@ const ChatPage: React.FC = () => {
                     );
                 })}
 
-                {/* 작성 중 표시 (아이돌이 입력 중일 때) */}
-                {isIdolTyping && selectedIdolId && (
+                {/* 작성 중 표시 (본인 방이 아닌 경우에만 아이돌이 입력 중임을 표시) */}
+                {isIdolTyping && selectedIdolId && !(user?.role === 'IDOL' && myIdolId === selectedIdolId) && (
                     <div className="flex justify-start shrink-0 transform transition-all">
                         <div className="w-8 h-8 rounded-full bg-gray-200 mr-2 overflow-hidden shrink-0 border border-[var(--color-idol)]/20">
                             {chatRooms.find(r => r.idolId === selectedIdolId)?.profileImage ? (

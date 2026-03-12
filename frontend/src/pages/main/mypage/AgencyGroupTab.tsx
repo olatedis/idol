@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../../../api/axios';
+import { api } from '../../../api/axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Idol {
@@ -14,6 +14,7 @@ interface Group {
     groupId: number;
     name: string;
     groupImage: string;
+    agencyId?: number;
     members?: Idol[];
 }
 
