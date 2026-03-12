@@ -17,4 +17,6 @@ public interface GroupRepository extends JpaRepository<Group, Integer> {
     // N+1 문제 해결을 위한 Fetch Join (상세 조회)
     @Query("SELECT g FROM Group g JOIN FETCH g.agency WHERE g.id = :id")
     Optional<Group> findByIdWithAgency(@Param("id") int id);
+
+    List<Group> findByAgency_Id(int agencyId);
 }

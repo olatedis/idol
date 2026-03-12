@@ -50,7 +50,6 @@ const ConcertPage: React.FC = () => {
 
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
-    const [totalElements, setTotalElements] = useState<number | null>(null);
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -94,7 +93,6 @@ const ConcertPage: React.FC = () => {
         setConcerts([]);
         setPage(0);
         setHasMore(true);
-        setTotalElements(null);
     };
 
 
@@ -123,9 +121,6 @@ const ConcertPage: React.FC = () => {
         } else {
             content = (data.content ?? []) as ConcertDto[];
             last = Boolean(data.last);
-            if (typeof data.totalElements === "number") {
-                setTotalElements(data.totalElements);
-            }
         }
 
         if (nextPage === 0) {

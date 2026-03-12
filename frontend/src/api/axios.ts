@@ -51,7 +51,7 @@ api.interceptors.response.use(
 
         // 제재(RESTRICTED/SUSPENDED) 등으로 인한 403 통제 처리
         if (axiosError.response?.status === 403) {
-            const message = axiosError.response?.data?.message || axiosError.response?.data || '이용이 제한된 서비스이거나 권한이 없습니다.';
+            const message = (axiosError.response?.data as any)?.message || axiosError.response?.data || '이용이 제한된 서비스이거나 권한이 없습니다.';
             alert(typeof message === 'string' ? message : '권한이 없습니다.');
 
             // 만약 토큰 검증 단계의 완전 정지(SUSPENDED)라면 강제 로그아웃

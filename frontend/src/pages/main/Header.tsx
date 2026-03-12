@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,9 +12,6 @@ import type { IdolMessageStackPayload, NotificationItem } from "../../types/noti
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
-
-    const location = useLocation();
-
     const { user, logout, accessToken } = useAuthStore();
     const isLoggedIn = !!user || !!accessToken;
 

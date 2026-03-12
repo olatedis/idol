@@ -125,10 +125,9 @@ public class CommentService {
         // IDOL_OFFICIAL: IDOL(본인)/AGENCY는 통과, USER는 구독자만
         if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
 
-            if (role == Role.IDOL) {
-                if (isMyIdol(post.getIdolId(), userId)) return;
-            }
-            if (role == Role.AGENCY) return;
+            if (role == Role.IDOL && isMyIdol(post.getIdolId(), userId)) return;
+            
+            if (role == Role.AGENCY && userInternalClient.canAgencyManageIdol(userId, post.getIdolId())) return;
 
             if (!subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId)) {
                 throw new RuntimeException("구독이 필요합니다.");
@@ -139,10 +138,11 @@ public class CommentService {
         // GROUP_OFFICIAL / GROUP_FAN
         if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
 
-            // GROUP_OFFICIAL은 IDOL/AGENCY 통과(정책)
-            if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
-                if (role == Role.IDOL || role == Role.AGENCY) return;
-            }
+            // 에이전시 관리 권한 확인
+            if (role == Role.AGENCY && userInternalClient.canAgencyManageGroup(userId, post.getGroupId())) return;
+
+            // 그룹 멤버(IDOL)인지 확인
+            if (role == Role.IDOL && userInternalClient.isGroupMember(post.getGroupId(), userId)) return;
 
             if (!subscriptionInternalClient.isActiveGroupSubscriber(post.getGroupId(), userId)) {
                 throw new RuntimeException("구독이 필요합니다.");
@@ -183,7 +183,7 @@ public class CommentService {
             }
         }
 
-        if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
+        if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
             if (role == Role.IDOL) {
                 return userInternalClient.isGroupMember(post.getGroupId(), userId);
             }

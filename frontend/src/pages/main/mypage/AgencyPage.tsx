@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getAgencyRevenue } from '../../../api/payment';
 import { motion } from 'framer-motion';
+import AgencyGroupTab from './AgencyGroupTab';
 
 interface AgencyPageProps {
     agencyId?: number;
@@ -10,6 +11,7 @@ const AgencyPage: React.FC<AgencyPageProps> = ({ agencyId }) => {
     const [revenueData, setRevenueData] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'revenue' | 'group'>('revenue');
 
     useEffect(() => {
         if (!agencyId) {
@@ -68,17 +70,40 @@ const AgencyPage: React.FC<AgencyPageProps> = ({ agencyId }) => {
 
     return (
         <div className="space-y-8 animate-fade-in font-sans">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900">소속사 대시보드</h2>
-                    <p className="text-sm text-gray-500 mt-1">소속 아티스트들의 통합 매출 현황을 확인하세요.</p>
+                    <h2 className="text-2xl font-bold text-gray-900">소속사 관리 페이지</h2>
+                    <p className="text-sm text-gray-500 mt-1">소속 아티스트들의 매출 확인 및 그룹 관리를 지원합니다.</p>
                 </div>
-                <div className="px-4 py-2 bg-idol/10 text-idol text-sm font-bold rounded-lg border border-idol/20 shadow-sm">
-                    AGENCY
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setActiveTab('revenue')}
+                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${
+                            activeTab === 'revenue' 
+                                ? 'bg-gray-900 text-white shadow-sm' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        매출 통계
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('group')}
+                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${
+                            activeTab === 'group' 
+                                ? 'bg-gray-900 text-white shadow-sm' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        그룹 및 멤버 관리
+                    </button>
                 </div>
             </div>
 
-            {/* 메인 총 매출 카드 */}
+            {activeTab === 'group' ? (
+                <AgencyGroupTab agencyId={agencyId} />
+            ) : (
+                <>
+                    {/* 메인 총 매출 카드 */}
             <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -191,6 +216,8 @@ const AgencyPage: React.FC<AgencyPageProps> = ({ agencyId }) => {
                     </div>
                 )}
             </div>
+                </>
+            )}
         </div>
     );
 };
