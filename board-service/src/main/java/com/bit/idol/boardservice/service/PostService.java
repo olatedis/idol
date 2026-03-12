@@ -339,6 +339,14 @@ public class PostService {
         if (post.getBoardType() == BoardType.GROUP_FAN) {
             if (role == Role.USER && post.getAuthorId().equals(userId))
                 return;
+            if (role == Role.AGENCY) {
+                boolean ok = userInternalClient.canAgencyManageGroup(userId, post.getGroupId());
+                if (ok) return;
+            }
+            if (role == Role.IDOL) {
+                boolean ok = userInternalClient.isGroupMember(post.getGroupId(), userId);
+                if (ok) return;
+            }
             throw new RuntimeException("접근 권한이 없습니다.");
         }
 
@@ -396,12 +404,10 @@ public class PostService {
         if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
 
             // IDOL 본인인지 확인
-            if (role == Role.IDOL) {
-                if (isMyIdol(post.getIdolId(), userId)) return;
-            }
+            if (role == Role.IDOL && isMyIdol(post.getIdolId(), userId)) return;
 
-            // 소속사(AGENCY)면 통과
-            if (role == Role.AGENCY) return;
+            // 소속사(AGENCY) 관리 권한 확인
+            if (role == Role.AGENCY && userInternalClient.canAgencyManageIdol(userId, post.getIdolId())) return;
 
             // USER는 구독자만
             boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId);
@@ -412,11 +418,13 @@ public class PostService {
         // GROUP_OFFICIAL / GROUP_FAN
         if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
 
-            // GROUP_OFFICIAL은 IDOL/AGENCY 통과(정책)
-            if (post.getBoardType() == BoardType.GROUP_OFFICIAL) {
-                if (role == Role.IDOL || role == Role.AGENCY) return;
-            }
+            // 에이전시 관리 권한 확인
+            if (role == Role.AGENCY && userInternalClient.canAgencyManageGroup(userId, post.getGroupId())) return;
 
+            // 그룹 멤버(IDOL)인지 확인
+            if (role == Role.IDOL && userInternalClient.isGroupMember(post.getGroupId(), userId)) return;
+
+            // 구독 확인
             boolean ok = subscriptionInternalClient.isActiveGroupSubscriber(post.getGroupId(), userId);
             if (!ok) throw new RuntimeException("구독이 필요합니다.");
         }
