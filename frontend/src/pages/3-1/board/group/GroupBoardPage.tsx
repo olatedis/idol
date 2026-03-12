@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useAuthStore } from "../../../../stores/authStore.ts";
-import { api } from "../../../../api/axios.ts";
+import React, {useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate, useParams, useSearchParams} from "react-router-dom";
+import {useAuthStore} from "../../../../stores/authStore.ts";
+import {api} from "../../../../api/axios.ts";
 
 type BoardKind = "official" | "fan";
 
@@ -28,6 +28,11 @@ type IdolDto = {
     stageName?: string | null;
     imgUrl?: string | null;
 };
+
+type GroupDto = {
+    groupId: number;
+    name: string;
+}
 
 function resolveBoardType(type: BoardKind): string {
     return type === "official" ? "GROUP_OFFICIAL" : "GROUP_FAN";
@@ -58,11 +63,11 @@ const formatDateToKST = (dateString: string) => {
 };
 
 const GroupBoardPage: React.FC = () => {
-    const { groupId } = useParams();
+    const {groupId} = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
 
-    const { accessToken } = useAuthStore();
+    const {accessToken} = useAuthStore();
 
     // URL 상태 (필터/정렬/검색만 유지)
     const board = (sp.get("type") as BoardKind) || "official";
@@ -85,6 +90,8 @@ const GroupBoardPage: React.FC = () => {
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+    const [groupName, setGroupName] = useState("");
+
     // 아이돌 드롭다운
     const [idols, setIdols] = useState<IdolDto[]>([]);
     const [idolLoading, setIdolLoading] = useState(false);
@@ -94,8 +101,8 @@ const GroupBoardPage: React.FC = () => {
     // 필터 버튼
     const leftFilters = useMemo(() => {
         return [
-            { label: "그룹 공식", type: "official" as BoardKind },
-            { label: "그룹 팬", type: "fan" as BoardKind },
+            {label: "그룹 공식", type: "official" as BoardKind},
+            {label: "그룹 팬", type: "fan" as BoardKind},
         ];
     }, []);
 
@@ -159,7 +166,7 @@ const GroupBoardPage: React.FC = () => {
         // search-service 연동: keyword가 있을 때만 전달 (서버 파라미터명: keyword)
         if (q && q.trim()) params.keyword = q.trim();
 
-        const res = await api.get("/board/posts", { params });
+        const res = await api.get("/board/posts", {params});
         const data = res.data as any;
         const content = (data.content ?? []) as PostListResponse[];
 
@@ -194,6 +201,25 @@ const GroupBoardPage: React.FC = () => {
                 setIdols([]);
             } finally {
                 setIdolLoading(false);
+            }
+        };
+
+        run();
+    }, [groupId]);
+
+    // 그룹명 조회
+    useEffect(() => {
+        const run = async () => {
+            if (!groupId) {
+                setGroupName("");
+                return;
+            }
+
+            try {
+                const res = await api.get<GroupDto>(`/groups/${groupId}`);
+                setGroupName(res.data?.name ?? "");
+            } catch {
+                setGroupName("");
             }
         };
 
@@ -259,7 +285,7 @@ const GroupBoardPage: React.FC = () => {
 
                 setPage((prev) => prev + 1);
             },
-            { root: null, rootMargin: "200px", threshold: 0 }
+            {root: null, rootMargin: "200px", threshold: 0}
         );
 
         io.observe(el);
@@ -279,7 +305,7 @@ const GroupBoardPage: React.FC = () => {
         return () => document.removeEventListener("mousedown", onDocDown);
     }, [idolOpen]);
 
-    const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+    const scrollTop = () => window.scrollTo({top: 0, behavior: "smooth"});
 
     const requireLoginOrStop = () => {
         if (accessToken) return true;
@@ -314,6 +340,25 @@ const GroupBoardPage: React.FC = () => {
 
     return (
         <div className="space-y-4">
+            {/* 현재 그룹명 */}
+            {groupName && (
+                <div className="flex">
+                    <div
+                        className="
+                            inline-flex items-center
+                            rounded-2xl px-6 py-3
+                            bg-white
+                            border border-[var(--color-idol)]/60
+                            shadow-[0_0_0_4px_rgba(255,146,146,0.12)]
+                            transition
+                        "
+                    >
+                        <span className="text-base font-semibold text-[var(--color-idol-dark)]">
+                            {groupName}
+                        </span>
+                    </div>
+                </div>
+            )}
             {/* 상단 툴바 */}
             <div className="flex justify-between flex-wrap gap-2">
                 <div className="flex gap-2 flex-wrap items-center">
@@ -461,7 +506,8 @@ const GroupBoardPage: React.FC = () => {
 
             {/* 게시글 리스트 */}
             <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                <div className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                <div
+                    className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
                     <div className="text-left">번호</div>
                     <div className="text-left">제목</div>
                     <div className="text-left">작성자</div>
@@ -514,7 +560,7 @@ const GroupBoardPage: React.FC = () => {
             </div>
 
             {/* 무한스크롤 sentinel */}
-            <div ref={sentinelRef} className="h-10" />
+            <div ref={sentinelRef} className="h-10"/>
 
             {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
             {!loading && !loadingMore && posts.length > 0 && !hasMore && (

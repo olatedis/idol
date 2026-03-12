@@ -24,6 +24,11 @@ type IdolDto = {
     stageName?: string | null;
 };
 
+type GroupDto = {
+    groupId: number;
+    name: string;
+};
+
 const PAGE_SIZE = 20;
 
 // 날짜 문자열을 KST 기준으로 표시하기 위한 헬퍼 함수
@@ -64,6 +69,8 @@ const IdolBoardPage: React.FC = () => {
     const [hasMore, setHasMore] = useState(true);
     const [totalElements, setTotalElements] = useState<number | null>(null);
 
+    const [groupName, setGroupName] = useState("");
+
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
     const leftFilters = useMemo(() => {
@@ -94,6 +101,24 @@ const IdolBoardPage: React.FC = () => {
     const [idolLoading, setIdolLoading] = useState(false);
     const [idolOpen, setIdolOpen] = useState(false);
     const idolWrapRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const run = async () => {
+            if (!groupId) {
+                setGroupName("");
+                return;
+            }
+
+            try {
+                const res = await api.get<GroupDto>(`/groups/${groupId}`);
+                setGroupName(res.data?.name ?? "");
+            } catch {
+                setGroupName("");
+            }
+        };
+
+        run();
+    }, [groupId]);
 
     useEffect(() => {
         const run = async () => {
@@ -223,8 +248,32 @@ const IdolBoardPage: React.FC = () => {
 
     return (
         <div className="space-y-4">
+
+                {/* 현재 그룹 / 아이돌 */}
+                {(groupName || selectedIdol) && (
+                    <div className="flex">
+                        <div
+                            className="
+                                inline-flex items-center
+                                rounded-2xl px-6 py-3
+                                bg-white
+                                border border-[var(--color-idol)]/60
+                                shadow-[0_0_0_4px_rgba(255,146,146,0.12)]
+                                transition
+                            "
+                        >
+                            <span className="text-base font-semibold text-[var(--color-idol-dark)]">
+                                {groupName}
+                                {groupName && selectedIdol ? " • " : ""}
+                                {selectedIdol ? idolLabel(selectedIdol) : ""}
+                            </span>
+                        </div>
+                    </div>
+                )}
             <div className="flex justify-between flex-wrap gap-2">
-                <div className="flex gap-2 flex-wrap items-center">
+
+
+            <div className="flex gap-2 flex-wrap items-center">
                     {leftFilters.map((f) => (
                         <button
                             key={f.label}
