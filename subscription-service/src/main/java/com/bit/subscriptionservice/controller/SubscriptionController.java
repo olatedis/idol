@@ -126,9 +126,6 @@ public class SubscriptionController {
     public ResponseEntity<List<GroupSubscriptionDto>> getMyGroupSubscriptions(
             @RequestHeader("X-User-Id") int userId,
             @RequestHeader("X-Role") String role) {
-        if (Role.valueOf(role) == Role.AGENCY) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
 
         return ResponseEntity.ok(subscriptionService.getMyGroupSubscriptions(userId));
     }
