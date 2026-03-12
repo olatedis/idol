@@ -95,6 +95,9 @@ public class SubscriptionService {
                 .orElseThrow(() -> new RuntimeException("활성화할 구독 정보가 없습니다."));
 
         subscription.activate();
+        // cache 상태를 ACTIVE로 갱신
+        String redisKey = buildIdolKey(userId, idolId);
+        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
 
         // publish same event as in Kafka listener
         String uuid = UUID.randomUUID().toString();
@@ -139,6 +142,9 @@ public class SubscriptionService {
                 .orElseThrow();
 
         subscription.activate();
+        // redis 캐시도 함께 갱신
+        String redisKey = buildIdolKey(subscription.getUserId(), subscription.getIdolId());
+        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
 
         String uuid = UUID.randomUUID().toString();
         Map<String, String> args = new HashMap<>();
