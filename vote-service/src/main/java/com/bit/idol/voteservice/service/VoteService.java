@@ -76,7 +76,7 @@ public class VoteService {
         Set<Integer> myVotedSet = new HashSet<>(myVotedVoteIds);
 
         return votes.stream()
-                .filter(vote -> groupId == null || groupId.equals(vote.getTargetGroupId())) // 그룹 필터 적용
+                .filter(vote -> groupId == null || java.util.Objects.equals(groupId, vote.getTargetGroupId())) // 그룹 필터 적용
                 .map(vote -> {
                     String status = "PROGRESS";
                     LocalDateTime now = LocalDateTime.now();
@@ -379,7 +379,7 @@ public class VoteService {
     }
 
     @Transactional(readOnly = true)
-    public List<MyVoteRecordDto> getMyVoteRecords(int userId) {
-        return voteRecordRepository.findMyVoteRecords(userId);
+    public List<MyVoteRecordDto> getMyVoteRecords(int userId, Long groupId) {
+        return voteRecordRepository.findMyVoteRecords(userId, groupId);
     }
 }

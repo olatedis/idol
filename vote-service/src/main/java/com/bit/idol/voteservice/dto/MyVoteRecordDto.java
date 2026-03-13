@@ -12,9 +12,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MyVoteRecordDto {
-    private int voteId;
+    private Integer voteId;
     private String voteTitle;
-    private int candidateNumber;
+    private Integer candidateNumber;
     private String candidateName;
     private LocalDateTime votedAt;
 }

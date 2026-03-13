@@ -34,7 +34,7 @@ public class VoteDetailDto {
                 .description(vote.getDescription())
                 .startDate(vote.getStartDate())
                 .endDate(vote.getEndDate())
-                .status(vote.getStatus().name())
+                .status(vote.getStatus() != null ? vote.getStatus().name() : "OPEN")
                 .totalVotes(vote.getTotalVotes())
                 .candidates(vote.getCandidate().stream()
                         .map(CandidateDto::from)

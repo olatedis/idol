@@ -180,7 +180,10 @@ const VotePage: React.FC = () => {
         try {
             if (tab === 'MY') {
                 if (!user) return;
-                const { data } = await api.get("/api/votes/me");
+                const url = groupId 
+                    ? `/api/votes/me?groupId=${groupId}` 
+                    : "/api/votes/me";
+                const { data } = await api.get(url);
                 setMyVotes(data);
             } else {
                 // groupId가 있으면 쿼리스트링에 포함하여 요청
@@ -190,7 +193,7 @@ const VotePage: React.FC = () => {
 
                 const { data } = await api.get(url);
 
-                const filtered = data.content.filter((v: VoteInfo) => {
+                const filtered = (data.content || []).filter((v: VoteInfo) => {
                     if (tab === 'OPEN') {
                         return v.status === 'OPEN' || v.status === 'UPCOMING';
                     }
@@ -202,7 +205,7 @@ const VotePage: React.FC = () => {
                 } else {
                     setVotes(prev => [...prev, ...filtered]);
                 }
-                setHasNext(!data.last);
+                setHasNext(pageNum < (data?.totalPages || 0) - 1);
             }
         } catch (error) {
             console.error("데이터 조회 실패:", error);

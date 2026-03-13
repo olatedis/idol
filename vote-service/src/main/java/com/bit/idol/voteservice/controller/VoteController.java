@@ -42,13 +42,20 @@ public class VoteController {
 
     // 투표 목록 조회 (기존: 검색/페이징용 - 비로그인 가능)
     @GetMapping
-    public ResponseEntity<Page<VoteInfo>> getVoteList(
-            @RequestParam(required = false) Long groupId, // 그룹 ID 필터 추가
+    public ResponseEntity<java.util.Map<String, Object>> getVoteList(
+            @RequestParam(required = false) Long groupId,
             @RequestParam(required = false) String keyword,
-            @PageableDefault(size = 10, sort = "startDate", direction = Sort.Direction.DESC) Pageable pageable) {
-
-        Page<VoteInfo> voteList = voteReader.getVoteList(groupId, keyword, pageable);
-        return ResponseEntity.ok(voteList);
+            @org.springframework.data.web.PageableDefault(size = 10, sort = "startDate", direction = org.springframework.data.domain.Sort.Direction.DESC) org.springframework.data.domain.Pageable pageable) {
+        org.springframework.data.domain.Page<VoteInfo> page = voteReader.getVoteList(groupId, keyword, pageable);
+        
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("content", page.getContent());
+        response.put("totalPages", page.getTotalPages());
+        response.put("totalElements", page.getTotalElements());
+        response.put("size", page.getSize());
+        response.put("number", page.getNumber());
+        
+        return ResponseEntity.ok(response);
     }
 
     // 투표 목록 조회 (로그인 유저용 - 내 참여 여부 포함)
@@ -59,11 +66,13 @@ public class VoteController {
         return ResponseEntity.ok(voteService.getVoteList(userId, groupId));
     }
 
+
     // 내 투표 기록 조회
     @GetMapping("/me")
     public ResponseEntity<List<MyVoteRecordDto>> getMyVoteRecords(
-            @RequestHeader("X-User-Id") int userId) {
-        List<MyVoteRecordDto> records = voteService.getMyVoteRecords(userId);
+            @RequestHeader("X-User-Id") int userId,
+            @RequestParam(required = false) Long groupId) {
+        List<MyVoteRecordDto> records = voteService.getMyVoteRecords(userId, groupId);
         return ResponseEntity.ok(records);
     }
 
