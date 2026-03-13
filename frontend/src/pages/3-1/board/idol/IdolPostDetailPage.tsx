@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {useAuthStore} from "../../../../stores/authStore";
 import {api} from "../../../../api/axios";
+import { showAlert, showConfirm, showErrorToast, showSuccessToast } from "../../../../utils/alert";
 
 type CommentResponse = {
     commentId: number;
@@ -160,19 +161,19 @@ const IdolPostDetailPage: React.FC = () => {
         if (!postId) return;
         if (deletingPost) return;
 
-        const ok = window.confirm("정말 삭제하시겠습니까?");
+        const ok = await showConfirm("정말 삭제하시겠습니까?", "삭제된 게시글은 복구할 수 없습니다.", "삭제");
         if (!ok) return;
 
         setDeletingPost(true);
         try {
             await api.delete(`/board/posts/${postId}`);
-            alert("삭제되었습니다.");
+            showSuccessToast("삭제되었습니다.");
             navigate(`/group/${groupId}/idol/${idolId}/board`);
         } catch (e: any) {
             const status = e?.response?.status;
-            if (status === 401) alert("로그인이 필요합니다.");
-            else if (status === 403) alert("권한이 없습니다.");
-            else alert(e?.response?.data?.message || e?.message || "삭제 실패");
+            if (status === 401) showErrorToast("로그인이 필요합니다.");
+            else if (status === 403) showErrorToast("권한이 없습니다.");
+            else showErrorToast(e?.response?.data?.message || e?.message || "삭제 실패");
         } finally {
             setDeletingPost(false);
         }
@@ -180,7 +181,10 @@ const IdolPostDetailPage: React.FC = () => {
 
     const onClickLike = async () => {
         if (!data || !postId) return;
-        if (!accessToken) return alert("로그인이 필요합니다.");
+        if (!accessToken) {
+            showErrorToast("로그인이 필요합니다.");
+            return;
+        }
         if (reacting) return;
 
         setReacting(true);
@@ -204,9 +208,9 @@ const IdolPostDetailPage: React.FC = () => {
             );
         } catch (e: any) {
             const status = e?.response?.status;
-            if (status === 401) alert("로그인이 필요합니다.");
-            else if (status === 403) alert("권한이 없습니다.");
-            else alert(e?.response?.data?.message || e?.message || "추천 처리 실패");
+            if (status === 401) showErrorToast("로그인이 필요합니다.");
+            else if (status === 403) showErrorToast("권한이 없습니다.");
+            else showErrorToast(e?.response?.data?.message || e?.message || "추천 처리 실패");
         } finally {
             setReacting(false);
         }
@@ -214,7 +218,10 @@ const IdolPostDetailPage: React.FC = () => {
 
     const onClickDislike = async () => {
         if (!data || !postId) return;
-        if (!accessToken) return alert("로그인이 필요합니다.");
+        if (!accessToken) {
+            showErrorToast("로그인이 필요합니다.");
+            return;
+        }
         if (reacting) return;
 
         setReacting(true);
@@ -238,9 +245,9 @@ const IdolPostDetailPage: React.FC = () => {
             );
         } catch (e: any) {
             const status = e?.response?.status;
-            if (status === 401) alert("로그인이 필요합니다.");
-            else if (status === 403) alert("권한이 없습니다.");
-            else alert(e?.response?.data?.message || e?.message || "비추천 처리 실패");
+            if (status === 401) showErrorToast("로그인이 필요합니다.");
+            else if (status === 403) showErrorToast("권한이 없습니다.");
+            else showErrorToast(e?.response?.data?.message || e?.message || "비추천 처리 실패");
         } finally {
             setReacting(false);
         }
@@ -249,8 +256,14 @@ const IdolPostDetailPage: React.FC = () => {
     const onSubmitComment = async () => {
         if (!data || !postId) return;
         if (!commentInput.trim()) return;
-        if (!accessToken) return alert("로그인이 필요합니다.");
-        if (user?.status === "RESTRICTED") return alert("활동 제한 상태에서는 댓글을 작성할 수 없습니다.");
+        if (!accessToken) {
+            showErrorToast("로그인이 필요합니다.");
+            return;
+        }
+        if (user?.status === "RESTRICTED") {
+            showErrorToast("활동 제한 상태에서는 댓글을 작성할 수 없습니다.");
+            return;
+        }
 
         if (submittingComment) return;
         setSubmittingComment(true);
@@ -263,9 +276,9 @@ const IdolPostDetailPage: React.FC = () => {
             setData(detail);
         } catch (e: any) {
             const status = e?.response?.status;
-            if (status === 401) alert("로그인이 필요합니다.");
-            else if (status === 403) alert("권한이 없습니다.");
-            else alert(e?.response?.data?.message || e?.message || "댓글 작성 실패");
+            if (status === 401) showErrorToast("로그인이 필요합니다.");
+            else if (status === 403) showErrorToast("권한이 없습니다.");
+            else showErrorToast(e?.response?.data?.message || e?.message || "댓글 작성 실패");
         } finally {
             setSubmittingComment(false);
         }
@@ -288,10 +301,13 @@ const IdolPostDetailPage: React.FC = () => {
 
     const onClickDeleteComment = async (commentId: number) => {
         if (!postId) return;
-        if (!accessToken) return alert("로그인이 필요합니다.");
+        if (!accessToken) {
+            showErrorToast("로그인이 필요합니다.");
+            return;
+        }
         if (deletingCommentId) return;
 
-        const ok = window.confirm("댓글을 삭제하시겠습니까?");
+        const ok = await showConfirm("댓글을 삭제하시겠습니까?", "삭제된 댓글은 복구할 수 없습니다.", "삭제");
         if (!ok) return;
 
         setDeletingCommentId(commentId);
@@ -301,9 +317,9 @@ const IdolPostDetailPage: React.FC = () => {
             setData(detail);
         } catch (e: any) {
             const status = e?.response?.status;
-            if (status === 401) alert("로그인이 필요합니다.");
-            else if (status === 403) alert("권한이 없습니다.");
-            else alert(e?.response?.data?.message || e?.message || "댓글 삭제 실패");
+            if (status === 401) showErrorToast("로그인이 필요합니다.");
+            else if (status === 403) showErrorToast("권한이 없습니다.");
+            else showErrorToast(e?.response?.data?.message || e?.message || "댓글 삭제 실패");
         } finally {
             setDeletingCommentId(null);
         }
@@ -325,12 +341,15 @@ const IdolPostDetailPage: React.FC = () => {
 
     // [추가] 댓글 수정 저장
     const onSubmitEditComment = async () => {
-        if (!accessToken) return alert("로그인이 필요합니다.");
+        if (!accessToken) {
+            showErrorToast("로그인이 필요합니다.");
+            return;
+        }
         if (!editingCommentId) return;
 
         const trimmed = editingContent.trim();
         if (!trimmed) {
-            alert("내용을 입력하세요.");
+            showErrorToast("내용을 입력하세요.");
             return;
         }
 
@@ -346,9 +365,9 @@ const IdolPostDetailPage: React.FC = () => {
             onCancelEditComment();
         } catch (e: any) {
             const status = e?.response?.status;
-            if (status === 401) alert("로그인이 필요합니다.");
-            else if (status === 403) alert("권한이 없습니다.");
-            else alert(e?.response?.data?.message || e?.message || "댓글 수정 실패");
+            if (status === 401) showErrorToast("로그인이 필요합니다.");
+            else if (status === 403) showErrorToast("권한이 없습니다.");
+            else showErrorToast(e?.response?.data?.message || e?.message || "댓글 수정 실패");
         } finally {
             setUpdatingCommentId(null);
         }

@@ -63,7 +63,7 @@ const Header: React.FC = () => {
         console.log("accessToken 존재?", !!accessToken);
 
         try {
-            await readOneNotification(accessToken!, notification.notificationId);
+            await readOneNotification(notification.notificationId);
             console.log("단건 읽음 API 호출 완료");
 
             setNotifications((prev) =>
@@ -91,7 +91,7 @@ const Header: React.FC = () => {
         if (targetIds.length === 0) return;
 
         try {
-            await readAllNotifications(accessToken);
+            await readAllNotifications();
             console.log("전체 읽음 API 호출 완료");
 
             setRemovingIds(targetIds);
@@ -172,7 +172,7 @@ const Header: React.FC = () => {
         try {
             setLoadingMoreNotifications(true);
 
-            const data = await getNotificationList(accessToken, 20, nextCursor);
+            const data = await getNotificationList(20, nextCursor);
 
             setNotifications((prev) => [...prev, ...(data.items ?? [])]);
             setNextCursor(data.nextCursor ?? null);
@@ -196,7 +196,7 @@ const Header: React.FC = () => {
         const loadNotifications = async () => {
             try {
                 setLoadingNotifications(true);
-                const data = await getNotificationList(accessToken, 20);
+                const data = await getNotificationList(20);
                 setNotifications((data.items ?? []).filter(n => !n.isRead));
                 setNextCursor(data.nextCursor ?? null);
                 setHasNext(data.hasNext ?? false);

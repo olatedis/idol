@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { api } from "../../../api/axios";
-import Swal from 'sweetalert2';
+import { showAlert, showConfirm, showErrorToast, showSuccessToast } from "../../../utils/alert";
 
 interface UserMyPageDto {
     userId: number; // mapped from id in backend
@@ -66,20 +66,10 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
             await api.post("/users/me/image", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
-            Swal.fire({
-                icon: 'success',
-                title: '완료',
-                text: '프로필 이미지가 변경되었습니다.',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            showSuccessToast("프로필 이미지가 변경되었습니다.");
             onRefresh();
         } catch (err: any) {
-            Swal.fire({
-                icon: 'error',
-                title: '오류',
-                text: err?.response?.data?.message || "이미지 변경 에러가 발생했습니다."
-            });
+            showErrorToast(err?.response?.data?.message || "이미지 변경 에러가 발생했습니다.");
         }
     };
 
@@ -97,91 +87,45 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
                     : Promise.resolve()
             ]);
 
-            Swal.fire({
-                icon: 'success',
-                title: '완료',
-                text: '회원 정보가 수정되었습니다.',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            showSuccessToast("회원 정보가 수정되었습니다.");
             setIsEditing(false);
             onRefresh();
         } catch (err: any) {
-            Swal.fire({
-                icon: 'error',
-                title: '오류',
-                text: err?.response?.data?.message || "정보 수정에 실패했습니다."
-            });
+            showErrorToast(err?.response?.data?.message || "정보 수정에 실패했습니다.");
         }
     };
 
     const handleChangePassword = async () => {
         if (pwdForm.newPassword.length < 8) {
-            Swal.fire({
-                icon: 'warning',
-                text: '새 비밀번호는 8자 이상이어야 합니다.'
-            });
+            showAlert("경고", "새 비밀번호는 8자 이상이어야 합니다.", "warning");
             return;
         }
         try {
             await api.post("/users/password/change", pwdForm);
-            Swal.fire({
-                icon: 'success',
-                title: '완료',
-                text: '비밀번호가 성공적으로 변경되었습니다.',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            showSuccessToast("비밀번호가 성공적으로 변경되었습니다.");
             setIsPwdModalOpen(false);
             setPwdForm({ currentPassword: "", newPassword: "" });
         } catch (err: any) {
-            Swal.fire({
-                icon: 'error',
-                title: '오류',
-                text: err?.response?.data?.message || "비밀번호 변경에 실패했습니다."
-            });
+            showErrorToast(err?.response?.data?.message || "비밀번호 변경에 실패했습니다.");
         }
     };
 
     const handleWithdraw = async () => {
-        const result = await Swal.fire({
-            title: '정말 탈퇴하시겠습니까?',
-            text: '관련 데이터가 모두 삭제되며 복구할 수 없습니다.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#fe2a55',
-            cancelButtonColor: '#e5e7eb',
-            confirmButtonText: '탈퇴',
-            cancelButtonText: '<span class="text-gray-700">취소</span>'
-        });
+        const ok = await showConfirm("정말 탈퇴하시겠습니까?", "관련 데이터가 모두 삭제되며 복구할 수 없습니다.", "탈퇴");
 
-        if (!result.isConfirmed) return;
+        if (!ok) return;
 
         if (!userInfo.provider && !withdrawPwd) {
-            Swal.fire({
-                icon: 'warning',
-                text: '비밀번호를 입력해주세요.'
-            });
+            showAlert("경고", "비밀번호를 입력해주세요.", "warning");
             return;
         }
 
         try {
             await api.post("/users/withdraw", { password: userInfo.provider ? "" : withdrawPwd });
-            Swal.fire({
-                icon: 'success',
-                title: '탈퇴 완료',
-                text: '회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.',
-                timer: 2000,
-                showConfirmButton: false
-            }).then(() => {
-                window.location.href = "/"; // 메인으로 튕기면서 로그아웃 처리
-            });
+            await showSuccessToast("회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.");
+            window.location.href = "/"; // 메인으로 튕기면서 로그아웃 처리
         } catch (err: any) {
-            Swal.fire({
-                icon: 'error',
-                title: '오류',
-                text: err?.response?.data?.message || "회원 탈퇴에 실패했습니다."
-            });
+            showErrorToast(err?.response?.data?.message || "회원 탈퇴에 실패했습니다.");
         }
     };
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Swal from 'sweetalert2';
+import { showAlert, showConfirm, showErrorToast, showSuccessToast } from "../../../utils/alert";
 import { useAuthStore } from "../../../stores/authStore";
 
 type SubscriptionDto = {
@@ -118,18 +118,9 @@ const SubscriptionTab: React.FC = () => {
     }, [accessToken]);
 
     const handleCancelSubscription = async (sub: SubscriptionDto) => {
-        const result = await Swal.fire({
-            title: '구독을 해지하시겠습니까?',
-            text: `정말 '${sub.targetName}' 구독을 해지하시겠습니까?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#fe2a55',
-            cancelButtonColor: '#e5e7eb',
-            confirmButtonText: '해지',
-            cancelButtonText: '<span class="text-gray-700">취소</span>'
-        });
+        const ok = await showConfirm("구독을 해지하시겠습니까?", `'${sub.targetName}' 구독을 해지하시겠습니까?`, "해지");
 
-        if (!result.isConfirmed) return;
+        if (!ok) return;
 
         try {
             await api.post(`/subscriptions/${sub.subscriptionId}/cancel`);
@@ -141,20 +132,10 @@ const SubscriptionTab: React.FC = () => {
                         : item
                 )
             );
-            Swal.fire({
-                icon: 'success',
-                title: '해지 완료',
-                text: '구독이 해지되었습니다.',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            showSuccessToast("구독이 해지되었습니다.");
         } catch (err: any) {
             console.error("구독 해지 실패", err);
-            Swal.fire({
-                icon: 'error',
-                title: '해지 실패',
-                text: err?.response?.data?.message || "구독 해지 중 오류가 발생했습니다."
-            });
+            showErrorToast(err?.response?.data?.message || "구독 해지 중 오류가 발생했습니다.");
         }
     };
 
