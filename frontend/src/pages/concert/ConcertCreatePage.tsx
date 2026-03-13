@@ -9,7 +9,7 @@ const ConcertCreatePage: React.FC = () => {
     const { groupId } = useParams<{ groupId?: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
-    const {formData, setFormData} = useState()
+
 
     const [seats, setSeats] = useState<{ grade: string; count: string; price: string }[]>([
         { grade: "VIP", count: "", price: "" },
@@ -17,6 +17,14 @@ const ConcertCreatePage: React.FC = () => {
         { grade: "S", count: "", price: "" },
         { grade: "A", count: "", price: "" },
     ]);
+
+    const [formData, setFormData] = useState({
+        title: "",
+        description: "",
+        venue: "",
+        concertDate: "",
+        startTime: "",
+    });
 
     const [loading, setLoading] = useState(false);
 
