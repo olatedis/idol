@@ -542,11 +542,11 @@ const ConcertPage: React.FC = () => {
                                                         <button
                                                             key={seat.id}
                                                             onClick={() => {
-                                                                if (!seat.reservedBy) {
+                                                                if (!seat.reservedBy || null || !seat.locked) {
                                                                     toggleSeatSelection(seat.id);
                                                                 }
                                                             }}
-                                                            disabled={!seat.reservedBy}
+                                                            disabled={!seat.reservedBy || !seat.locked}
                                                             className={`
                                                                 p-2 rounded border-2 font-bold text-sm transition flex flex-col items-center
                                                                 ${
