@@ -155,7 +155,7 @@ const IdolSubscribe: React.FC = () => {
                                                 <div className="font-semibold mb-2">아이돌 선택</div>
                                                 <ul className="max-h-60 overflow-y-auto">
                                                     {groupIdols.map(i => (
-                                                        <li key={i.idolId} className="py-1 cursor-pointer hover:bg-gray-100" onClick={() => handleIdolClick(i)}>
+                                                        <li key={i.id} className="py-1 cursor-pointer hover:bg-gray-100" onClick={() => handleIdolClick(i)}>
                                                             {i.stageName}
                                                         </li>
                                                     ))}
