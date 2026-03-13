@@ -64,7 +64,7 @@ public class SubscriptionExpireScheduler {
                             .targetType(SubscriptionEvent.TargetType.USER)
                             .targetId(String.valueOf(sub.getUserId()))
                             .args(args)
-                            .redirectUrl("/subscription") //TODO: 나중에 라우팅 제대로 맞추기.
+                            .redirectUrl("/mypage") //TODO: 나중에 라우팅 제대로 맞추기.
                             .occurredAt(LocalDateTime.now())
                             .build()
             );

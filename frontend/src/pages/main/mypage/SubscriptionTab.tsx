@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { showAlert, showConfirm, showErrorToast, showSuccessToast } from "../../../utils/alert";
+import { showConfirm, showErrorToast, showSuccessToast } from "../../../utils/alert";
 import { useAuthStore } from "../../../stores/authStore";
 
 type SubscriptionDto = {
@@ -46,7 +46,6 @@ const SubscriptionTab: React.FC = () => {
                     const idolRes = await api.get(`/subscriptions/me`);
                     idolSubs = Array.isArray(idolRes.data) ? idolRes.data : [];
                 } catch (err) {
-                    console.warn("Failed to fetch idol subscriptions");
                 }
 
                 // 각 아이돌 구독에 targetName(stageName) 매핑
@@ -61,7 +60,6 @@ const SubscriptionTab: React.FC = () => {
                                 name = `[${detailData.groupName}] ${name}`;
                             }
                         } catch (e) {
-                            console.warn("Idol name fetch failed", sub.idolId);
                         }
                         return {
                             ...sub,
@@ -83,7 +81,6 @@ const SubscriptionTab: React.FC = () => {
                     const groupRes = await api.get(`/subscriptions/groups/me`);
                     groupSubs = Array.isArray(groupRes.data) ? groupRes.data : [];
                 } catch (err) {
-                    console.warn("Failed to fetch group subscriptions");
                 }
 
                 // 그룹 구독 데이터를 동일한 SubscriptionDto 포맷으로 매핑
@@ -123,18 +120,25 @@ const SubscriptionTab: React.FC = () => {
         if (!ok) return;
 
         try {
-            await api.post(`/subscriptions/${sub.subscriptionId}/cancel`);
-            // UI를 즉시 갱신 (상태를 CANCELLED로 변경)
-            setSubscriptions((prev) =>
-                prev.map((item) =>
-                    item.subscriptionId === sub.subscriptionId
-                        ? { ...item, status: "CANCELLED", autoRenew: false } // Also set autoRenew to false
-                        : item
-                )
-            );
+            if (sub.targetType === "IDOL") {
+                await api.post(`/subscriptions/cancel`, { idolId: sub.targetId });
+                // 아이돌 구독은 유효기간까지 유지되므로 autoRenew만 끔
+                setSubscriptions((prev) =>
+                    prev.map((item) =>
+                        (item.subscriptionId === sub.subscriptionId && item.targetType === "IDOL")
+                            ? { ...item, autoRenew: false }
+                            : item
+                    )
+                );
+            } else {
+                await api.post(`/subscriptions/groups/cancel`, { groupId: sub.targetId });
+                // 그룹 구독은 즉시 해지되므로 목록에서 제거
+                setSubscriptions((prev) =>
+                    prev.filter((item) => !(item.subscriptionId === sub.subscriptionId && item.targetType === "GROUP"))
+                );
+            }
             showSuccessToast("구독이 해지되었습니다.");
         } catch (err: any) {
-            console.error("구독 해지 실패", err);
             showErrorToast(err?.response?.data?.message || "구독 해지 중 오류가 발생했습니다.");
         }
     };
@@ -157,7 +161,7 @@ const SubscriptionTab: React.FC = () => {
     const groupSubscriptions = subscriptions.filter(s => s.targetType === "GROUP");
 
     const renderCard = (sub: SubscriptionDto) => (
-        <div key={sub.subscriptionId} className="border border-idol/20 bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+        <div key={`${sub.targetType}-${sub.subscriptionId}`} className="border border-idol/20 bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
             <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-idol/10 to-transparent rounded-bl-full pointer-events-none" />
 
             <div className="flex justify-between items-start mb-4">
@@ -187,14 +191,16 @@ const SubscriptionTab: React.FC = () => {
                 )}
             </div>
 
-            <div className="text-xs text-gray-500 space-y-1 mt-4 pt-4 border-t border-gray-100">
-                <div className="flex justify-between items-center">
-                    <span>구독 기간</span>
-                    <span className="text-gray-900 font-medium">
-                        {formatKstDate(sub?.createdAt)} ~ {formatKstDate(sub?.updatedAt)}
-                    </span>
+            {sub?.targetType === "IDOL" && (
+                <div className="text-xs text-gray-500 space-y-1 mt-4 pt-4 border-t border-gray-100">
+                    <div className="flex justify-between items-center">
+                        <span>구독 기간</span>
+                        <span className="text-gray-900 font-medium">
+                            {formatKstDate(sub?.createdAt)} ~ {formatKstDate(sub?.updatedAt)}
+                        </span>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <button
                 onClick={() => handleCancelSubscription(sub)}

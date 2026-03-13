@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Header from "../../pages/main/Header";
 import { api } from "../../api/axios";
+import { showAlert } from "../../utils/alert";
 
 interface Concert {
     concertId: number;
@@ -25,7 +26,6 @@ const GlobalConcertPage: React.FC = () => {
                 const response = await api.get("/concerts");
                 setConcerts(response.data);
             } catch (error) {
-                console.error("전체 콘서트 불러오기 실패:", error);
             } finally {
                 setIsLoading(false);
             }
@@ -71,7 +71,7 @@ const GlobalConcertPage: React.FC = () => {
                             <div
                                 key={concert.concertId}
                                 className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-100 flex flex-col h-full cursor-pointer hover:-translate-y-2"
-                                onClick={() => alert(`콘서트 상세 연동 준비중. (ID: ${concert.concertId})`)}
+                                onClick={() => showAlert("안내", `콘서트 상세 연동 준비중. (ID: ${concert.concertId})`, "info")}
                             >
                                 <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 shrink-0">
                                     <img

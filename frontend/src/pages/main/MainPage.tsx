@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../api/axios";
 import { useAuthStore } from "../../stores/authStore";
 import SignupModal from "../../components/auth/SignupModal";
-import { showSuccessToast, showErrorToast, showAlert } from "../../utils/alert"; // 추가됨
+import { showSuccessToast, showErrorToast, showAlert } from "../../utils/alert";
 
 const MainPage: React.FC = () => {
     const [username, setUsername] = useState("");
@@ -43,7 +43,6 @@ const MainPage: React.FC = () => {
             let userObj = user;
 
             if (!user) {
-                console.error("유저 정보가 없습니다! 백엔드 응답을 확인하세요.");
                 const userRes = await api.get("/users/me", {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 });
@@ -71,7 +70,6 @@ const MainPage: React.FC = () => {
                         navigate("/idol");
                     }
                 } catch (err) {
-                    console.error("아이돌 정보 조회 실패:", err);
                     navigate("/idol");
                 }
             } else {
@@ -79,7 +77,6 @@ const MainPage: React.FC = () => {
             }
 
         } catch (error) {
-            console.error(error);
             showErrorToast("아이디 또는 비밀번호를 확인해주세요."); // 예쁜 알림으로 변경
         }
     };

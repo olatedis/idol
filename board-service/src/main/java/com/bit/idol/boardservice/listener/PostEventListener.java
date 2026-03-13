@@ -53,7 +53,7 @@ public class PostEventListener {
             args.put("boardType", post.getBoardType().name());
             event.setArgs(args);
 
-            event.setRedirectUrl("/board/notice/" + post.getPostId());
+            event.setRedirectUrl("/notices/" + post.getPostId());
             event.setOccurredAt(LocalDateTime.now().toString());
 
             notifyProducer.send(event);

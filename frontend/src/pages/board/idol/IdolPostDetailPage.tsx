@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {useAuthStore} from "../../../../stores/authStore";
-import {api} from "../../../../api/axios";
-import { showAlert, showConfirm, showErrorToast, showSuccessToast } from "../../../../utils/alert";
+import {useAuthStore} from "../../../stores/authStore";
+import {api} from "../../../api/axios";
+import { showConfirm, showErrorToast, showSuccessToast } from "../../../utils/alert";
 
 type CommentResponse = {
     commentId: number;

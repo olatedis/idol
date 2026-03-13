@@ -5,6 +5,7 @@ import {
     updateNotificationPreference,
     type NotificationPreferenceResponse,
 } from "../../../api/notificationApi";
+import { showErrorToast } from "../../../utils/alert";
 
 const NotificationPreferenceTab: React.FC = () => {
     const {accessToken} = useAuthStore();
@@ -18,11 +19,10 @@ const NotificationPreferenceTab: React.FC = () => {
 
         try {
             setLoading(true);
-            const data = await getNotificationPreference(accessToken);
+            const data = await getNotificationPreference();
             setPreference(data);
         } catch (error) {
-            console.error(error);
-            alert("알림 설정을 불러오는 중 오류가 발생했습니다.");
+            showErrorToast("알림 설정을 불러오는 중 오류가 발생했습니다.");
         } finally {
             setLoading(false);
         }
@@ -71,7 +71,7 @@ const NotificationPreferenceTab: React.FC = () => {
 
         try {
             setSaving(true);
-            const saved = await updateNotificationPreference(accessToken, {
+            const saved = await updateNotificationPreference({
                 allEnabled: nextPreference.allEnabled,
                 chatEnabled: nextPreference.chatEnabled,
                 voteEnabled: nextPreference.voteEnabled,
@@ -80,8 +80,7 @@ const NotificationPreferenceTab: React.FC = () => {
             });
             setPreference(saved);
         } catch (error) {
-            console.error(error);
-            alert("알림 설정 저장에 실패했습니다.");
+            showErrorToast("알림 설정 저장에 실패했습니다.");
             setPreference(preference);
         } finally {
             setSaving(false);

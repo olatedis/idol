@@ -27,7 +27,6 @@ const AdminAgencyTab: React.FC = () => {
             setAgencies(response.data);
             setError(null);
         } catch (err: any) {
-            console.error("소속사 목록 조회 실패", err);
             setError("소속사 목록을 불러오는데 실패했습니다.");
         } finally {
             setLoading(false);
@@ -49,7 +48,6 @@ const AdminAgencyTab: React.FC = () => {
             fetchAgencies();
             Swal.fire('추가 완료', '소속사가 추가되었습니다.', 'success');
         } catch (err: any) {
-            console.error("소속사 추가 실패", err);
             Swal.fire('추가 실패', '소속사 추가에 실패했습니다.', 'error');
         }
     };
@@ -65,7 +63,6 @@ const AdminAgencyTab: React.FC = () => {
             fetchAgencies();
             Swal.fire('수정 완료', '소속사 정보가 수정되었습니다.', 'success');
         } catch (err: any) {
-            console.error("소속사 수정 실패", err);
             Swal.fire('수정 실패', '소속사 수정에 실패했습니다.', 'error');
         }
     };
@@ -91,7 +88,6 @@ const AdminAgencyTab: React.FC = () => {
             fetchAgencies();
             Swal.fire('삭제 완료', '소속사가 삭제되었습니다.', 'success');
         } catch (err: any) {
-            console.error("소속사 삭제 실패", err);
             Swal.fire('삭제 실패', '소속사 삭제에 실패했습니다.', 'error');
         }
     };

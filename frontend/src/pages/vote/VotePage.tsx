@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
-import { api } from "../../../api/axios";
-import { useAuthStore } from "../../../stores/authStore";
+import { api } from "../../api/axios";
+import { useAuthStore } from "../../stores/authStore";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
-import { showSuccessToast, showErrorToast, showConfirm } from "../../../utils/alert";
+import { showSuccessToast, showErrorToast, showConfirm } from "../../utils/alert";
 import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
 
 interface CandidateDto {
     number: number;
@@ -52,7 +51,7 @@ const AnimatedNumber = ({ value }: { value: number }) => {
 };
 
 const VotePage: React.FC = () => {
-    const { user } = useAuthStore();
+    const { user, accessToken } = useAuthStore();
     const { groupId } = useParams<{ groupId?: string }>(); // URL에서 groupId 추출
 
     // 상태
@@ -128,14 +127,16 @@ const VotePage: React.FC = () => {
     }, [selectedVote?.id, selectedVote?.status]);
 
     const connectWebSocket = (voteId: number) => {
-        const socket = new SockJS("http://localhost:8000/ws-ranking");
+        const wsUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000")
+            .replace("http", "ws") + "/ws-ranking";
+
         const client = new Client({
-            webSocketFactory: () => socket,
+            brokerURL: wsUrl,
             connectHeaders: {},
             heartbeatIncoming: 10000,
             heartbeatOutgoing: 10000,
             onConnect: () => {
-                console.log("WebSocket Connected: Vote " + voteId);
+                
                 client.subscribe(`/topic/votes/${voteId}/ranking`, (message) => {
                     const rankingList: RankingDto[] = JSON.parse(message.body);
                     updateVoteCounts(rankingList);
@@ -155,7 +156,7 @@ const VotePage: React.FC = () => {
         if (stompClient.current) {
             stompClient.current.deactivate();
             stompClient.current = null;
-            console.log("WebSocket Disconnected");
+            
         }
     };
 
@@ -242,7 +243,7 @@ const VotePage: React.FC = () => {
     // 투표하기
     const handleVote = async () => {
         if (!selectedVote || selectedCandidate === null || isSubmitting) return;
-        if (!user) {
+        if (!user || !accessToken) {
             showErrorToast("로그인이 필요합니다.");
             return;
         }
@@ -298,7 +299,7 @@ const VotePage: React.FC = () => {
                 headers: { "Content-Type": "multipart/form-data" }
             });
 
-            console.log("업로드 응답 Data:", data); // 디버깅용 로그
+             // 디버깅용 로그
 
             const imageUrl = data.fileUrl || data.url;
             if (!imageUrl) {
@@ -342,7 +343,7 @@ const VotePage: React.FC = () => {
                 }))
             };
 
-            console.log("투표 생성 Request Body:", requestBody); // 전송될 페이로드 확인용
+             // 전송될 페이로드 확인용
 
             await api.post("/api/votes", requestBody);
             showSuccessToast("투표가 생성되었습니다.");

@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Editor } from "@toast-ui/react-editor";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "../../../../stores/authStore.ts";
-import { api } from "../../../../api/axios.ts";
+import { useAuthStore } from "../../../stores/authStore.ts";
+import { api } from "../../../api/axios.ts";
 
 type PostResponse = {
     postId: number;
@@ -18,7 +18,7 @@ type PostResponse = {
     likeCount: number;
     dislikeCount: number;
 
-    myReaction?: string;
+    myReaction: string;
 
     createdAt: string;
     updatedAt: string;
@@ -29,10 +29,10 @@ type PostUpdateRequest = {
     content?: string | null;
 };
 
-const IdolPostEditPage: React.FC = () => {
-    const { groupId, idolId, postId } = useParams();
+const GroupPostEditPage: React.FC = () => {
+    const { postId } = useParams();
     const navigate = useNavigate();
-    const { accessToken, user } = useAuthStore();
+    const { accessToken } = useAuthStore();
 
     const editorRef = useRef<Editor>(null);
 
@@ -43,11 +43,6 @@ const IdolPostEditPage: React.FC = () => {
     const [title, setTitle] = useState("");
     const [contentHtml, setContentHtml] = useState("");
     const [contentInjected, setContentInjected] = useState(false);
-
-    const canEdit = useMemo(() => {
-        if (!user) return false;
-        return user.role === "ADMIN" || user.role === "IDOL" || user.role === "AGENCY";
-    }, [user]);
 
     useEffect(() => {
         const run = async () => {
@@ -60,11 +55,6 @@ const IdolPostEditPage: React.FC = () => {
             }
             if (!accessToken) {
                 setError("로그인이 필요합니다.");
-                setLoading(false);
-                return;
-            }
-            if (!canEdit) {
-                setError("권한이 없습니다.");
                 setLoading(false);
                 return;
             }
@@ -89,8 +79,9 @@ const IdolPostEditPage: React.FC = () => {
         };
 
         run();
-    }, [postId, accessToken, canEdit]);
+    }, [postId, accessToken]);
 
+    // ✅ editor가 준비된 뒤 contentHtml을 1번 주입
     useEffect(() => {
         if (loading) return;
         if (contentInjected) return;
@@ -98,6 +89,7 @@ const IdolPostEditPage: React.FC = () => {
         const inst = editorRef.current?.getInstance();
         if (!inst) return;
 
+        // Toast UI는 마운트 타이밍에 setHTML이 씹히는 경우가 있어 next tick에 한번 더 보장
         setTimeout(() => {
             const inst2 = editorRef.current?.getInstance();
             if (!inst2) return;
@@ -107,16 +99,13 @@ const IdolPostEditPage: React.FC = () => {
         }, 0);
     }, [loading, contentHtml, contentInjected]);
 
+
     const onSubmit = async () => {
         setError("");
 
         if (!postId) return;
         if (!accessToken) {
             setError("로그인이 필요합니다.");
-            return;
-        }
-        if (!canEdit) {
-            setError("권한이 없습니다.");
             return;
         }
         if (!title.trim()) {
@@ -126,6 +115,7 @@ const IdolPostEditPage: React.FC = () => {
 
         const inst = editorRef.current?.getInstance();
         const html = inst?.getHTML()?.trim() ?? "";
+
         if (!html) {
             setError("내용을 입력해주세요.");
             return;
@@ -143,7 +133,7 @@ const IdolPostEditPage: React.FC = () => {
             await api.put(`/board/posts/${postId}`, req);
 
             alert("수정되었습니다.");
-            navigate(`/group/${groupId}/idol/${idolId}/board`);
+            navigate(`../`);
         } catch (e: any) {
             const status = e?.response?.status;
             if (status === 401) setError("로그인이 필요합니다.");
@@ -161,7 +151,7 @@ const IdolPostEditPage: React.FC = () => {
         <div className="space-y-4">
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                    <div className="text-lg font-semibold text-gray-900">아이돌 공식 글 수정</div>
+                    <div className="text-lg font-semibold text-gray-900">글 수정</div>
                     <div className="flex gap-2">
                         <button
                             type="button"
@@ -176,7 +166,7 @@ const IdolPostEditPage: React.FC = () => {
                             onClick={onSubmit}
                             disabled={submitting}
                             className="px-4 py-2 rounded-full bg-[var(--color-idol-mid)] text-white text-sm font-semibold
-                                hover:bg-[var(--color-idol-dark)] active:scale-[0.99] transition disabled:opacity-60"
+                            hover:bg-[var(--color-idol-dark)] active:scale-[0.99] transition disabled:opacity-60"
                         >
                             {submitting ? "저장 중..." : "저장"}
                         </button>
@@ -211,4 +201,4 @@ const IdolPostEditPage: React.FC = () => {
     );
 };
 
-export default IdolPostEditPage;
+export default GroupPostEditPage;

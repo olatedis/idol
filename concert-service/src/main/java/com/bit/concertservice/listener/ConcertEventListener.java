@@ -49,7 +49,7 @@ public class ConcertEventListener {
                     .targetType(NotificationEventDto.TargetType.GROUP_SUB)
                     .targetId(String.valueOf(concert.getGroupId()))
                     .args(args)
-                    .redirectUrl("/concert/" + concert.getId())
+                    .redirectUrl("/group/" + concert.getGroupId() + "/concert")
                     .occurredAt(LocalDateTime.now())
                     .build();
 

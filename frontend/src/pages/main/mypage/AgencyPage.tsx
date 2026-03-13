@@ -25,7 +25,6 @@ const AgencyPage: React.FC<AgencyPageProps> = ({ agencyId }) => {
                 const data = await getAgencyRevenue(agencyId);
                 setRevenueData(data);
             } catch (err: any) {
-                console.error("매출 기록 조회 실패:", err);
                 if (err.response?.status === 403) {
                     setError("접근 권한이 없습니다. (소속사 계정으로 로그인해주세요)");
                 } else {

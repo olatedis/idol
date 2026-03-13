@@ -49,7 +49,6 @@ const IdolPage: React.FC = () => {
             const { data } = await api.get<GroupDto[]>("/groups");
             setAllGroups(data);
         } catch (error) {
-            console.error("전체 그룹 조회 실패:", error);
         }
     };
 
@@ -74,7 +73,6 @@ const IdolPage: React.FC = () => {
                 setSubscribedGroups(groupResults);
             }
         } catch (error) {
-            console.error("그룹 목록 조회 실패:", error);
         }
     };
 

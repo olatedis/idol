@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../main/Header';
 import { useAuthStore } from "../../stores/authStore";
 import { createPaymentReady, getIdol, createSubscription } from '../../api/payment';
+import { showErrorToast } from '../../utils/alert';
 import { loadTossPaymentsScript } from '../../utils/tossPayments';
 import { api } from '../../api/axios';
 
@@ -42,13 +43,12 @@ const PaymentPage: React.FC = () => {
                 headers: { 'X-User-Id': String(user?.userId) }
             });
         } catch (e) {
-            console.error('pending delete failed', e);
         }
     };
 
     const handlePay = async () => {
         if (!user || !user.userId) {
-            alert('로그인이 필요합니다.');
+            showErrorToast('로그인이 필요합니다.');
             return;
         }
         setLoading(true);
@@ -95,7 +95,6 @@ const PaymentPage: React.FC = () => {
 
                 if (plan === 'MONTHLY') {
                     // 월간 구독은 빌링키 발급으로 처리 (정기결제)
-                    console.log('billing auth call', { toss });
                     const billingFunc = toss.requestBillingAuth;
                     if (typeof billingFunc === 'function') {
                         await billingFunc('카드', {
@@ -138,8 +137,7 @@ const PaymentPage: React.FC = () => {
                 }
             }
         } catch (e) {
-            console.error(e);
-            alert('결제 준비 중 오류가 발생했습니다.');
+            showErrorToast('결제 준비 중 오류가 발생했습니다.');
             setLoading(false);
         }
     };
@@ -234,7 +232,6 @@ const PaymentPage: React.FC = () => {
                                             setReadyOrderId(null);
                                         }
                                     } catch (e) {
-                                        console.error('취소 처리 실패', e);
                                     }
                                     navigate(-1);
                                 }} className="ml-3 py-3 px-4 rounded border">취소</button>

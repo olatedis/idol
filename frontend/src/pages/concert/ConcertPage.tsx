@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "../../../stores/authStore";
+import { useAuthStore } from "../../stores/authStore";
 import { AnimatePresence, motion } from "framer-motion";
+import { showErrorToast } from "../../utils/alert";
 
-import { api } from '../../../api/axios';
+import { api } from '../../api/axios';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 20;
 
@@ -134,7 +135,6 @@ const ConcertPage: React.FC = () => {
 
     const fetchConcertSeats = async (concertId: number) => {
         if (!API_BASE_URL) {
-            console.error("API_BASE_URL이 설정되지 않았습니다.");
             return;
         }
         try {
@@ -143,8 +143,6 @@ const ConcertPage: React.FC = () => {
             const res = await api.get(url);
 
             if (res.status !== 200) {
-                const errorText = res.statusText || '좌석 조회 실패';
-                console.error("좌석 조회 실패 응답:", errorText);
                 throw new Error(`좌석 조회 실패 (${res.status})`);
             }
             
@@ -156,7 +154,6 @@ const ConcertPage: React.FC = () => {
                 setConcertSeats([]);
             }
         } catch (e) {
-            console.error("좌석 조회 오류:", e);
             setConcertSeats([]);
         } finally {
             setSeatsLoading(false);
@@ -231,7 +228,7 @@ const ConcertPage: React.FC = () => {
 
     const requireLogin = () => {
         if (accessToken) return true;
-        alert("로그인이 필요합니다.");
+        showErrorToast("로그인이 필요합니다.");
         return false;
     };
 
@@ -261,11 +258,11 @@ const ConcertPage: React.FC = () => {
 
     const onConfirmBooking = async () => {
         if (selectedSeats.length === 0) {
-            alert("좌석을 선택해주세요.");
+            showErrorToast("좌석을 선택해주세요.");
             return;
         }
         if (!selectedConcert) {
-            alert("콘서트 정보가 없습니다.");
+            showErrorToast("콘서트 정보가 없습니다.");
             return;
         }
         // 선택한 좌석 정보 준비
@@ -274,7 +271,7 @@ const ConcertPage: React.FC = () => {
 
         // 로그인 확인
         if (!user || !user.userId) {
-            alert('로그인이 필요합니다.');
+            showErrorToast('로그인이 필요합니다.');
             return;
         }
 
@@ -316,8 +313,7 @@ const ConcertPage: React.FC = () => {
 
             setIsBookingModalOpen(false);
         } catch (e: any) {
-            console.error('예약 실패:', e);
-            alert(e?.message || '예약 중 오류가 발생했습니다. 다른 좌석을 선택해주세요.');
+            showErrorToast(e?.message || '예약 중 오류가 발생했습니다. 다른 좌석을 선택해주세요.');
         }
     };
 

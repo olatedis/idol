@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate, useParams } from "react-rout
 import Header from "../main/Header";
 import { useAuthStore } from "../../stores/authStore";
 import { api } from "../../api/axios";
+import { showErrorToast } from "../../utils/alert";
 
 
 type GroupSubscriptionDto = {
@@ -43,7 +44,7 @@ const DefaultServicePage: React.FC = () => {
             }
 
             if (!groupId) {
-                alert("잘못된 접근입니다. (groupId 없음)");
+                showErrorToast("잘못된 접근입니다. (groupId 없음)");
                 navigate(-1);
                 return;
             }
@@ -62,7 +63,7 @@ const DefaultServicePage: React.FC = () => {
                     hasAccess = managedGroupIds.includes(gid);
                     
                     if (!hasAccess) {
-                        alert(`해당 그룹(ID: ${gid})에 대한 관리 권한이 없습니다.`);
+                        showErrorToast(`해당 그룹(ID: ${gid})에 대한 관리 권한이 없습니다.`);
                         navigate(-1);
                         return;
                     }
@@ -78,7 +79,7 @@ const DefaultServicePage: React.FC = () => {
                     hasAccess = subscribedGroupIds.includes(gid);
 
                     if (!hasAccess) {
-                        alert("구독하지 않은 그룹입니다.");
+                        showErrorToast("구독하지 않은 그룹입니다.");
                         navigate(-1);
                         return;
                     }
@@ -86,8 +87,7 @@ const DefaultServicePage: React.FC = () => {
 
                 setGuardChecking(false);
             } catch (err) {
-                console.error("Permission check failed:", err);
-                alert("권한 확인 중 오류가 발생했습니다.");
+                showErrorToast("권한 확인 중 오류가 발생했습니다.");
                 navigate(-1);
             }
         };
