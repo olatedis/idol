@@ -254,7 +254,7 @@ const ConcertPage: React.FC = () => {
     };
 
     const getSeatCountByGrade = (grade: SeatGrade): number => {
-        return concertSeats.filter((s) => s.grade === grade && !s.locked).length;
+        return concertSeats.filter((s) => s.grade === grade && !s.reservedBy).length;
     };
 
     const onConfirmBooking = async () => {
@@ -550,7 +550,7 @@ const ConcertPage: React.FC = () => {
                                                             className={`
                                                                 p-2 rounded border-2 font-bold text-sm transition flex flex-col items-center
                                                                 ${
-                                                                    !seat.reservedBy
+                                                                    seat.reservedBy
                                                                         ? "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
                                                                         : selectedSeats.includes(seat.id)
                                                                         ? "border-[var(--color-idol)] bg-[var(--color-idol)] text-white"
