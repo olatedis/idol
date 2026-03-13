@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Header from './Header.tsx';
 import { getIdol, fetchGroups, fetchGroupIdols, subscribeGroup } from '../../api/payment.ts';
 import { useAuthStore } from '../../stores/authStore.ts';
+import { showAlert, showErrorToast, showSuccessToast } from '../../utils/alert';
 
 interface GroupDto { groupId: number; name: string; groupImage?: string; }
 interface IdolDto {
@@ -67,11 +68,11 @@ const IdolSubscribe: React.FC = () => {
         if (!selectedGroup) return;
         try {
             await subscribeGroup(user?.userId || 0, selectedGroup.groupId, selectedGroup.name);
-            alert('그룹 구독이 완료되었습니다.');
+            showSuccessToast('그룹 구독이 완료되었습니다.');
             setGroupModalOpen(false);
         } catch (e) {
             console.error(e);
-            alert('그룹 구독에 실패했습니다.');
+            showErrorToast('그룹 구독에 실패했습니다.');
         }
     };
 
