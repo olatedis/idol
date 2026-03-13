@@ -63,6 +63,7 @@ public class ChatService {
             for (IdolDto idol : idols) {
                 redisTemplate.opsForHash().put(IDOL_CACHE_KEY, String.valueOf(idol.getIdolId()), idol);
             }
+            redisTemplate.expire(IDOL_CACHE_KEY, Duration.ofHours(24)); // 24시간마다 갱신 유도
         } else {
             idols = cachedIdols.stream()
                     .map(obj -> objectMapper.convertValue(obj, IdolDto.class))
