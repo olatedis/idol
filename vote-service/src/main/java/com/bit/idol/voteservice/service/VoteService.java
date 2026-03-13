@@ -8,13 +8,17 @@ import com.bit.idol.voteservice.dto.VoteListDto;
 import com.bit.idol.voteservice.dto.event.VoteEvent;
 import com.bit.idol.voteservice.dto.notification.NotificationEventDto;
 import com.bit.idol.voteservice.dto.notification.TargetType;
+import com.bit.idol.voteservice.entity.OutboxEvent;
 import com.bit.idol.voteservice.entity.Vote;
 import com.bit.idol.voteservice.entity.VoteRecord;
 import com.bit.idol.voteservice.entity.VoteStatus;
 import com.bit.idol.voteservice.producer.NotificationProducer;
 import com.bit.idol.voteservice.repository.CandidateRepository;
+import com.bit.idol.voteservice.repository.OutboxRepository;
 import com.bit.idol.voteservice.repository.VoteRecordRepository;
 import com.bit.idol.voteservice.repository.VoteRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
@@ -50,6 +54,8 @@ public class VoteService {
     private final UserFeignClient userFeignClient;
     private final ApplicationEventPublisher eventPublisher;
     private final NotificationProducer notificationProducer;
+    private final OutboxRepository outboxRepository;
+    private final ObjectMapper objectMapper;
 
     @Value("${spring.kafka.topic.vote}")
     private String voteTopic;
@@ -333,7 +339,7 @@ public class VoteService {
 
         // DB 차감: 기록 삭제, 후보자 득표수 감소, 투표 전체 참여자수 감소
         voteRecordRepository.delete(record);
-        voteRecordRepository.flush(); // 영속성 컨텍스트 즉시 DB 반영 (삭제 확실히 보장)
+        voteRecordRepository.flush();
 
         candidateRepository.decrementVoteCount(record.getCandidateId());
         candidateRepository.flush();
@@ -345,24 +351,30 @@ public class VoteService {
             voteRepository.saveAndFlush(voteEntity);
         }
 
-        // Kafka 전송: ranking-service가 ZSET에서 점수를 빼도록 마이너스 번호로 보냄
+        // Outbox 패턴 적용: Kafka/Redis 작업을 하나의 트랜잭션으로 묶어 Outbox 테이블에 저장
         com.bit.idol.voteservice.entity.Candidate candidate = candidateRepository.findById(record.getCandidateId())
                 .orElseThrow(() -> new RuntimeException("후보자를 찾을 수 없습니다."));
-        try {
-            String uuid = UUID.randomUUID().toString();
-            String message = uuid + ":" + voteId + ":" + userId + ":-" + candidate.getNumber();
-            kafkaTemplate.send("vote-complete-topic", message);
-        } catch (Exception e) {
-            log.error("랭킹 서비스로 취소 이벤트 전송 실패: {}", e.getMessage());
-        }
 
-        // Redis 중복 방지 키 롤백
+        Map<String, Object> payloadMap = new HashMap<>();
+        payloadMap.put("voteId", voteId);
+        payloadMap.put("userId", userId);
+        payloadMap.put("candidateNumber", candidate.getNumber());
+        payloadMap.put("redisKey", "vote:" + voteId + ":user:" + userId);
+        payloadMap.put("processedKey", "processed:vote:" + voteId + ":user:" + userId);
+
         try {
-            String redisKey = "vote:" + voteId + ":user:" + userId;
-            String processedKey = "processed:vote:" + voteId + ":user:" + userId;
-            redisTemplate.delete(Arrays.asList(redisKey, processedKey));
-        } catch (Exception e) {
-            log.error("Redis 키 삭제 실패 (투표 취소): {}", e.getMessage());
+            String payload = objectMapper.writeValueAsString(payloadMap);
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .aggregateId(String.valueOf(voteId))
+                    .aggregateType("VOTE")
+                    .eventType("VOTE_CANCELLED")
+                    .payload(payload)
+                    .build();
+            outboxRepository.save(outboxEvent);
+            log.info("투표 취소 이벤트 Outbox 저장 완료: voteId={}, userId={}", voteId, userId);
+        } catch (JsonProcessingException e) {
+            log.error("Outbox 페이로드 직렬화 실패: {}", e.getMessage());
+            throw new RuntimeException("투표 취소 처리 중 오류가 발생했습니다.");
         }
     }
 
