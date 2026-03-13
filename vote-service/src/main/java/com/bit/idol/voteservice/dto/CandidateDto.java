@@ -12,10 +12,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CandidateDto {
-    private int id;
+    private Integer id;
     
-    @JsonProperty("number") // 프론트엔드와 필드명 일치 (number)
-    private int number;
+    @JsonProperty("number")
+    private Integer number;
     
     private String name;
     private String image; // 이미지 필드 추가

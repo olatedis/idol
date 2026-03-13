@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 public class VoteInfo implements Serializable {
-    private int id;
+    private Integer id;
     private String title;
     private String description;
     private LocalDateTime startDate;
@@ -29,9 +29,9 @@ public class VoteInfo implements Serializable {
         LocalDateTime now = LocalDateTime.now();
         String status = "OPEN";
 
-        if (now.isBefore(vote.getStartDate())) {
+        if (vote.getStartDate() != null && now.isBefore(vote.getStartDate())) {
             status = "UPCOMING";
-        } else if (now.isAfter(vote.getEndDate())) {
+        } else if (vote.getEndDate() != null && now.isAfter(vote.getEndDate())) {
             status = "CLOSED";
         }
 

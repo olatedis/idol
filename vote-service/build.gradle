@@ -68,9 +68,6 @@ dependencies {
 
 
 
-    // Jackson Afterburner (JSON ?�능 ?�닝) - 추�???
-    implementation 'com.fasterxml.jackson.module:jackson-module-afterburner'
-
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
