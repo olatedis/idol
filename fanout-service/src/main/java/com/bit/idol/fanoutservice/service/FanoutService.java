@@ -70,9 +70,22 @@ public class FanoutService {
             return;
         }
 
+        Integer actorId = null;
+        try {
+            if (req.getArgs() != null && req.getArgs().get("actorId") !=null) {
+                actorId = Integer.parseInt(req.getArgs().get("actorId"));
+            }
+        } catch (Exception e) {
+            log.warn("actorId 파싱 실패. actorId={} eventId={}",
+                    req.getArgs() !=null ? req.getArgs().get("actorId") : null,
+                    req.getEventId());
+        }
+
         int sent = 0;
         for (UserDto u : users) {
             if (u == null || u.getUserId() == null) continue;
+
+            if (actorId != null && actorId.equals(u.getUserId())) continue;;
             sendToOneUser(req, String.valueOf(u.getUserId()));
             sent++;
         }

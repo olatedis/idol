@@ -16,7 +16,7 @@ type PageResponse<T> = {
     content: T[];
     totalElements: number;
     totalPages: number;
-    number: number; // current page (0-based)
+    number: number;
     size: number;
     last: boolean;
 };
@@ -28,13 +28,10 @@ const PAGE_SIZE = 20;
 const formatDateToKST = (dateString: string) => {
     if (!dateString) return "";
 
-    // 백엔드는 'YYYY-MM-DD HH:mm:ss' (UTC/GMT) 형태로 문자열을 전달한다고 가정
-    // JS Date 객체로 파싱 시 UTC로 인식시키기 위해 뒤에 'Z'를 추가
-    const utcDate = new Date(`${dateString.replace(' ', 'T')}Z`);
+    const utcDate = new Date(`${dateString.replace(" ", "T")}Z`);
 
     if (isNaN(utcDate.getTime())) return dateString;
 
-    // KST는 UTC+9
     const kstDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
 
     const yy = String(kstDate.getUTCFullYear()).slice(2);
@@ -56,7 +53,6 @@ const NoticeListPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    // TODO: 로그인 확정되면 교체
     const { user } = useAuthStore();
     const isAdmin = user?.role === "ADMIN";
 
@@ -77,7 +73,6 @@ const NoticeListPage: React.FC = () => {
                 params.set("size", String(PAGE_SIZE));
                 params.set("sort", "createdAt,desc");
 
-                // 백엔드의 실제 엔드포인트는 /notices 입니다.
                 const res = await fetch(`${API_BASE_URL}/notices?${params.toString()}`, {
                     method: "GET",
                     signal: controller.signal,
@@ -107,7 +102,7 @@ const NoticeListPage: React.FC = () => {
     };
 
     const scrollTop = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     const onClickWrite = () => {
@@ -115,126 +110,189 @@ const NoticeListPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        // 수정: 전체 배경을 핑크 톤과 어울리는 아주 연한 배경으로 변경
+        <div className="min-h-screen bg-[#FFF7F8] flex flex-col">
             <Header />
-            <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-                <div className="mb-10 text-center sm:text-left">
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight mb-3">
-                        공지사항
-                    </h1>
-                    <p className="text-gray-500 text-lg sm:text-xl">
-                        아이돌 서비스의 주요 소식과 안내를 확인하세요.
-                    </p>
-                </div>
 
-                <div className="space-y-4">
+            <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20">
+                {/* 수정: 상단 소개 카드 색감 핑크 계열로 정리 + 불필요한 뱃지 제거 */}
+                <section className="mb-8">
+                    <div className="rounded-[28px] border border-[#F3D6DC] bg-white shadow-sm overflow-hidden">
+                        {/* 수정: 상단 포인트 라인을 pink 계열 gradient로 변경 */}
+                        <div className="h-2 w-full bg-gradient-to-r from-[var(--color-idol)] via-[var(--color-idol-mid)] to-[var(--color-idol-dark)]" />
 
-                    {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
-                    {error && <div className="text-sm text-red-600">{error}</div>}
+                        <div className="px-6 sm:px-8 py-8 sm:py-9">
+                            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
+                                공지사항
+                            </h1>
+
+                            <p className="mt-3 text-sm sm:text-base text-gray-600 leading-relaxed">
+                                서비스 운영 안내와 주요 소식을 한눈에 확인하세요.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="space-y-4">
+                    {loading && (
+                        <div className="rounded-2xl border border-[#F3D6DC] bg-white px-5 py-4 text-sm text-gray-600 shadow-sm">
+                            공지 목록을 불러오는 중입니다...
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 shadow-sm">
+                            {error}
+                        </div>
+                    )}
 
                     {!loading && !error && data && (
-                        <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                            <div
-                                className="hidden sm:grid grid-cols-[90px_1fr_140px_140px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
-                                <div className="text-center sm:text-left">번호</div>
-                                <div className="text-left">제목</div>
-                                <div className="text-left">작성일</div>
-                                <div className="text-right">조회수</div>
-                            </div>
+                        <>
+                            {/* 수정: 리스트 카드 색감 정리 */}
+                            <div className="rounded-[28px] border border-[#F3D6DC] bg-white shadow-sm overflow-hidden">
+                                <div className="hidden sm:grid grid-cols-[90px_1fr_160px_100px] items-center px-6 py-4 bg-[#FFF1F4] border-b border-[#F3D6DC] text-sm font-semibold text-gray-700">
+                                    <div>번호</div>
+                                    <div>제목</div>
+                                    <div>작성일</div>
+                                    <div className="text-right">조회수</div>
+                                </div>
 
-                            {data.content.length === 0 ? (
-                                <div className="px-4 py-6 text-sm text-gray-600">공지사항이 없습니다.</div>
-                            ) : (
-                                data.content.map((n, idx) => (
-                                    <button
-                                        key={n.postId}
-                                        type="button"
-                                        onClick={() => navigate(`/notices/${n.postId}`)}
-                                        className="
-                                    w-full text-left
-                                    grid grid-cols-[50px_1fr] sm:grid-cols-[90px_1fr_140px_140px] gap-x-3 sm:gap-x-0 items-center
-                                    px-4 py-4 sm:py-3
-                                    border-b border-gray-100 last:border-b-0
-                                    hover:bg-gray-50
-                                    transition-colors
-                                "
-                                    >
-                                        <div className="text-sm text-gray-500 sm:text-gray-900 tabular-nums text-center sm:text-left">
-                                            {data.totalElements - (page * PAGE_SIZE + idx)}
+                                {data.content.length === 0 ? (
+                                    <div className="px-6 py-14 text-center">
+                                        <div className="text-base font-semibold text-gray-800">
+                                            등록된 공지사항이 없습니다.
                                         </div>
-
-                                        <div className="min-w-0">
-                                            <div className="text-sm font-semibold text-gray-900 truncate">{n.title}</div>
-                                            <div className="text-xs text-gray-500 mt-1 sm:hidden">
-                                                {n.createdAt.split(" ")[0]} · 조회 {n.viewCount}
+                                        <div className="mt-1 text-sm text-gray-500">
+                                            새로운 공지가 등록되면 이곳에 표시됩니다.
+                                        </div>
+                                    </div>
+                                ) : (
+                                    data.content.map((n, idx) => (
+                                        <button
+                                            key={n.postId}
+                                            type="button"
+                                            onClick={() => navigate(`/notices/${n.postId}`)}
+                                            className="
+                                                group w-full text-left
+                                                grid grid-cols-[56px_1fr] sm:grid-cols-[90px_1fr_160px_100px]
+                                                items-center gap-x-3
+                                                px-4 sm:px-6 py-3 sm:py-3.5
+                                                border-b border-[#F8E4E8] last:border-b-0
+                                                hover:bg-[#FFF7F8]
+                                                transition-colors
+                                            "
+                                        >
+                                            {/* 수정: 번호 pill은 유지하되 더 작고 핑크 계열로 변경 */}
+                                            <div className="flex items-center justify-center sm:justify-start">
+                                                <span className="inline-flex min-w-10 justify-center rounded-full bg-[#FFF1F4] px-2.5 py-1 text-xs sm:text-sm font-semibold text-[var(--color-idol-dark)] tabular-nums">
+                                                    {data.totalElements - (page * PAGE_SIZE + idx)}
+                                                </span>
                                             </div>
-                                        </div>
 
-                                        <div className="hidden sm:block text-sm text-gray-600 truncate">{formatDateToKST(n.createdAt)}</div>
+                                            {/* 수정: 제목 앞 점 제거 */}
+                                            <div className="min-w-0">
+                                                <div className="truncate text-sm sm:text-[15px] font-semibold text-gray-900 group-hover:text-[var(--color-idol-dark)] transition-colors">
+                                                    {n.title}
+                                                </div>
 
-                                        <div className="hidden sm:block text-sm text-gray-700 text-right tabular-nums">{n.viewCount}</div>
-                                    </button>
-                                ))
-                            )}
-                        </div>
-                    )}
+                                                <div className="mt-1 flex items-center gap-2 text-xs text-gray-500 sm:hidden">
+                                                    <span>{formatDateToKST(n.createdAt)}</span>
+                                                    <span>·</span>
+                                                    <span>조회 {n.viewCount}</span>
+                                                </div>
+                                            </div>
 
-                    {!loading && data && (
-                        <div className="flex items-center justify-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => goPage(page - 1)}
-                                disabled={page <= 0}
-                                className="px-3 py-2 rounded-full border border-gray-200 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60"
-                            >
-                                이전
-                            </button>
+                                            <div className="hidden sm:block text-sm text-gray-600 tabular-nums">
+                                                {formatDateToKST(n.createdAt)}
+                                            </div>
 
-                            <div className="text-sm text-gray-700 tabular-nums">
-                                {page + 1} / {data.totalPages}
+                                            <div className="hidden sm:block text-right">
+                                                <span className="inline-flex rounded-full bg-[#FFF1F4] px-3 py-1 text-sm font-semibold text-gray-900 tabular-nums">
+                                                    {n.viewCount}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    ))
+                                )}
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={() => goPage(page + 1)}
-                                disabled={data.last}
-                                className="px-3 py-2 rounded-full border border-gray-200 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60"
-                            >
-                                다음
-                            </button>
-                        </div>
-                    )}
+                            {/* 수정: 페이지네이션도 핑크톤으로 정리 */}
+                            <div className="flex items-center justify-center gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => goPage(page - 1)}
+                                    disabled={page <= 0}
+                                    className="
+                                        min-w-[76px] px-4 py-2.5 rounded-full
+                                        border border-[#F3D6DC] bg-white
+                                        text-sm font-semibold text-gray-700
+                                        shadow-sm
+                                        hover:bg-[#FFF7F8]
+                                        disabled:opacity-50 disabled:cursor-not-allowed
+                                    "
+                                >
+                                    이전
+                                </button>
 
-                    <div className="fixed right-4 bottom-6 z-40 flex flex-col items-end gap-3">
+                                <div className="rounded-full bg-white border border-[#F3D6DC] px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm">
+                                    <span className="text-[var(--color-idol-dark)]">{page + 1}</span>
+                                    <span className="mx-1 text-gray-400">/</span>
+                                    <span>{data.totalPages}</span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => goPage(page + 1)}
+                                    disabled={data.last}
+                                    className="
+                                        min-w-[76px] px-4 py-2.5 rounded-full
+                                        border border-[#F3D6DC] bg-white
+                                        text-sm font-semibold text-gray-700
+                                        shadow-sm
+                                        hover:bg-[#FFF7F8]
+                                        disabled:opacity-50 disabled:cursor-not-allowed
+                                    "
+                                >
+                                    다음
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </section>
+
+                {/* 수정: 플로팅 버튼도 핑크 계열로 변경 */}
+                <div className="fixed right-4 bottom-6 z-40 flex flex-col items-end gap-3">
+                    <button
+                        type="button"
+                        onClick={scrollTop}
+                        className="
+                            w-12 h-12 rounded-full
+                            bg-white border border-[#F3D6DC]
+                            shadow-md
+                            text-gray-700 text-lg font-semibold
+                            hover:bg-[#FFF7F8]
+                            transition-colors
+                        "
+                        aria-label="맨 위로"
+                    >
+                        ↑
+                    </button>
+
+                    {isAdmin && (
                         <button
                             type="button"
-                            onClick={scrollTop}
+                            onClick={onClickWrite}
                             className="
-            w-12 h-12 rounded-full
-            bg-gray-100 border border-gray-200
-            shadow-md
-            text-gray-800 font-semibold
-            hover:bg-gray-200
-          "
+                                px-5 py-3 rounded-2xl
+                                bg-[var(--color-idol-dark)] text-white text-sm font-semibold
+                                shadow-md
+                                hover:brightness-95
+                                transition
+                            "
                         >
-                            ↑
+                            작성하기
                         </button>
-
-                        {isAdmin && (
-                            <button
-                                type="button"
-                                onClick={onClickWrite}
-                                className="
-              px-5 py-3 rounded-2xl
-              bg-[#1FBFB8] text-white text-sm font-semibold
-              shadow-md
-              hover:bg-[#17AFA8]
-            "
-                            >
-                                작성하기
-                            </button>
-                        )}
-                    </div>
+                    )}
                 </div>
             </main>
         </div>

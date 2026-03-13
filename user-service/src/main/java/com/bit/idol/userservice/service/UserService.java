@@ -151,8 +151,8 @@ public class UserService {
     }
 
     public List<UserDto> getAllUsers() {
-        return userViewRepository.findAll().stream()
-                .map(this::convertViewToDto)
+        return userRepository.findAll().stream()
+                .map(UserDto::fromEntity)
                 .collect(Collectors.toList());
     }
 
