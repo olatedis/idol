@@ -254,7 +254,7 @@ const ConcertPage: React.FC = () => {
     };
 
     const getSeatCountByGrade = (grade: SeatGrade): number => {
-        return concertSeats.filter((s) => s.grade === grade && !s.reservedBy).length;
+        return concertSeats.filter((s) => s.grade === grade && !s.reservedBy && !s.locked).length;
     };
 
     const onConfirmBooking = async () => {
@@ -542,15 +542,15 @@ const ConcertPage: React.FC = () => {
                                                         <button
                                                             key={seat.id}
                                                             onClick={() => {
-                                                                if (!seat.reservedBy || null || !seat.locked) {
+                                                                if (!seat.reservedBy && !seat.locked) {
                                                                     toggleSeatSelection(seat.id);
                                                                 }
                                                             }}
-                                                            disabled={!seat.reservedBy || !seat.locked}
+                                                            disabled={!!seat.reservedBy || seat.locked}
                                                             className={`
                                                                 p-2 rounded border-2 font-bold text-sm transition flex flex-col items-center
                                                                 ${
-                                                                    seat.reservedBy
+                                                                    seat.reservedBy || seat.locked
                                                                         ? "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
                                                                         : selectedSeats.includes(seat.id)
                                                                         ? "border-[var(--color-idol)] bg-[var(--color-idol)] text-white"
