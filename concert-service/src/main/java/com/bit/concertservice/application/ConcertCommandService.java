@@ -2,14 +2,23 @@ package com.bit.concertservice.application;
 
 import com.bit.concertservice.domain.dto.ConcertCreateRequest;
 import com.bit.concertservice.domain.dto.ConcertUpdateRequest;
+import com.bit.concertservice.domain.dto.SeatCreateRequest;
 import com.bit.concertservice.domain.entity.Concert;
+import com.bit.concertservice.domain.entity.Seat;
+import com.bit.concertservice.domain.enumtype.SeatGrade;
 import com.bit.concertservice.domain.event.ConcertEvent;
 import com.bit.concertservice.infra.ConcertRepository;
+import com.bit.concertservice.infra.SeatRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 
 @Service
 @AllArgsConstructor
@@ -17,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ConcertCommandService {
 
     private final ConcertRepository concertRepository;
+    private final SeatRepository seatRepository;
     private final ApplicationEventPublisher eventPublisher; // 변경됨
 
     @Transactional
@@ -37,10 +47,11 @@ public class ConcertCommandService {
         if (request.getConcertDate() == null) {
             throw new IllegalArgumentException("시작일은 필수입니다.");
         }
-        if (request.getTicketSaleDate() == null) {
-            throw new IllegalArgumentException("티켓 판매일은 필수입니다.");
+        LocalDateTime ticketSaleDate = request.getTicketSaleDate();
+        if (ticketSaleDate == null) {
+            ticketSaleDate = request.getConcertDate().minusWeeks(1);
         }
-        if (request.getTicketSaleDate().isAfter(request.getConcertDate())) {
+        if (ticketSaleDate.isAfter(request.getConcertDate())) {
             throw new IllegalArgumentException("티켓 판매일은 콘서트 시작일보다 먼저여야 합니다.");
         }
 
@@ -53,10 +64,25 @@ public class ConcertCommandService {
                 request.getImg(),
                 request.getConcertDate(),
                 request.getStartTime(),
-                request.getTicketSaleDate()
+                ticketSaleDate
         );
 
         Concert saved = concertRepository.save(concert);
+
+        // 좌석 생성
+        if (request.getSeats() != null && !request.getSeats().isEmpty()) {
+            List<Seat> seatsToSave = new ArrayList<>();
+            for (SeatCreateRequest seatReq : request.getSeats()) {
+                SeatGrade grade = SeatGrade.valueOf(seatReq.getGrade().toUpperCase());
+                for (int i = 1; i <= seatReq.getCount(); i++) {
+                    String seatNumber = grade.name() + "-" + String.format("%03d", i);
+                    Seat seat = new Seat(seatNumber, grade, seatReq.getPrice(), saved);
+                    seatsToSave.add(seat);
+                }
+            }
+            seatRepository.saveAll(seatsToSave);
+            log.info("좌석 생성 완료: concertId={}, totalSeats={}", saved.getId(), seatsToSave.size());
+        }
         log.info("콘서트 등록 완료: concertId={}, title={}, agencyId={}, groupId={}",
                 saved.getId(), saved.getTitle(), saved.getAgencyId(), saved.getGroupId());
 

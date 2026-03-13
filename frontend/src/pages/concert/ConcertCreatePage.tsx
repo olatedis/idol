@@ -9,16 +9,14 @@ const ConcertCreatePage: React.FC = () => {
     const { groupId } = useParams<{ groupId?: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
+    const {formData, setFormData} = useState()
 
-    const [formData, setFormData] = useState({
-        title: "",
-        description: "",
-        venue: "",
-        concertDate: "",
-        startTime: "",
-        price: "",
-        totalTickets: "",
-    });
+    const [seats, setSeats] = useState<{ grade: string; count: string; price: string }[]>([
+        { grade: "VIP", count: "", price: "" },
+        { grade: "R", count: "", price: "" },
+        { grade: "S", count: "", price: "" },
+        { grade: "A", count: "", price: "" },
+    ]);
 
     const [loading, setLoading] = useState(false);
 
@@ -42,6 +40,17 @@ const ConcertCreatePage: React.FC = () => {
 
         setLoading(true);
         try {
+            const validSeats = seats.filter(s => s.count && s.price).map(s => ({
+                grade: s.grade,
+                count: parseInt(s.count),
+                price: parseInt(s.price),
+            }));
+
+            if (validSeats.length === 0) {
+                showErrorToast("최소 하나의 좌석 등급을 입력해주세요.");
+                return;
+            }
+
             const payload = {
                 groupId: groupId ? parseInt(groupId) : null,
                 title: formData.title,
@@ -49,8 +58,7 @@ const ConcertCreatePage: React.FC = () => {
                 venue: formData.venue,
                 concertDate: formData.concertDate,
                 startTime: formData.startTime || null,
-                price: formData.price ? parseInt(formData.price) : null,
-                totalTickets: formData.totalTickets ? parseInt(formData.totalTickets) : null,
+                seats: validSeats,
                 agencyId: user.agencyId,
             };
 
@@ -132,27 +140,43 @@ const ConcertCreatePage: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-1">가격</label>
-                            <input
-                                type="number"
-                                name="price"
-                                value={formData.price}
-                                onChange={handleChange}
-                                className="w-full p-2 border rounded"
-                                placeholder="예: 50000"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium mb-1">총 티켓 수</label>
-                            <input
-                                type="number"
-                                name="totalTickets"
-                                value={formData.totalTickets}
-                                onChange={handleChange}
-                                className="w-full p-2 border rounded"
-                                placeholder="예: 1000"
-                            />
+                            <label className="block text-sm font-medium mb-3">좌석 등급 설정 *</label>
+                            <div className="space-y-3">
+                                {seats.map((seat, index) => (
+                                    <div key={seat.grade} className="flex gap-4 items-center">
+                                        <span className="w-12 font-medium">{seat.grade}</span>
+                                        <div className="flex-1">
+                                            <input
+                                                type="number"
+                                                placeholder="좌석 수"
+                                                value={seat.count}
+                                                onChange={(e) => {
+                                                    const newSeats = [...seats];
+                                                    newSeats[index].count = e.target.value;
+                                                    setSeats(newSeats);
+                                                }}
+                                                className="w-full p-2 border rounded"
+                                                min="0"
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <input
+                                                type="number"
+                                                placeholder="가격"
+                                                value={seat.price}
+                                                onChange={(e) => {
+                                                    const newSeats = [...seats];
+                                                    newSeats[index].price = e.target.value;
+                                                    setSeats(newSeats);
+                                                }}
+                                                className="w-full p-2 border rounded"
+                                                min="0"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">각 등급별 좌석 수와 가격을 입력하세요. 빈 등급은 등록되지 않습니다.</p>
                         </div>
 
                         <div className="flex gap-4 pt-4">

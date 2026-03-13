@@ -319,7 +319,6 @@ const ConcertPage: React.FC = () => {
     };
 
     const onCreateConcert = () => {
-        if (!requireLogin()) return;
         navigate("./create");
     };
 
