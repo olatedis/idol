@@ -20,5 +20,6 @@ public class IdolDto implements Serializable {
     private String profileImage;
     private int agencyId;
     private String agencyName;
+    private Integer groupId;
     private String status;
 }

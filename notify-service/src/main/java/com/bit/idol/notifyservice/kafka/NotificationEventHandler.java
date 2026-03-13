@@ -131,24 +131,31 @@ public class NotificationEventHandler {
         }
     }
 
-    // redirectUrl: /chat/room/{idolId} 형태에서 idolId 파싱
+    // redirectUrl: /chat/room/{idolId} 또는 /group/{groupId}/chat?idolId={idolId} 형태에서 idolId 파싱
     private static Long parseIdolIdFromRedirectUrl(String redirectUrl) {
         try {
-            if (redirectUrl == null) return null;
+            if (redirectUrl == null || redirectUrl.isBlank()) return null;
 
-            // 기대 패턴: /chat/room/123
+            // 1. 새로운 패턴: ?idolId=123 파싱
+            if (redirectUrl.contains("idolId=")) {
+                String term = "idolId=";
+                int start = redirectUrl.indexOf(term) + term.length();
+                int end = redirectUrl.indexOf("&", start);
+                String val = (end == -1) ? redirectUrl.substring(start) : redirectUrl.substring(start, end);
+                return Long.parseLong(val.trim());
+            }
+
+            // 2. 기존 패턴: /chat/room/123 파싱
             String prefix = "/chat/room/";
             int idx = redirectUrl.indexOf(prefix);
-            if (idx < 0) return null;
+            if (idx >= 0) {
+                String tail = redirectUrl.substring(idx + prefix.length());
+                int q = tail.indexOf("?");
+                if (q >= 0) tail = tail.substring(0, q);
+                return Long.parseLong(tail.trim());
+            }
 
-            String tail = redirectUrl.substring(idx + prefix.length());
-            if (tail.isBlank()) return null;
-
-            // 혹시 뒤에 쿼리스트링 붙는 경우 대비
-            int q = tail.indexOf("?");
-            if (q >= 0) tail = tail.substring(0, q);
-
-            return Long.parseLong(tail.trim());
+            return null;
         } catch (Exception e) {
             return null;
         }

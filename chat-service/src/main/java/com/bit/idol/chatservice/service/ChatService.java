@@ -414,6 +414,17 @@ public class ChatService {
     private void sendNotification(ChatMessageDto messageDto) {
         try {
             if ("IDOL".equals(messageDto.getSenderRole())) {
+                // groupId를 포함한 새로운 리다이렉트 URL 생성
+                Integer groupId = userFeignClient.getAllIdols().stream()
+                        .filter(i -> (long)i.getIdolId() == messageDto.getIdolId())
+                        .findFirst()
+                        .map(IdolDto::getGroupId)
+                        .orElse(null);
+
+                String redirectUrl = (groupId != null) 
+                        ? "/group/" + groupId + "/chat?idolId=" + messageDto.getIdolId()
+                        : "/mypage"; // 그룹 정보를 못찾으면 마이페이지로 보냄
+
                 Map<String, String> args = new HashMap<>();
                 args.put("idolName", messageDto.getSenderNickname());
                 args.put("message", messageDto.getContent());
@@ -424,7 +435,7 @@ public class ChatService {
                         .targetType(TargetType.IDOL_SUB)
                         .targetId(String.valueOf(messageDto.getIdolId()))
                         .args(args)
-                        .redirectUrl("/chat/room/" + messageDto.getIdolId())
+                        .redirectUrl(redirectUrl)
                         .occurredAt(LocalDateTime.now())
                         .build();
 
@@ -434,6 +445,17 @@ public class ChatService {
             if (messageDto.getParentId() != null && !messageDto.getParentId().isEmpty()) {
                 chatRepository.findById(messageDto.getParentId()).ifPresent(parentMsg -> {
                     if (parentMsg.getSenderId() != messageDto.getSenderId()) {
+                        // groupId를 포함한 새로운 리다이렉트 URL 생성
+                        Integer groupId = userFeignClient.getAllIdols().stream()
+                                .filter(i -> (long)i.getIdolId() == messageDto.getIdolId())
+                                .findFirst()
+                                .map(IdolDto::getGroupId)
+                                .orElse(null);
+
+                        String redirectUrl = (groupId != null)
+                                ? "/group/" + groupId + "/chat?idolId=" + messageDto.getIdolId()
+                                : "/mypage";
+
                         Map<String, String> args = new HashMap<>();
                         args.put("replierName", messageDto.getSenderNickname());
 
@@ -443,7 +465,7 @@ public class ChatService {
                                 .targetType(TargetType.USER)
                                 .targetId(String.valueOf(parentMsg.getSenderId()))
                                 .args(args)
-                                .redirectUrl("/chat/room/" + messageDto.getIdolId())
+                                .redirectUrl(redirectUrl)
                                 .occurredAt(LocalDateTime.now())
                                 .build();
 
@@ -571,11 +593,16 @@ public class ChatService {
             // 아이돌 최초 접속 시 구독자 알림 발행
             if (turnedOn) {
                 try {
-                    String idolName = userFeignClient.getAllIdols().stream()
+                    var idolInfo = userFeignClient.getAllIdols().stream()
                             .filter(idol -> idol.getIdolId() == idolId)
-                            .findFirst()
-                            .map(idol -> idol.getStageName())
-                            .orElse("아이돌");
+                            .findFirst();
+                    String idolName = idolInfo.map(IdolDto::getStageName).orElse("아이돌");
+                    Integer groupId = idolInfo.map(IdolDto::getGroupId).orElse(null);
+
+                    String redirectUrl = (groupId != null)
+                            ? "/group/" + groupId + "/chat?idolId=" + idolId
+                            : "/mypage";
+
                     com.bit.idol.chatservice.dto.notification.NotificationEventDto notifyEvent =
                             com.bit.idol.chatservice.dto.notification.NotificationEventDto.builder()
                                     .eventId(java.util.UUID.randomUUID().toString())
@@ -583,7 +610,7 @@ public class ChatService {
                                     .targetType(com.bit.idol.chatservice.dto.notification.TargetType.IDOL_SUB)
                                     .targetId(String.valueOf(idolId))
                                     .args(java.util.Map.of("idolName", idolName))
-                                    .redirectUrl("/chat/room/" + idolId)
+                                    .redirectUrl(redirectUrl)
                                     .occurredAt(java.time.LocalDateTime.now())
                                     .build();
                     notificationProducer.send(notifyEvent);

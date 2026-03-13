@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore.ts";
 import { api } from "../../api/axios.ts";
 import { Client } from "@stomp/stompjs";
@@ -19,6 +19,7 @@ const WS_URL = API_BASE_URL.replace("http", "ws") + "/ws-chat";
 
 const ChatPage: React.FC = () => {
     const { groupId } = useParams<{ groupId?: string }>();
+    const [searchParams] = useSearchParams();
     const { user } = useAuthStore();
 
     // UI 상태 관리
@@ -123,6 +124,14 @@ const ChatPage: React.FC = () => {
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
+
+    // 딥링크 대응: URL에 idolId가 있으면 해당 방 자동 선택
+    useEffect(() => {
+        const idolIdParam = searchParams.get("idolId");
+        if (idolIdParam && !selectedIdolId) {
+            setSelectedIdolId(Number(idolIdParam));
+        }
+    }, [searchParams, selectedIdolId]);
 
     // Phase 2: 채팅방(아이돌) 선택 시 STOMP 연결 및 기존 내역 로드
     useEffect(() => {

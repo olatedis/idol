@@ -114,7 +114,7 @@ public class SubscriptionService {
                 .targetType(SubscriptionEvent.TargetType.USER)
                 .targetId(String.valueOf(subscription.getUserId()))
                 .args(args)
-                .redirectUrl("/subscription")
+                .redirectUrl("/mypage")
                 .occurredAt(LocalDateTime.now())
                 .build();
 
