@@ -16,7 +16,7 @@ import IdolSubscribe from "./pages/main/IdolSubscribe.tsx";
 import PaymentPage from "./pages/payment/PaymentPage.tsx";
 import PaymentComplete from "./pages/payment/PaymentComplete.tsx";
 import VotePage from "./pages/vote/VotePage.tsx";
-import ConcertPage from "./pages/concert/ConcertPage.tsx";
+import ConcertCreatePage from "./pages/concert/ConcertCreatePage.tsx";
 import IdolBoardPage from "./pages/board/idol/IdolBoardPage.tsx";
 import IdolPostWritePage from "./pages/board/idol/IdolPostWritePage.tsx";
 import IdolPostDetailPage from "./pages/board/idol/IdolPostDetailPage.tsx";
@@ -25,6 +25,7 @@ import GlobalConcertPage from "./pages/main/GlobalConcertPage.tsx";
 import GroupPostEditPage from "./pages/board/group/GroupPostEditPage.tsx";
 import MyPage from "./pages/main/mypage/MyPage.tsx";
 import IdolPostEditPage from "./pages/board/idol/IdolPostEditPage.tsx";
+import ConcertPage from "./pages/concert/ConcertPage.tsx";
 
 function App() {
     return (
@@ -69,6 +70,7 @@ function App() {
 
                     {/* 콘서트 페이지 */}
                     <Route path="concert" element={<ConcertPage />} />
+                    <Route path="concert/create" element={<ConcertCreatePage />} />
 
                     {/* 채팅 페이지 */}
                     <Route path="chat" element={<ChatPage />} />

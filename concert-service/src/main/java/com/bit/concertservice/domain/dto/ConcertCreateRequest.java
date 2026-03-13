@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -20,6 +21,6 @@ public class ConcertCreateRequest {
     private String img;             // 이미지
     private LocalDateTime concertDate;   // 시작일
     private LocalDateTime startTime;     // 시간
-    private LocalDateTime ticketSaleDate; // 티켓 판매일
-
+    private LocalDateTime ticketSaleDate; // 티켓 판매일 (optional)
+    private List<SeatCreateRequest> seats; // 좌석 정보
 }

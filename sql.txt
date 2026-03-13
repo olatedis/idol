@@ -175,3 +175,74 @@ INSERT INTO group_members (group_id, idol_id) VALUES
 (5,28),
 (5,29),
 (5,30);
+
+-- =========================
+-- 2) idols.stage_name 중복 제거
+--    기준: idols.id
+-- =========================
+UPDATE idols SET stage_name = '가나' WHERE id = 1;
+UPDATE idols SET stage_name = '다라' WHERE id = 2;
+UPDATE idols SET stage_name = '마바' WHERE id = 3;
+UPDATE idols SET stage_name = '사아' WHERE id = 4;
+UPDATE idols SET stage_name = '자차' WHERE id = 5;
+UPDATE idols SET stage_name = '카타' WHERE id = 6;
+UPDATE idols SET stage_name = '파하' WHERE id = 7;
+UPDATE idols SET stage_name = '하리' WHERE id = 8;
+UPDATE idols SET stage_name = '나유' WHERE id = 9;
+UPDATE idols SET stage_name = '도윤' WHERE id = 10;
+UPDATE idols SET stage_name = '라희' WHERE id = 11;
+UPDATE idols SET stage_name = '미소' WHERE id = 12;
+UPDATE idols SET stage_name = '보라' WHERE id = 13;
+UPDATE idols SET stage_name = '서율' WHERE id = 14;
+UPDATE idols SET stage_name = '시아' WHERE id = 15;
+UPDATE idols SET stage_name = '아린' WHERE id = 16;
+UPDATE idols SET stage_name = '연우' WHERE id = 17;
+UPDATE idols SET stage_name = '지안' WHERE id = 18;
+UPDATE idols SET stage_name = '채온' WHERE id = 19;
+UPDATE idols SET stage_name = '태린' WHERE id = 20;
+UPDATE idols SET stage_name = '하엘' WHERE id = 21;
+UPDATE idols SET stage_name = '윤서' WHERE id = 22;
+UPDATE idols SET stage_name = '은호' WHERE id = 23;
+UPDATE idols SET stage_name = '주원' WHERE id = 24;
+UPDATE idols SET stage_name = '규리' WHERE id = 25;
+UPDATE idols SET stage_name = '도하' WHERE id = 26;
+UPDATE idols SET stage_name = '로은' WHERE id = 27;
+UPDATE idols SET stage_name = '린아' WHERE id = 28;
+UPDATE idols SET stage_name = '민재' WHERE id = 29;
+UPDATE idols SET stage_name = '시온' WHERE id = 30;
+
+
+-- =========================
+-- 3) subscriptions.idol_stage_name 동기화
+--    기준: subscriptions.idol_id
+-- =========================
+UPDATE subscriptions SET idol_stage_name = '가나' WHERE idol_id = 1;
+UPDATE subscriptions SET idol_stage_name = '다라' WHERE idol_id = 2;
+UPDATE subscriptions SET idol_stage_name = '마바' WHERE idol_id = 3;
+UPDATE subscriptions SET idol_stage_name = '사아' WHERE idol_id = 4;
+UPDATE subscriptions SET idol_stage_name = '자차' WHERE idol_id = 5;
+UPDATE subscriptions SET idol_stage_name = '카타' WHERE idol_id = 6;
+UPDATE subscriptions SET idol_stage_name = '파하' WHERE idol_id = 7;
+UPDATE subscriptions SET idol_stage_name = '하리' WHERE idol_id = 8;
+UPDATE subscriptions SET idol_stage_name = '나유' WHERE idol_id = 9;
+UPDATE subscriptions SET idol_stage_name = '도윤' WHERE idol_id = 10;
+UPDATE subscriptions SET idol_stage_name = '라희' WHERE idol_id = 11;
+UPDATE subscriptions SET idol_stage_name = '미소' WHERE idol_id = 12;
+UPDATE subscriptions SET idol_stage_name = '보라' WHERE idol_id = 13;
+UPDATE subscriptions SET idol_stage_name = '서율' WHERE idol_id = 14;
+UPDATE subscriptions SET idol_stage_name = '시아' WHERE idol_id = 15;
+UPDATE subscriptions SET idol_stage_name = '아린' WHERE idol_id = 16;
+UPDATE subscriptions SET idol_stage_name = '연우' WHERE idol_id = 17;
+UPDATE subscriptions SET idol_stage_name = '지안' WHERE idol_id = 18;
+UPDATE subscriptions SET idol_stage_name = '채온' WHERE idol_id = 19;
+UPDATE subscriptions SET idol_stage_name = '태린' WHERE idol_id = 20;
+UPDATE subscriptions SET idol_stage_name = '하엘' WHERE idol_id = 21;
+UPDATE subscriptions SET idol_stage_name = '윤서' WHERE idol_id = 22;
+UPDATE subscriptions SET idol_stage_name = '은호' WHERE idol_id = 23;
+UPDATE subscriptions SET idol_stage_name = '주원' WHERE idol_id = 24;
+UPDATE subscriptions SET idol_stage_name = '규리' WHERE idol_id = 25;
+UPDATE subscriptions SET idol_stage_name = '도하' WHERE idol_id = 26;
+UPDATE subscriptions SET idol_stage_name = '로은' WHERE idol_id = 27;
+UPDATE subscriptions SET idol_stage_name = '린아' WHERE idol_id = 28;
+UPDATE subscriptions SET idol_stage_name = '민재' WHERE idol_id = 29;
+UPDATE subscriptions SET idol_stage_name = '시온' WHERE idol_id = 30;
