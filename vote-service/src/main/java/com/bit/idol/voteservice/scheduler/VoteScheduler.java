@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -27,26 +26,24 @@ import java.util.UUID;
 public class VoteScheduler {
 
     private final VoteRepository voteRepository;
-    private final RedisTemplate<String, String> redisTemplate; // <String, Object> -> <String, String>
+    private final RedisTemplate<String, String> redisTemplate;
     private final NotificationProducer notificationProducer;
-    private final VoteService voteService; // 추가됨
+    private final VoteService voteService;
 
     @Scheduled(cron = "0 * * * * *")
     @SchedulerLock(name = "closeExpiredVotes", lockAtLeastFor = "PT30S", lockAtMostFor = "PT50S")
-    // @Transactional 제거 (개별 트랜잭션으로 분리)
     public void closeExpiredVotes() {
         LocalDateTime now = LocalDateTime.now();
         List<Vote> expiredVotes = voteRepository.findAllByEndDateBeforeAndStatus(now, VoteStatus.OPEN);
 
         if (!expiredVotes.isEmpty()) {
             log.info("마감된 투표 {}건을 종료 처리합니다.", expiredVotes.size());
-            
+
             for (Vote vote : expiredVotes) {
                 try {
-                    // 개별 트랜잭션으로 처리 (하나 실패해도 나머지는 진행)
                     voteService.closeVote(vote.getId());
                 } catch (Exception e) {
-                    log.error("투표 종료 처리 실패: ID={}, Error={}", vote.getId(), e.getMessage());
+                    log.error("투표 종료 처리 실패: ID={}, Error={}", vote.getId(), e.getMessage(), e);
                 }
             }
         }
@@ -59,22 +56,25 @@ public class VoteScheduler {
         LocalDateTime oneHourLater = now.plusHours(1);
         LocalDateTime oneHourTenMinutesLater = now.plusHours(1).plusMinutes(10);
 
-        List<Vote> closingVotes = voteRepository.findAllByEndDateBetweenAndStatus(oneHourLater, oneHourTenMinutesLater, VoteStatus.OPEN);
+        List<Vote> closingVotes = voteRepository.findAllByEndDateBetweenAndStatus(
+                oneHourLater,
+                oneHourTenMinutesLater,
+                VoteStatus.OPEN
+        );
 
         for (Vote vote : closingVotes) {
             String notifyKey = "vote:notify:closing:" + vote.getId();
-            if (Boolean.FALSE.equals(redisTemplate.hasKey(notifyKey))) { // hasKey가 null을 반환할 수 있으므로 Boolean.FALSE.equals로 안전하게 비교
-                
+
+            if (Boolean.FALSE.equals(redisTemplate.hasKey(notifyKey))) {
                 TargetType targetType = TargetType.ALL;
                 String targetId = null;
+
                 if (vote.getTargetGroupId() != null) {
                     targetType = TargetType.GROUP_SUB;
                     targetId = String.valueOf(vote.getTargetGroupId());
                 }
 
-                // 메시지 내용 제거
                 sendVoteNotification(vote, "VOTE_CLOSING_SOON", targetType, targetId);
-                
                 redisTemplate.opsForValue().set(notifyKey, "SENT", java.time.Duration.ofHours(2));
             }
         }
@@ -83,11 +83,19 @@ public class VoteScheduler {
     private void sendVoteNotification(Vote vote, String type, TargetType targetType, String targetId) {
         try {
             Map<String, String> args = new HashMap<>();
-            
+
+            // 수정: 투표 제목 / groupId 전달 및 프론트 라우트에 맞는 redirectUrl 생성
             String redirectUrl = "/vote";
+
             if (vote != null) {
                 args.put("voteTitle", vote.getTitle());
-                redirectUrl = "/vote/" + vote.getId();
+
+                if (vote.getTargetGroupId() != null) {
+                    args.put("groupId", String.valueOf(vote.getTargetGroupId()));
+                    redirectUrl = "/group/" + vote.getTargetGroupId() + "/vote";
+                } else {
+                    redirectUrl = "/vote";
+                }
             }
 
             NotificationEventDto event = NotificationEventDto.builder()
@@ -95,14 +103,14 @@ public class VoteScheduler {
                     .type(type)
                     .targetType(targetType)
                     .targetId(targetId)
-                    .args(args) // 메시지 없이 변수만 전달
+                    .args(args)
                     .redirectUrl(redirectUrl)
                     .occurredAt(LocalDateTime.now())
                     .build();
-            
+
             notificationProducer.send(event);
         } catch (Exception e) {
-            log.error("알림 발송 실패: {}", e.getMessage());
+            log.error("알림 발송 실패: {}", e.getMessage(), e);
         }
     }
 }

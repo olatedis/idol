@@ -148,16 +148,27 @@ public class VoteService {
             if (topCandidate != null) {
                 TargetType targetType2 = vote.getTargetGroupId() != null ? TargetType.GROUP_SUB : TargetType.ALL;
                 String targetId2 = vote.getTargetGroupId() != null ? String.valueOf(vote.getTargetGroupId()) : null;
+                // 수정: 투표 알림 공통 규칙 적용
+                Map<String, String> voteResultArgs = new HashMap<>();
+                voteResultArgs.put("voteTitle", vote.getTitle());
+                voteResultArgs.put("winnerName", "후보 " + topCandidate);
+
+                if (vote.getTargetGroupId() != null) {
+                    voteResultArgs.put("groupId", String.valueOf(vote.getTargetGroupId()));
+                }
+
+                String voteResultRedirectUrl = "/vote";
+                if (vote.getTargetGroupId() != null) {
+                    voteResultRedirectUrl = "/group/" + vote.getTargetGroupId() + "/vote";
+                }
+
                 NotificationEventDto voteResultEvent = NotificationEventDto.builder()
                         .eventId(java.util.UUID.randomUUID().toString())
                         .type("VOTE_RESULT")
                         .targetType(targetType2)
                         .targetId(targetId2)
-                        .args(java.util.Map.of(
-                                "voteTitle", vote.getTitle(),
-                                "winnerName", "후보 " + topCandidate
-                        ))
-                        .redirectUrl("/vote/" + vote.getId())
+                        .args(voteResultArgs)
+                        .redirectUrl(voteResultRedirectUrl)
                         .occurredAt(java.time.LocalDateTime.now())
                         .build();
                 notificationProducer.send(voteResultEvent);
@@ -232,16 +243,27 @@ public class VoteService {
             VoteInfo voteInfo2 = voteReader.getVoteInfo(voteId);
             String candidateName = candidateRepository.findByVoteIdAndNumber(voteId, candidateNumber)
                     .map(c -> c.getName()).orElse("후보 " + candidateNumber);
+            // 수정: 투표 알림 공통 규칙 적용
+            Map<String, String> submitArgs = new HashMap<>();
+            submitArgs.put("voteTitle", voteInfo2.getTitle());
+            submitArgs.put("candidateName", candidateName);
+
+            if (voteInfo2.getTargetGroupId() != null) {
+                submitArgs.put("groupId", String.valueOf(voteInfo2.getTargetGroupId()));
+            }
+
+            String submitRedirectUrl = "/vote";
+            if (voteInfo2.getTargetGroupId() != null) {
+                submitRedirectUrl = "/group/" + voteInfo2.getTargetGroupId() + "/vote";
+            }
+
             NotificationEventDto submitEvent = NotificationEventDto.builder()
                     .eventId(java.util.UUID.randomUUID().toString())
                     .type("MY_VOTE_SUBMITTED")
                     .targetType(TargetType.USER)
                     .targetId(String.valueOf(userId))
-                    .args(java.util.Map.of(
-                            "voteTitle", voteInfo2.getTitle(),
-                            "candidateName", candidateName
-                    ))
-                    .redirectUrl("/vote/" + voteId)
+                    .args(submitArgs)
+                    .redirectUrl(submitRedirectUrl)
                     .occurredAt(java.time.LocalDateTime.now())
                     .build();
             notificationProducer.send(submitEvent);

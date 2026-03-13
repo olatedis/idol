@@ -125,6 +125,37 @@ const Header: React.FC = () => {
         }).format(utcDate);
     };
 
+    const getNotificationTitle = (notification: NotificationItem) => {
+        const voteTitle = notification.args?.voteTitle;
+        const boardTitle = notification.args?.title;
+
+        if (notification.type === "VOTE_OPENED") {
+            return voteTitle
+                ? `"${voteTitle}" 투표가 시작되었습니다.`
+                : "투표가 시작되었습니다.";
+        }
+
+        if (notification.type === "VOTE_CLOSED") {
+            return voteTitle
+                ? `"${voteTitle}" 투표가 종료되었습니다.`
+                : "투표가 종료되었습니다.";
+        }
+
+        if (notification.type === "VOTE_CLOSING_SOON") {
+            return voteTitle
+                ? `"${voteTitle}" 투표가 1시간 뒤 종료됩니다.`
+                : "투표가 1시간 뒤 종료됩니다.";
+        }
+
+        if (notification.type === "MY_VOTE_SUBMITTED") {
+            return voteTitle
+                ? `"${voteTitle}" 투표를 완료했습니다.`
+                : "투표를 완료했습니다.";
+        }
+
+        return boardTitle || notification.type;
+    };
+
     const getNotificationLabel = (notification: NotificationItem) => {
         const boardType = notification.args?.boardType;
 
@@ -133,6 +164,16 @@ const Header: React.FC = () => {
         if (boardType === "GROUP_FAN") return "그룹 팬";
         if (boardType === "IDOL_OFFICIAL") return "아이돌 공식";
         if (notification.type === "IDOL_MESSAGE") return "아이돌 메시지";
+
+        // 추가: 투표 알림 라벨
+        if (
+            notification.type === "VOTE_OPENED" ||
+            notification.type === "VOTE_CLOSED" ||
+            notification.type === "VOTE_CLOSING_SOON" ||
+            notification.type === "MY_VOTE_SUBMITTED"
+        ) {
+            return "투표";
+        }
 
         return "알림";
     };
@@ -143,6 +184,16 @@ const Header: React.FC = () => {
         if (boardType === "ADMIN_NOTICE") return "📢";
         if (boardType === "GROUP_OFFICIAL" || boardType === "GROUP_FAN") return "👥";
         if (boardType === "IDOL_OFFICIAL" || notification.type === "IDOL_MESSAGE") return "🎤";
+
+        // 추가: 투표 알림 아이콘
+        if (
+            notification.type === "VOTE_OPENED" ||
+            notification.type === "VOTE_CLOSED" ||
+            notification.type === "VOTE_CLOSING_SOON" ||
+            notification.type === "MY_VOTE_SUBMITTED"
+        ) {
+            return "🗳️";
+        }
 
         return "🔔";
     };
@@ -431,7 +482,7 @@ const Header: React.FC = () => {
                                                                         </div>
 
                                                                         <div className="mt-1 text-sm font-medium text-gray-800 truncate">
-                                                                            {notification.args?.title || notification.type}
+                                                                            {getNotificationTitle(notification)}
                                                                         </div>
 
                                                                         {!notification.isRead && (

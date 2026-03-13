@@ -51,6 +51,8 @@ public class PostEventListener {
             args.put("postId", String.valueOf(post.getPostId()));
             args.put("title", post.getTitle());
             args.put("boardType", post.getBoardType().name());
+
+            args.put("actorId", String.valueOf(post.getAuthorId()));
             event.setArgs(args);
 
             event.setRedirectUrl("/notices/" + post.getPostId());

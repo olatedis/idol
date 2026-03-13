@@ -28,14 +28,29 @@ public class VoteEventListener {
         sendVoteNotification(event.vote(), event.type(), event.targetType(), event.targetId());
     }
 
-    private void sendVoteNotification(Vote vote, String type, com.bit.idol.voteservice.dto.notification.TargetType targetType, String targetId) {
+    private void sendVoteNotification(
+            Vote vote,
+            String type,
+            com.bit.idol.voteservice.dto.notification.TargetType targetType,
+            String targetId
+    ) {
         try {
             Map<String, String> args = new HashMap<>();
-            
+
+            // 수정: 투표 알림 문구용 제목 전달
             String redirectUrl = "/vote";
+
             if (vote != null) {
                 args.put("voteTitle", vote.getTitle());
-                redirectUrl = "/vote/" + vote.getId();
+
+                // 수정: 프론트 실제 라우트에 맞게 groupId도 함께 전달
+                if (vote.getTargetGroupId() != null) {
+                    args.put("groupId", String.valueOf(vote.getTargetGroupId()));
+                    redirectUrl = "/group/" + vote.getTargetGroupId() + "/vote";
+                } else {
+                    // 수정: 전체 투표 라우트가 아직 없으면 임시 기본 경로
+                    redirectUrl = "/vote";
+                }
             }
 
             NotificationEventDto event = NotificationEventDto.builder()
@@ -47,10 +62,10 @@ public class VoteEventListener {
                     .redirectUrl(redirectUrl)
                     .occurredAt(LocalDateTime.now())
                     .build();
-            
+
             notificationProducer.send(event);
         } catch (Exception e) {
-            log.error("알림 발송 실패: {}", e.getMessage());
+            log.error("알림 발송 실패: {}", e.getMessage(), e);
         }
     }
 }
