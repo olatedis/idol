@@ -32,6 +32,8 @@ interface ChatMessage {
     createdAt?: string;
     me?: boolean;
     reactions?: Record<string, number>;
+    translated?: string;
+    isTranslated?: boolean;
 }
 
 const ChatPage: React.FC = () => {
@@ -491,6 +493,32 @@ const ChatPage: React.FC = () => {
         }
     };
 
+    // 번역 기능 핸들러
+    const handleTranslate = async (messageId: string) => {
+        const msg = messages.find(m => m.id === messageId);
+        if (!msg || !msg.id) return;
+
+        // 이미 번역된 경우 토글만 수행
+        if (msg.translated) {
+            setMessages(prev => prev.map(m => m.id === messageId ? { ...m, isTranslated: !m.isTranslated } : m));
+            return;
+        }
+
+        try {
+            // 브라우저 언어 감지 (기본 EN)
+            const browserLang = navigator.language.split("-")[0].toUpperCase();
+            const targetLang = ["KO", "EN", "JA", "ZH"].includes(browserLang) ? browserLang : "EN";
+
+            const res = await api.get(`/chat/translate/${messageId}?lang=${targetLang}`);
+            const translatedText = res.data.text;
+
+            setMessages(prev => prev.map(m => m.id === messageId ? { ...m, translated: translatedText, isTranslated: true } : m));
+        } catch (err) {
+            console.error("번역 실패:", err);
+            alert("번역 중 오류가 발생했습니다.");
+        }
+    };
+
     // 엔터키 전송 지원 (한글 IME 중복 발송 방지 포함)
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.nativeEvent.isComposing) return; // IME 조합 중이면 엔터키 이벤트 무시 (중복 발송 방지)
@@ -784,12 +812,38 @@ const ChatPage: React.FC = () => {
                                         <video src={msg.content} controls className="max-w-full max-h-64 object-contain" onLoadedMetadata={scrollToBottom} />
                                     </div>
                                 ) : (
-                                    <div className="whitespace-pre-wrap word-break">{msg.content}</div>
+                                    <div className="whitespace-pre-wrap word-break">
+                                        {msg.isTranslated && msg.translated ? (
+                                            <div className="flex flex-col gap-1.5">
+                                                <div className="opacity-50 line-through text-[0.85em]">{msg.content}</div>
+                                                <div className="font-medium animate-fade-in">
+                                                    <span className="mr-1.5">🌐</span>
+                                                    {msg.translated}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            msg.content
+                                        )}
+                                    </div>
                                 )}
 
                                 {msg.createdAt && (
-                                    <div className={`text-[10px] mt-1.5 ${isMine ? 'text-white/70 text-right' : 'text-gray-400 text-left'}`}>
-                                        {new Date(msg.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                    <div className={`flex items-center gap-2 mt-1.5 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`text-[10px] ${isMine ? 'text-white/70' : 'text-gray-400'}`}>
+                                            {new Date(msg.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                        {msg.type === 'TEXT' && (
+                                            <button 
+                                                onClick={() => handleTranslate(msg.id!)}
+                                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition-all active:scale-90 ${
+                                                    isMine 
+                                                    ? 'bg-white/20 text-white hover:bg-white/30' 
+                                                    : 'bg-gray-100 text-[var(--color-idol)] hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                {msg.isTranslated ? '되돌리기' : '번역'}
+                                            </button>
+                                        )}
                                     </div>
                                 )}
 

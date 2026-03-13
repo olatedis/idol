@@ -123,15 +123,17 @@ const MyPage: React.FC = () => {
                             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
                         )}
                     </button>
-                    <button
-                        className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "subscription" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
-                        onClick={() => setActiveTab("subscription")}
-                    >
-                        구독 내역
-                        {activeTab === "subscription" && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
-                        )}
-                    </button>
+                    {userInfo?.role !== "AGENCY" && userInfo?.role !== "ADMIN" && (
+                        <button
+                            className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "subscription" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                            onClick={() => setActiveTab("subscription")}
+                        >
+                            구독 내역
+                            {activeTab === "subscription" && (
+                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
+                            )}
+                        </button>
+                    )}
                     <button
                         className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "payment" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                         onClick={() => setActiveTab("payment")}
@@ -189,7 +191,7 @@ const MyPage: React.FC = () => {
                         <ProfileTab userInfo={userInfo} onRefresh={fetchMyInfo} />
                     )}
 
-                    {activeTab === "subscription" && (
+                    {activeTab === "subscription" && userInfo?.role !== "AGENCY" && userInfo?.role !== "ADMIN" && (
                         <SubscriptionTab />
                     )}
 

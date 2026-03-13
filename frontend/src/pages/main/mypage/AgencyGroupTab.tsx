@@ -83,7 +83,7 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
 
         try {
             setActionError('');
-            await api.post(`/groups/${selectedGroupId}/members`, { idolId: Number(newMemberIdolId) });
+            await api.post(`/groups/${selectedGroupId}/members?idolId=${newMemberIdolId}`);
             
             // 성공 시 로컬 상태 업데이트
             const idolInfo = allIdols.find(i => i.idolId === Number(newMemberIdolId));
@@ -110,7 +110,7 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
         }
 
         try {
-            await api.post(`/groups/${groupId}/members/remove`, { idolId });
+            await api.post(`/groups/${groupId}/members/remove?idolId=${idolId}`);
             
             // 성공 시 로컬 상태 업데이트
             setGroups(prevGroups => prevGroups.map((g: Group) => {

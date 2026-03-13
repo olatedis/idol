@@ -16,6 +16,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -65,7 +66,7 @@ public class SubscriptionService {
 
         subscriptionRepository.save(subscription);
 
-        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.PENDING.name());
+        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.PENDING.name(), Duration.ofDays(1)); // PENDING은 짧게 1일
 
         PaymentEvent event = new PaymentEvent(
                 userId,
@@ -97,7 +98,7 @@ public class SubscriptionService {
         subscription.activate();
         // cache 상태를 ACTIVE로 갱신
         String redisKey = buildIdolKey(userId, idolId);
-        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
+        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name(), Duration.ofDays(30));
 
         // publish same event as in Kafka listener
         String uuid = UUID.randomUUID().toString();
@@ -144,7 +145,7 @@ public class SubscriptionService {
         subscription.activate();
         // redis 캐시도 함께 갱신
         String redisKey = buildIdolKey(subscription.getUserId(), subscription.getIdolId());
-        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
+        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name(), Duration.ofDays(30));
 
         String uuid = UUID.randomUUID().toString();
         Map<String, String> args = new HashMap<>();
@@ -252,7 +253,7 @@ public class SubscriptionService {
                 SubscriptionStatus.ACTIVE);
 
         if (active) {
-            redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
+            redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name(), Duration.ofDays(30));
         }
 
         return active;
@@ -289,7 +290,7 @@ public class SubscriptionService {
 
         groupSubscriptionRepository.save(gs);
 
-        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
+        redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name(), Duration.ofDays(30));
 
         // 그룹 구독 이벤트
         String uuid = UUID.randomUUID().toString();
@@ -376,7 +377,7 @@ public class SubscriptionService {
                 SubscriptionStatus.ACTIVE);
 
         if (active) {
-            redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name());
+            redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.ACTIVE.name(), Duration.ofDays(30));
         }
 
         return active;

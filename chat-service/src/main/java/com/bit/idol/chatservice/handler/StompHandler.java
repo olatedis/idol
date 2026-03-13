@@ -75,12 +75,8 @@ public class StompHandler implements ChannelInterceptor {
         UserDto user = connectService.verifyUser(token);
         log.info("유저 검증 성공: userId={}, role={}", user.getUserId(), user.getRole());
 
-        // 2. 구독 목록 조회 및 세션 저장 (보안 강화)
-        if ("USER".equals(user.getRole())) {
-            Set<Long> subscribedIdolIds = connectService.getSubscribedIdolIds(user.getUserId());
-            accessor.getSessionAttributes().put("subscribedIdolIds", subscribedIdolIds);
-            log.info("구독 목록 로드 완료: {}개", subscribedIdolIds.size());
-        } else if ("IDOL".equals(user.getRole())) {
+        // 2. 구독 목록은 세션에 저장하지 않고 필요 시 실시간 조회 (스태일 세션 방지)
+        if ("IDOL".equals(user.getRole())) {
             try {
                 IdolDto idol = userFeignClient.getMyIdolInfo(user.getUserId());
                 if (idol != null) {
@@ -154,16 +150,11 @@ public class StompHandler implements ChannelInterceptor {
         // (더 강력한 보안을 위해선 Controller에서 @DestinationVariable로 받아서 검증해야 함)
 
         if ("USER".equals(role)) {
-            @SuppressWarnings("unchecked")
-            Set<Long> subscribedIdolIds = (Set<Long>) accessor.getSessionAttributes().get("subscribedIdolIds");
-
-            if (subscribedIdolIds == null || subscribedIdolIds.isEmpty()) {
-                // 구독 정보가 없으면 전송 차단 (혹은 재조회 시도)
-                throw new RuntimeException("구독 정보가 없습니다.");
-            }
-
-            // 상세 검증은 Controller의 @MessageMapping에서 수행하는 것이 더 자연스러움.
-            // 여기서는 "구독자만 채팅 가능"이라는 대전제만 체크.
+            // 실시간 구독 여부 확인 (Redis 조회)
+            // Payload를 파싱하여 idolId를 추출하는 대신, Controller에서 이미 검증하지만
+            // Handler 레벨에서 1차 차단을 원할 경우 헤더에 idolId를 보내거나, 
+            // 여기서는 '로그인 여부'만 체크하고 상세 검증은 Controller에 맡김.
+            // (이미 handleConnect에서 세션이 없으면 에러가 남)
         }
     }
 
@@ -180,13 +171,13 @@ public class StompHandler implements ChannelInterceptor {
                     if (parts.length >= 4) {
                         Long targetIdolId = Long.parseLong(parts[3]);
 
-                        @SuppressWarnings("unchecked")
-                        Set<Long> subscribedIdolIds = (Set<Long>) accessor.getSessionAttributes()
-                                .get("subscribedIdolIds");
+                        // 실시간 구독 여부 확인 (Session에 저장된 값 대신 Redis 직접 조회)
+                        int userIdInt = (int) accessor.getSessionAttributes().get("userId");
+                        boolean isSubscribed = connectService.isSubscribed(userIdInt, targetIdolId.intValue());
 
-                        if (subscribedIdolIds == null || !subscribedIdolIds.contains(targetIdolId)) {
-                            log.warn("권한 없는 채팅방 구독 시도 차단: sessionId={}, targetIdolId={}", accessor.getSessionId(),
-                                    targetIdolId);
+                        if (!isSubscribed) {
+                            log.warn("권한 없는 채팅방 구독 시도 차단: sessionId={}, userId={}, targetIdolId={}", 
+                                    accessor.getSessionId(), userIdInt, targetIdolId);
                             throw new RuntimeException("구독하지 않은 채팅방은 실시간 수신할 수 없습니다.");
                         }
                     }
