@@ -17,6 +17,7 @@ type SeatDto = {
     price: number;
     locked: boolean;
     lockedBy?: number | null;
+    reservedBy?: number | null;
 };
 
 type ConcertDto = {
@@ -541,15 +542,15 @@ const ConcertPage: React.FC = () => {
                                                         <button
                                                             key={seat.id}
                                                             onClick={() => {
-                                                                if (!seat.locked) {
+                                                                if (!seat.reservedBy) {
                                                                     toggleSeatSelection(seat.id);
                                                                 }
                                                             }}
-                                                            disabled={seat.locked}
+                                                            disabled={!seat.reservedBy}
                                                             className={`
                                                                 p-2 rounded border-2 font-bold text-sm transition flex flex-col items-center
                                                                 ${
-                                                                    seat.locked
+                                                                    !seat.reservedBy
                                                                         ? "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
                                                                         : selectedSeats.includes(seat.id)
                                                                         ? "border-[var(--color-idol)] bg-[var(--color-idol)] text-white"
