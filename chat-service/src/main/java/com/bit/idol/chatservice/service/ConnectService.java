@@ -69,6 +69,10 @@ public class ConnectService {
         return subscriptionFeignClient.checkSubscription(idolId, userId);
     }
 
+    public boolean isSubscribed(int userId, int idolId) {
+        return verifySubscription(userId, (long) idolId);
+    }
+
     // 3. 구독 목록 조회 (보안 강화용)
     @CircuitBreaker(name = "subscription-check", fallbackMethod = "fallbackGetSubscriptions")
     public Set<Long> getSubscribedIdolIds(int userId) {
