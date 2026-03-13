@@ -42,10 +42,10 @@ const Header: React.FC = () => {
     };
 
     const handleLogout = () => {
+        setIsMenuOpen(false);
         logout();
         showSuccessToast("로그아웃되었습니다.");
-        navigate("/");
-        setIsMenuOpen(false);
+        navigate("/", { replace: true });
     };
 
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -59,19 +59,14 @@ const Header: React.FC = () => {
     }
 
     const handleNotificationClick = async (notification: NotificationItem) => {
-        console.log("클릭 알림", notification);
-        console.log("accessToken 존재?", !!accessToken);
 
         try {
             await readOneNotification(notification.notificationId);
-            console.log("단건 읽음 API 호출 완료");
 
             setNotifications((prev) =>
                 prev.filter((item) => item.notificationId !== notification.notificationId)
             );
-            console.log("프론트 목록 제거 완료");
         } catch (error) {
-            console.error("단건 읽음 실패", error);
         } finally {
             setIsNotificationOpen(false);
             navigate(notification.redirectUrl);
@@ -79,20 +74,15 @@ const Header: React.FC = () => {
     };
 
     const handleReadAllNotifications = async () => {
-        console.log("전체 읽음 클릭");
-        console.log("accessToken 존재?", !!accessToken);
-        console.log("현재 notifications", notifications);
 
         if (!accessToken) return;
 
         const targetIds = notifications.map((item) => item.notificationId);
-        console.log("제거 대상 ids", targetIds);
 
         if (targetIds.length === 0) return;
 
         try {
             await readAllNotifications();
-            console.log("전체 읽음 API 호출 완료");
 
             setRemovingIds(targetIds);
 
@@ -101,10 +91,8 @@ const Header: React.FC = () => {
                     prev.filter((item) => !targetIds.includes(item.notificationId))
                 );
                 setRemovingIds([]);
-                console.log("전체 읽음 후 프론트 목록 제거 완료");
             }, 320);
         } catch (error) {
-            console.error("전체 읽음 실패", error);
         }
     };
 
@@ -201,7 +189,6 @@ const Header: React.FC = () => {
                 setNextCursor(data.nextCursor ?? null);
                 setHasNext(data.hasNext ?? false);
             } catch (error) {
-                console.error(error);
             } finally {
                 setLoadingNotifications(false);
             }
@@ -218,7 +205,6 @@ const Header: React.FC = () => {
         const connect = async () => {
             connection = await connectNotificationSse(accessToken, {
                 onConnected: () => {
-                    console.log("알림 SSE 연결 성공");
                 },
                 onNotification: (payload) => {
                     setNotifications((prev) => [
@@ -235,7 +221,6 @@ const Header: React.FC = () => {
                     upsertIdolMessageStack(payload);
                 },
                 onError: () => {
-                    console.error("알림 SSE 연결 오류");
                 },
             });
         };

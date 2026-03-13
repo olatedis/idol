@@ -42,7 +42,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
                     setIdolInfo(res.data);
                     setEditForm(prev => ({ ...prev, stageName: res.data.stageName || "" }));
                 })
-                .catch(err => console.warn("Failed to fetch idol info:", err));
+                .catch(() => {});
         }
     }, [userInfo.role]);
 

@@ -6,25 +6,25 @@ import NoticeListPage from "./pages/main/notice/NoticeListPage.tsx";
 import NoticeDetailPage from "./pages/main/notice/NoticeDetailPage.tsx";
 import NoticeWritePage from "./pages/main/notice/NoticeWritePage.tsx";
 import NoticeEditPage from "./pages/main/notice/NoticeEditPage.tsx";
-import DefaultServicePage from "./pages/3-1/DefaultServicePage.tsx";
-import GroupBoardPage from "./pages/3-1/board/group/GroupBoardPage.tsx";
-import IdolPage from "./pages/2-1/IdolPage.tsx";
-import GroupPostWritePage from "./pages/3-1/board/group/GroupPostWritePage.tsx";
-import GroupPostDetailPage from "./pages/3-1/board/group/GroupPostDetailPage.tsx";
+import DefaultServicePage from "./pages/service/DefaultServicePage.tsx";
+import GroupBoardPage from "./pages/board/group/GroupBoardPage.tsx";
+import IdolPage from "./pages/idol/IdolPage.tsx";
+import GroupPostWritePage from "./pages/board/group/GroupPostWritePage.tsx";
+import GroupPostDetailPage from "./pages/board/group/GroupPostDetailPage.tsx";
 import OAuthKakao from "./pages/auth/OAuthKakao.tsx";
 import IdolSubscribe from "./pages/main/IdolSubscribe.tsx";
 import PaymentPage from "./pages/payment/PaymentPage.tsx";
 import PaymentComplete from "./pages/payment/PaymentComplete.tsx";
-import VotePage from "./pages/3-1/vote/VotePage.tsx";
-import ConcertPage from "./pages/3-1/concert/ConcertPage.tsx";
-import IdolBoardPage from "./pages/3-1/board/idol/IdolBoardPage.tsx";
-import IdolPostWritePage from "./pages/3-1/board/idol/IdolPostWritePage.tsx";
-import IdolPostDetailPage from "./pages/3-1/board/idol/IdolPostDetailPage.tsx";
-import ChatPage from "./pages/3-1/chat/ChatPage.tsx";
+import VotePage from "./pages/vote/VotePage.tsx";
+import ConcertPage from "./pages/concert/ConcertPage.tsx";
+import IdolBoardPage from "./pages/board/idol/IdolBoardPage.tsx";
+import IdolPostWritePage from "./pages/board/idol/IdolPostWritePage.tsx";
+import IdolPostDetailPage from "./pages/board/idol/IdolPostDetailPage.tsx";
+import ChatPage from "./pages/chat/ChatPage.tsx";
 import GlobalConcertPage from "./pages/main/GlobalConcertPage.tsx";
-import GroupPostEditPage from "./pages/3-1/board/group/GroupPostEditPage.tsx";
+import GroupPostEditPage from "./pages/board/group/GroupPostEditPage.tsx";
 import MyPage from "./pages/main/mypage/MyPage.tsx";
-import IdolPostEditPage from "./pages/3-1/board/idol/IdolPostEditPage.tsx";
+import IdolPostEditPage from "./pages/board/idol/IdolPostEditPage.tsx";
 
 function App() {
     return (

@@ -62,7 +62,6 @@ const MyPage: React.FC = () => {
             const data = await res.json();
             setUserInfo(data);
         } catch (e) {
-            console.error(e);
             Swal.fire({
                 icon: 'error',
                 title: '오류',
@@ -75,13 +74,7 @@ const MyPage: React.FC = () => {
 
     useEffect(() => {
         if (!accessToken) {
-            Swal.fire({
-                icon: 'warning',
-                title: '로그인 필요',
-                text: '로그인이 필요합니다.'
-            }).then(() => {
-                navigate("/");
-            });
+            navigate("/");
             return;
         }
         fetchMyInfo();

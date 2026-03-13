@@ -33,7 +33,6 @@ const AdminReportQueue: React.FC = () => {
             });
             setActionForms(initialForms);
         } catch (err) {
-            console.error("Failed to fetch reports queue", err);
         } finally {
             setLoading(false);
         }

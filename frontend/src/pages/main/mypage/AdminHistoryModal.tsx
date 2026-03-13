@@ -21,7 +21,6 @@ const AdminHistoryModal: React.FC<AdminHistoryModalProps> = ({ userId, type, onC
                 const res = await api.get(endpoint);
                 setData(res.data);
             } catch (err) {
-                console.error("Failed to fetch history", err);
             } finally {
                 setLoading(false);
             }

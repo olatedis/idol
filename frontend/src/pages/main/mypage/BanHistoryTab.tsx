@@ -19,7 +19,6 @@ const BanHistoryTab: React.FC = () => {
                 const res = await api.get("/users/me/bans-history");
                 setHistory(res.data);
             } catch (err) {
-                console.error("Failed to fetch ban history", err);
             } finally {
                 setLoading(false);
             }
