@@ -105,7 +105,7 @@ const GlobalConcertPage: React.FC = () => {
                                             <span className="truncate">{concert.address}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-gray-800 font-bold">
-                                            <span>&#8361; {concert.price.toLocaleString()}</span>
+                                            <span>&#8361; {concert.price}</span>
                                             <span className="text-xs text-gray-400 font-normal border border-gray-200 px-2 py-1 rounded-md">{concert.capacity}석</span>
                                         </div>
                                     </div>
