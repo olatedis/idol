@@ -3,9 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+    getIdolMessageStacks,
     getNotificationList,
     readAllNotifications,
     readOneNotification,
+    resetIdolMessageStack,
 } from "../../api/notificationApi";
 import { connectNotificationSse } from "../../utils/notificationSse";
 import type { IdolMessageStackPayload, NotificationItem } from "../../types/notification";
@@ -34,7 +36,16 @@ const Header: React.FC = () => {
 
     const notificationListRef = useRef<HTMLDivElement | null>(null);
 
-    const unreadCount = notifications.filter((item) => !item.isRead).length;
+    const normalUnreadCount = notifications.filter(
+        (item) => !item.isRead && item.type !== "IDOL_MESSAGE"
+    ).length;
+
+    const stackUnreadCount = idolMessageStacks.reduce(
+        (sum, item) => sum + (item.unreadCount || 0),
+        0
+    );
+
+    const unreadCount = normalUnreadCount + stackUnreadCount;
 
     const handleLogin = () => {
         navigate("/", { state: { scrollToLogin: true } });
@@ -124,6 +135,52 @@ const Header: React.FC = () => {
             hour12: false,
         }).format(utcDate);
     };
+
+    const parseIdolId = (notification: NotificationItem) => {
+        const idolIdFromArgs = notification.args?.idolId;
+        if (idolIdFromArgs) return Number(idolIdFromArgs);
+
+        const match = notification.redirectUrl?.match(/idolId=(\d+)/);
+        if (match) return Number(match[1]);
+
+        return null;
+    };
+
+    const getLatestIdolMessageNotification = (idolId: number) => {
+        return notifications.find(
+            (item) => item.type === "IDOL_MESSAGE" && parseIdolId(item) === idolId
+        );
+    };
+
+    const handleIdolStackClick = async (stack: IdolMessageStackPayload) => {
+        const latest = getLatestIdolMessageNotification(stack.idolId);
+
+        const groupId = latest?.args?.groupId;
+        const redirectUrl =
+            latest?.redirectUrl ||
+            (groupId
+                ? `/group/${groupId}/chat?idolId=${stack.idolId}`
+                : `/mypage`);
+
+        try {
+            await resetIdolMessageStack(stack.idolId);
+
+            setIdolMessageStacks((prev) =>
+                prev.map((item) =>
+                    item.idolId === stack.idolId
+                        ? { ...item, unreadCount: 0 }
+                        : item
+                )
+            );
+        } catch (error) {
+        } finally {
+            setIsNotificationOpen(false);
+            navigate(redirectUrl);
+        }
+    };
+
+
+
 
     const getNotificationTitle = (notification: NotificationItem) => {
         const voteTitle = notification.args?.voteTitle;
@@ -223,6 +280,10 @@ const Header: React.FC = () => {
         }
     };
 
+    const visibleNotifications = notifications.filter(
+        (item) => item.type !== "IDOL_MESSAGE"
+    );
+
     useEffect(() => {
         if (!isLoggedIn || !accessToken) {
             setNotifications([]);
@@ -235,10 +296,16 @@ const Header: React.FC = () => {
         const loadNotifications = async () => {
             try {
                 setLoadingNotifications(true);
-                const data = await getNotificationList(20);
-                setNotifications((data.items ?? []).filter(n => !n.isRead));
-                setNextCursor(data.nextCursor ?? null);
-                setHasNext(data.hasNext ?? false);
+
+                const [notificationData, stackData] = await Promise.all([
+                    getNotificationList(20),
+                    getIdolMessageStacks(),
+                ]);
+
+                setNotifications((notificationData.items ?? []).filter(n => !n.isRead));
+                setNextCursor(notificationData.nextCursor ?? null);
+                setHasNext(notificationData.hasNext ?? false);
+                setIdolMessageStacks(stackData.items ?? []);
             } catch (error) {
             } finally {
                 setLoadingNotifications(false);
@@ -449,12 +516,12 @@ const Header: React.FC = () => {
                                                         <div className="px-4 py-6 text-sm text-gray-500 text-center">
                                                             불러오는 중...
                                                         </div>
-                                                    ) : notifications.length === 0 ? (
+                                                    ) : visibleNotifications.length === 0 && idolMessageStacks.length === 0 ? (
                                                         <div className="px-4 py-6 text-sm text-gray-500 text-center">
                                                             알림이 없습니다.
                                                         </div>
                                                     ) : (
-                                                        notifications.map((notification) => (
+                                                        visibleNotifications.map((notification) => (
                                                             <button
                                                                 key={notification.notificationId}
                                                                 onClick={() => handleNotificationClick(notification)}
@@ -504,20 +571,64 @@ const Header: React.FC = () => {
                                                 )}
 
                                                 {idolMessageStacks.length > 0 && (
-                                                    <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-                                                        <div className="text-xs font-semibold text-gray-600 mb-2">
-                                                            아이돌 메시지 스택
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            {idolMessageStacks.map((stack) => (
-                                                                <div
-                                                                    key={stack.idolId}
-                                                                    className="text-xs text-gray-600"
-                                                                >
-                                                                    idolId {stack.idolId} : {stack.unreadCount}개
-                                                                </div>
-                                                            ))}
-                                                        </div>
+                                                    <div className="border-b border-gray-100 bg-white">
+                                                        {idolMessageStacks
+                                                            .filter((stack) => stack.unreadCount > 0)
+                                                            .sort((a, b) => {
+                                                                const aTime = a.lastOccurredAt ? new Date(`${a.lastOccurredAt}Z`).getTime() : 0;
+                                                                const bTime = b.lastOccurredAt ? new Date(`${b.lastOccurredAt}Z`).getTime() : 0;
+                                                                return bTime - aTime;
+                                                            })
+                                                            .map((stack) => {
+                                                                const latest = getLatestIdolMessageNotification(stack.idolId);
+
+                                                                const idolName = latest?.args?.idolName || `아이돌 ${stack.idolId}`;
+                                                                const groupName = latest?.args?.groupName || "그룹";
+                                                                const idolImageUrl = latest?.args?.idolImageUrl;
+
+                                                                return (
+                                                                    <button
+                                                                        key={stack.idolId}
+                                                                        onClick={() => handleIdolStackClick(stack)}
+                                                                        className="w-full px-4 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100 last:border-b-0"
+                                                                    >
+                                                                        <div className="flex items-start gap-3">
+                                                                            <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center text-xs text-gray-400">
+                                                                                {idolImageUrl ? (
+                                                                                    <img
+                                                                                        src={idolImageUrl}
+                                                                                        alt={idolName}
+                                                                                        className="w-full h-full object-cover"
+                                                                                    />
+                                                                                ) : (
+                                                                                    "👤"
+                                                                                )}
+                                                                            </div>
+
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <div className="flex items-center justify-between gap-2">
+                                    <span className="text-xs font-semibold text-gray-500">
+                                        아이돌 채팅
+                                    </span>
+                                                                                    <span className="text-[11px] text-gray-400 shrink-0">
+                                        {formatNotificationTimeToKST(stack.lastOccurredAt)}
+                                    </span>
+                                                                                </div>
+
+                                                                                <div className="mt-1 text-sm font-medium text-gray-800 truncate">
+                                                                                    {groupName} {idolName}
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div className="shrink-0 self-center">
+                                <span className="inline-flex min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold items-center justify-center">
+                                    {stack.unreadCount > 99 ? "99+" : stack.unreadCount}
+                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </button>
+                                                                );
+                                                            })}
                                                     </div>
                                                 )}
                                             </motion.div>
