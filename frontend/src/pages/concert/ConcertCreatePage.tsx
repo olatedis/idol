@@ -23,7 +23,7 @@ const ConcertCreatePage: React.FC = () => {
         description: "",
         venue: "",
         concertDate: "",
-        startTime: "",
+        ticketSaleDate: "",
     });
 
     const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ const ConcertCreatePage: React.FC = () => {
             return;
         }
 
-        if (!formData.title || !formData.venue || !formData.concertDate) {
+        if (!formData.title || !formData.venue || !formData.concertDate || !formData.ticketSaleDate) {
             showErrorToast("필수 항목을 입력해주세요.");
             return;
         }
@@ -59,15 +59,23 @@ const ConcertCreatePage: React.FC = () => {
                 return;
             }
 
-            const payload = {
-                groupId: groupId ? parseInt(groupId) : null,
-                title: formData.title,
-                description: formData.description || null,
-                venue: formData.venue,
-                concertDate: formData.concertDate,
-                startTime: formData.startTime || null,
+const agencyId = user?.agencyId ?? 0;
+                const groupIdNum = groupId ? Number(groupId) : null;
+
+                if (agencyId <= 0) {
+                    showErrorToast("소속사 정보가 없습니다.");
+                    return;
+                }
+
+                const payload = {
+                    agencyId,
+                    groupId: groupIdNum,
+                    title: formData.title,
+                    description: formData.description || null,
+                    venue: formData.venue,
+                    concertDate: formData.concertDate,
+                    ticketSaleDate: formData.ticketSaleDate,
                 seats: validSeats,
-                agencyId: user.agencyId,
             };
 
             await api.post("/concerts", payload);
@@ -137,11 +145,11 @@ const ConcertCreatePage: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-1">시작 시간</label>
+                            <label className="block text-sm font-medium mb-1">티켓 예매 시작일 *</label>
                             <input
-                                type="time"
-                                name="startTime"
-                                value={formData.startTime}
+                                type="datetime-local"
+                                name="ticketSaleDate"
+                                value={formData.ticketSaleDate}
                                 onChange={handleChange}
                                 className="w-full p-2 border rounded"
                             />
