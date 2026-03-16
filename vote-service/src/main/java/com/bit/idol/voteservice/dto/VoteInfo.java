@@ -22,8 +22,9 @@ public class VoteInfo implements Serializable {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private String status;
-    private Long targetGroupId; // 그룹 식별자 추가
-    private List<CandidateDto> candidates; // 후보 목록 추가
+    private int totalVotes; // 총 투표수 추가
+    private Long targetGroupId;
+    private List<CandidateDto> candidates;
 
     public static VoteInfo from(Vote vote) {
         LocalDateTime now = LocalDateTime.now();
@@ -42,10 +43,11 @@ public class VoteInfo implements Serializable {
                 .startDate(vote.getStartDate())
                 .endDate(vote.getEndDate())
                 .status(status)
+                .totalVotes(vote.getTotalVotes()) // 매핑 추가
                 .targetGroupId(vote.getTargetGroupId())
                 .candidates(vote.getCandidate().stream()
                         .map(CandidateDto::from)
-                        .collect(Collectors.toList())) // 후보 목록 매핑
+                        .collect(Collectors.toList()))
                 .build();
     }
 }

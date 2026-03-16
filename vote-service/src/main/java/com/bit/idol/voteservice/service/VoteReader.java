@@ -42,10 +42,12 @@ public class VoteReader {
                 .orElseThrow(() -> new RuntimeException("후보자 없음"));
     }
 
-    // 전체 투표 목록 조회 (캐싱 적용)
-    @Cacheable(value = "votes", key = "'all'")
-    public List<Vote> getAllVotesCached() {
-        return voteRepository.findAll();
+    // 전체 투표 목록 조회 (캐싱 적용 - 엔티티 대신 DTO 캐싱)
+    @Cacheable(value = "votes", key = "'all'", sync = true)
+    public List<VoteInfo> getAllVotesCached() {
+        return voteRepository.findAll().stream()
+                .map(VoteInfo::from)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     // 투표 목록 조회 (페이징 + 그룹 필터링 + 검색)

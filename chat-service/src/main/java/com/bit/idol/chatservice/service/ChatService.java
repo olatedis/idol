@@ -692,6 +692,12 @@ public class ChatService {
         return deduplicatedResult;
     }
 
+    public Long getIdolIdByMessageId(String messageId) {
+        return chatRepository.findById(messageId)
+                .map(ChatMessage::getIdolId)
+                .orElseThrow(() -> new RuntimeException("메시지를 찾을 수 없습니다."));
+    }
+
     private ChatMessageDto convertToDto(ChatMessage entity) {
         return ChatMessageDto.builder()
                 .id(entity.getId())

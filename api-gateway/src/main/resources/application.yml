@@ -80,8 +80,8 @@ spring:
           filters:
             - name: RequestRateLimiter
               args:
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
                 key-resolver: "#{@userIdKeyResolver}"
 
         - id: ranking-service
@@ -151,6 +151,7 @@ jwt:
     - /idols/**
     - /groups/**
     - /uploads/**
+    - /api/votes/**
 
 logging:
   level:
