@@ -71,7 +71,6 @@ const Header: React.FC = () => {
     }
 
     const handleNotificationClick = async (notification: NotificationItem) => {
-
         try {
             await readOneNotification(notification.notificationId);
 
@@ -81,7 +80,15 @@ const Header: React.FC = () => {
         } catch (error) {
         } finally {
             setIsNotificationOpen(false);
-            navigate(notification.redirectUrl);
+
+            if (
+                notification.type !== "RESERVATION_CREATED" &&
+                notification.redirectUrl &&
+                notification.redirectUrl.trim() !== "" &&
+                notification.redirectUrl !== "#"
+            ) {
+                navigate(notification.redirectUrl);
+            }
         }
     };
 
@@ -202,11 +209,59 @@ const Header: React.FC = () => {
         const voteTitle = notification.args?.voteTitle;
         const boardTitle = notification.args?.title;
         const idolName = notification.args?.idolName;
+        const groupName = notification.args?.groupName;
+        const concertName = notification.args?.concertName;
+        const idolId = notification.args?.idolId;
+        const groupId = notification.args?.groupId;
+
+        if (notification.type === "IDOL_SUB_STARTED") {
+            return idolId
+                ? `아이돌 구독이 시작되었습니다.`
+                : "아이돌 구독이 시작되었습니다.";
+        }
+
+        if (notification.type === "IDOL_SUB_END") {
+            return idolId
+                ? `아이돌 구독이 종료되었습니다.`
+                : "아이돌 구독이 종료되었습니다.";
+        }
+
+        if (notification.type === "GROUP_SUB_STARTED") {
+            return groupId
+                ? `그룹 구독이 시작되었습니다.`
+                : "그룹 구독이 시작되었습니다.";
+        }
+
+        if (notification.type === "GROUP_SUB_END") {
+            return groupId
+                ? `그룹 구독이 종료되었습니다.`
+                : "그룹 구독이 종료되었습니다.";
+        }
+
+        if (notification.type === "CONCERT_OPENED") {
+            return groupName
+                ? `${groupName}의 콘서트가 생성되었습니다.`
+                : "콘서트가 생성되었습니다."
+        }
+
+        if (notification.type === "RESERVATION_CREATED") {
+            return concertName
+                ? `${concertName}의 예매가 완료되었습니다.`
+                : "콘서트 예매가 완료되었습니다.";
+        }
 
         if (notification.type === "CHAT_IDOL_ONLINE") {
             return idolName
                 ? `${idolName}의 채팅이 시작되었습니다.`
                 : "아이돌의 채팅이 시작되었습니다.";
+        }
+
+        if (notification.type === "REPORT_RECEIVED") {
+            const reportCount = notification.args?.reportCount;
+
+            return reportCount
+                ? `신고가 ${reportCount}회 누적되었습니다. 주의해주세요.`
+                : "신고가 누적되었습니다. 주의해주세요.";
         }
 
         if (notification.type === "VOTE_OPENED") {
@@ -233,6 +288,18 @@ const Header: React.FC = () => {
                 : "투표를 완료했습니다.";
         }
 
+        if (notification.type === "RANKING_CHANGED") {
+            return voteTitle
+                ? `"${voteTitle}" 랭킹이 변경되었습니다.`
+                : "랭킹이 변경되었습니다.";
+        }
+
+        if (notification.type === "VOTE_RESULT") {
+            return voteTitle
+                ? `"${voteTitle}" 투표 결과가 공개되었습니다.`
+                : "투표 결과가 공개되었습니다.";
+        }
+
         return boardTitle || notification.type;
     };
 
@@ -245,14 +312,31 @@ const Header: React.FC = () => {
         if (boardType === "IDOL_OFFICIAL") return "아이돌 공식";
         if (notification.type === "IDOL_MESSAGE") return "아이돌 메시지";
 
-        // 추가: 투표 알림 라벨
+        if (
+            notification.type === "IDOL_SUB_STARTED" ||
+            notification.type === "IDOL_SUB_END" ||
+            notification.type === "GROUP_SUB_STARTED" ||
+            notification.type === "GROUP_SUB_END"
+        ) {
+            return "구독";
+        }
+
         if (
             notification.type === "VOTE_OPENED" ||
             notification.type === "VOTE_CLOSED" ||
             notification.type === "VOTE_CLOSING_SOON" ||
-            notification.type === "MY_VOTE_SUBMITTED"
+            notification.type === "MY_VOTE_SUBMITTED" ||
+            notification.type === "RANKING_CHANGED" ||
+            notification.type === "VOTE_RESULT"
         ) {
             return "투표";
+        }
+
+        if (
+            notification.type === "CONCERT_OPENED" ||
+            notification.type === "RESERVATION_CREATED"
+        ) {
+            return "콘서트";
         }
 
         return "알림";
@@ -275,6 +359,15 @@ const Header: React.FC = () => {
             return "🗳️";
         }
 
+        if (
+            notification.type === "IDOL_SUB_STARTED" ||
+            notification.type === "IDOL_SUB_END" ||
+            notification.type === "GROUP_SUB_STARTED" ||
+            notification.type === "GROUP_SUB_END"
+        ) {
+            return "💎";
+        }
+
         return "🔔";
     };
 
@@ -293,7 +386,15 @@ const Header: React.FC = () => {
 
             const data = await getNotificationList(20, nextCursor);
 
-            setNotifications((prev) => [...prev, ...(data.items ?? [])]);
+            setNotifications((prev) => {
+                const unreadItems = (data.items ?? []).filter((item) => !item.isRead);
+                const merged = [...prev, ...unreadItems];
+
+                return merged.filter(
+                    (item, index, arr) =>
+                        arr.findIndex((target) => target.notificationId === item.notificationId) === index
+                );
+            });
             setNextCursor(data.nextCursor ?? null);
             setHasNext(data.hasNext ?? false);
         } catch (error) {
@@ -304,7 +405,7 @@ const Header: React.FC = () => {
     };
 
     const visibleNotifications = notifications.filter(
-        (item) => item.type !== "IDOL_MESSAGE"
+        (item) => !item.isRead && item.type !== "IDOL_MESSAGE"
     );
 
     useEffect(() => {
@@ -325,7 +426,7 @@ const Header: React.FC = () => {
                     getIdolMessageStacks(),
                 ]);
 
-                setNotifications((notificationData.items ?? []).filter(n => !n.isRead));
+                setNotifications((notificationData.items ?? []).filter((item) => !item.isRead));
                 setNextCursor(notificationData.nextCursor ?? null);
                 setHasNext(notificationData.hasNext ?? false);
                 setIdolMessageStacks(stackData.items ?? []);
@@ -354,7 +455,7 @@ const Header: React.FC = () => {
                             isRead: false,
                             readAt: null,
                         },
-                        ...prev.filter(n => !n.isRead),
+                        ...prev.filter((item) => item.notificationId !== payload.notificationId),
                     ]);
                     triggerBellAnimation();
                 },
@@ -550,10 +651,10 @@ const Header: React.FC = () => {
                                                                 .filter((stack) => stack.unreadCount > 0)
                                                                 .sort((a, b) => {
                                                                     const aTime = a.lastOccurredAt
-                                                                        ? new Date(`${a.lastOccurredAt}Z`).getTime()
+                                                                        ? new Date(a.lastOccurredAt).getTime()
                                                                         : 0;
                                                                     const bTime = b.lastOccurredAt
-                                                                        ? new Date(`${b.lastOccurredAt}Z`).getTime()
+                                                                        ? new Date(b.lastOccurredAt).getTime()
                                                                         : 0;
                                                                     return bTime - aTime;
                                                                 })

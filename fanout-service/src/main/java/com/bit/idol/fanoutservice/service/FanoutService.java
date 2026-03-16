@@ -28,7 +28,7 @@ public class FanoutService {
 
     public void handle(NotifyRequestEvent req) {
         if (req == null) return;
-        if (blank(req.getEventId()) || blank(req.getType()) || req.getTargetType() == null || blank(req.getRedirectUrl()) || blank(req.getOccurredAt())) {
+        if (blank(req.getEventId()) || blank(req.getType()) || req.getTargetType() == null || blank(req.getOccurredAt())) {
             return;
         }
 
@@ -180,7 +180,7 @@ public class FanoutService {
         out.setTargetType(TargetType.USER);
         out.setTargetId(userIdStr);
         out.setArgs(req.getArgs());
-        out.setRedirectUrl(req.getRedirectUrl());
+        out.setRedirectUrl(blank(req.getRedirectUrl()) ? "#" : req.getRedirectUrl());
         out.setOccurredAt(req.getOccurredAt());
 
         producer.send(fanoutTopic, out);
@@ -203,7 +203,7 @@ public class FanoutService {
 
         out.setArgs(args);
 
-        out.setRedirectUrl(req.getRedirectUrl());
+        out.setRedirectUrl(blank(req.getRedirectUrl()) ? "#" : req.getRedirectUrl());
         out.setOccurredAt(req.getOccurredAt());
 
         producer.send(fanoutTopic, out);
