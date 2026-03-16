@@ -86,8 +86,8 @@ const ConcertCreatePage: React.FC = () => {
                 const uploadRes = await api.post("/chat/upload", form, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
-                const { thumbnailUrl, url, content } = uploadRes.data || {};
-                imgUrl = thumbnailUrl || url || content;
+
+                imgUrl = uploadRes.data
             }
 
             const payload: any = {
@@ -96,14 +96,15 @@ const ConcertCreatePage: React.FC = () => {
                 title: formData.title,
                 description: formData.description || null,
                 venue: formData.venue,
+                img: imgUrl,
                 concertDate: formData.concertDate,
                 ticketSaleDate: formData.ticketSaleDate,
                 seats: validSeats,
             };
 
-            if (imgUrl) {
-                payload.img = imgUrl;
-            }
+            // if (imgUrl) {
+            //     payload.img = imgUrl;
+            // }
 
             await api.post("/concerts", payload);
 
