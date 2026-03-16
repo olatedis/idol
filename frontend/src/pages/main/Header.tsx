@@ -138,9 +138,9 @@ const Header: React.FC = () => {
     const formatNotificationTimeToKST = (value?: string | null) => {
         if (!value) return "";
 
-        const utcDate = value.endsWith("Z") ? new Date(value) : new Date(`${value}Z`);
+        const date = new Date(value);
 
-        if (Number.isNaN(utcDate.getTime())) return value;
+        if (Number.isNaN(date.getTime())) return value;
 
         return new Intl.DateTimeFormat("ko-KR", {
             timeZone: "Asia/Seoul",
@@ -149,7 +149,7 @@ const Header: React.FC = () => {
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,
-        }).format(utcDate);
+        }).format(date);
     };
 
     const parseIdolId = (notification: NotificationItem) => {
@@ -201,6 +201,13 @@ const Header: React.FC = () => {
     const getNotificationTitle = (notification: NotificationItem) => {
         const voteTitle = notification.args?.voteTitle;
         const boardTitle = notification.args?.title;
+        const idolName = notification.args?.idolName;
+
+        if (notification.type === "CHAT_IDOL_ONLINE") {
+            return idolName
+                ? `${idolName}의 채팅이 시작되었습니다.`
+                : "아이돌의 채팅이 시작되었습니다.";
+        }
 
         if (notification.type === "VOTE_OPENED") {
             return voteTitle
