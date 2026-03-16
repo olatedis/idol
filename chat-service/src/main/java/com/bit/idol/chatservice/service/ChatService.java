@@ -414,20 +414,35 @@ public class ChatService {
     private void sendNotification(ChatMessageDto messageDto) {
         try {
             if ("IDOL".equals(messageDto.getSenderRole())) {
-                // groupId를 포함한 새로운 리다이렉트 URL 생성
-                Integer groupId = userFeignClient.getAllIdols().stream()
-                        .filter(i -> (long)i.getIdolId() == messageDto.getIdolId())
+                // 수정: 스택형 알림 카드에 필요한 메타데이터를 함께 전달
+                IdolDto idolInfo = userFeignClient.getAllIdols().stream()
+                        .filter(i -> (long) i.getIdolId() == messageDto.getIdolId())
                         .findFirst()
-                        .map(IdolDto::getGroupId)
                         .orElse(null);
 
-                String redirectUrl = (groupId != null) 
+                Integer groupId = idolInfo != null ? idolInfo.getGroupId() : null;
+                String groupName = idolInfo != null ? idolInfo.getGroupName() : null;
+                String idolName = idolInfo != null ? idolInfo.getStageName() : messageDto.getSenderNickname();
+                String idolImageUrl = idolInfo != null ? idolInfo.getProfileImage() : null;
+
+                String redirectUrl = (groupId != null)
                         ? "/group/" + groupId + "/chat?idolId=" + messageDto.getIdolId()
-                        : "/mypage"; // 그룹 정보를 못찾으면 마이페이지로 보냄
+                        : "/mypage";
 
                 Map<String, String> args = new HashMap<>();
-                args.put("idolName", messageDto.getSenderNickname());
+                args.put("idolId", String.valueOf(messageDto.getIdolId()));
+                args.put("idolName", idolName);
                 args.put("message", messageDto.getContent());
+
+                if (groupId != null) {
+                    args.put("groupId", String.valueOf(groupId));
+                }
+                if (groupName != null) {
+                    args.put("groupName", groupName);
+                }
+                if (idolImageUrl != null) {
+                    args.put("idolImageUrl", idolImageUrl);
+                }
 
                 NotificationEventDto event = NotificationEventDto.builder()
                         .eventId(UUID.randomUUID().toString())
