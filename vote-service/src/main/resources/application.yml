@@ -1,9 +1,7 @@
 server:
   port: 8083
   compression:
-    enabled: true
-    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
-    min-response-size: 2048
+    enabled: false # 직렬화 오류와 겹칠 경우 브라우저 인코딩 에러를 유발하므로 일시 비활성화
 
 spring:
   application:

@@ -71,20 +71,14 @@ public class VoteService {
 
     @Transactional(readOnly = true)
     public List<VoteListDto> getVoteList(int userId, Long groupId) {
-        List<Vote> votes = voteReader.getAllVotesCached();
+        List<VoteInfo> votes = voteReader.getAllVotesCached();
         List<Integer> myVotedVoteIds = voteRecordRepository.findVoteIdsByUserId(userId);
         Set<Integer> myVotedSet = new HashSet<>(myVotedVoteIds);
 
         return votes.stream()
-                .filter(vote -> groupId == null || java.util.Objects.equals(groupId, vote.getTargetGroupId())) // 그룹 필터 적용
+                .filter(vote -> groupId == null || java.util.Objects.equals(groupId, vote.getTargetGroupId()))
                 .map(vote -> {
-                    String status = "PROGRESS";
-                    LocalDateTime now = LocalDateTime.now();
-                    if (now.isBefore(vote.getStartDate())) {
-                        status = "UPCOMING";
-                    } else if (now.isAfter(vote.getEndDate())) {
-                        status = "ENDED";
-                    }
+                    String status = vote.getStatus(); // VoteInfo에는 문자열 status가 이미 있음
 
                     return VoteListDto.builder()
                             .id((long) vote.getId())

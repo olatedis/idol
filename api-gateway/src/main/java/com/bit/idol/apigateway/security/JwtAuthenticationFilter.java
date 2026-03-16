@@ -96,15 +96,19 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         log.info("User authenticated: userId={}, username={}, role={}", userId, username, role);
 
         return redisTemplate.opsForValue().get("user:info:id::" + userId)
+                .defaultIfEmpty("NOT_FOUND")
                 .flatMap(userJson -> {
-                    if (userJson.contains("\"status\":\"SUSPENDED\"") || userJson.contains("\"status\":\"BANNED\"")) {
+                    if (!"NOT_FOUND".equals(userJson) && (userJson.contains("\"status\":\"SUSPENDED\"") || userJson.contains("\"status\":\"BANNED\""))) {
                         log.warn("Access denied for suspended/banned user: {}", userId);
                         exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
                         return exchange.getResponse().setComplete();
                     }
                     return mutateAndForward(exchange, chain, userId, username, nickname, role);
                 })
-                .switchIfEmpty(Mono.defer(() -> mutateAndForward(exchange, chain, userId, username, nickname, role)));
+                .onErrorResume(e -> {
+                    log.error("Redis lookup failed in JwtAuthenticationFilter: {}, proceeding with mutation", e.getMessage());
+                    return mutateAndForward(exchange, chain, userId, username, nickname, role);
+                });
     }
 
     private Mono<Void> mutateAndForward(ServerWebExchange exchange, GatewayFilterChain chain, String userId,
