@@ -1,21 +1,21 @@
-import React, { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "../../stores/authStore";
+import React, {useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
+import {useAuthStore} from "../../stores/authStore";
 import Header from "../main/Header";
-import { api } from '../../api/axios';
-import { showErrorToast, showSuccessToast } from "../../utils/alert";
+import {api} from '../../api/axios';
+import {showErrorToast, showSuccessToast} from "../../utils/alert";
 
 const ConcertCreatePage: React.FC = () => {
-    const { groupId } = useParams<{ groupId?: string }>();
+    const {groupId} = useParams<{ groupId?: string }>();
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const {user} = useAuthStore();
 
 
     const [seats, setSeats] = useState<{ grade: string; count: string; price: string }[]>([
-        { grade: "VIP", count: "", price: "" },
-        { grade: "R", count: "", price: "" },
-        { grade: "S", count: "", price: "" },
-        { grade: "A", count: "", price: "" },
+        {grade: "VIP", count: "", price: ""},
+        {grade: "R", count: "", price: ""},
+        {grade: "S", count: "", price: ""},
+        {grade: "A", count: "", price: ""},
     ]);
 
     const [formData, setFormData] = useState({
@@ -23,14 +23,14 @@ const ConcertCreatePage: React.FC = () => {
         description: "",
         venue: "",
         concertDate: "",
-        startTime: "",
+        ticketSaleDate: "",
     });
 
     const [loading, setLoading] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        const {name, value} = e.target;
+        setFormData((prev) => ({...prev, [name]: value}));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -41,7 +41,7 @@ const ConcertCreatePage: React.FC = () => {
             return;
         }
 
-        if (!formData.title || !formData.venue || !formData.concertDate) {
+        if (!formData.title || !formData.venue || !formData.concertDate || !formData.ticketSaleDate) {
             showErrorToast("필수 항목을 입력해주세요.");
             return;
         }
@@ -59,15 +59,23 @@ const ConcertCreatePage: React.FC = () => {
                 return;
             }
 
+            const userId = user?.userId ?? 0;
+            const groupIdNum = groupId ? Number(groupId) : null;
+
+            if (userId <= 0) {
+                showErrorToast("소속사 정보가 없습니다.");
+                return;
+            }
+            const agencyId = await api.get("/agency/id")
             const payload = {
-                groupId: groupId ? parseInt(groupId) : null,
+                agencyId: agencyId.data,
+                groupId: groupIdNum,
                 title: formData.title,
                 description: formData.description || null,
                 venue: formData.venue,
                 concertDate: formData.concertDate,
-                startTime: formData.startTime || null,
+                ticketSaleDate: formData.ticketSaleDate,
                 seats: validSeats,
-                agencyId: user.agencyId,
             };
 
             await api.post("/concerts", payload);
@@ -83,7 +91,7 @@ const ConcertCreatePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-idol-bg">
-            <Header />
+            <Header/>
             <main className="pt-[80px] px-6">
                 <div className="max-w-2xl mx-auto">
                     <h1 className="text-3xl font-bold mb-6">콘서트 등록</h1>
@@ -137,11 +145,11 @@ const ConcertCreatePage: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-1">시작 시간</label>
+                            <label className="block text-sm font-medium mb-1">티켓 예매 시작일 *</label>
                             <input
-                                type="time"
-                                name="startTime"
-                                value={formData.startTime}
+                                type="datetime-local"
+                                name="ticketSaleDate"
+                                value={formData.ticketSaleDate}
                                 onChange={handleChange}
                                 className="w-full p-2 border rounded"
                             />
