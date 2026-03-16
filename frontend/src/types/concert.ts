@@ -28,10 +28,12 @@ export type ConcertDto = {
 
 export type ConcertDetail = {
     id: number;
+    groupId?: number | null;
     title: string;
     description?: string;
     venue: string;
     concertDate: string;
     ticketSaleDate?: string;
     agencyId?: number;
+    img?: string;
 };

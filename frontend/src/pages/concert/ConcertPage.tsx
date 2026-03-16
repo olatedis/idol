@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { AnimatePresence, motion } from "framer-motion";
 import { showErrorToast } from "../../utils/alert";
@@ -14,6 +14,7 @@ const PAGE_SIZE = 20;
 const ConcertPage: React.FC = () => {
     const { groupId } = useParams<{ groupId?: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const { user } = useAuthStore();
 
@@ -159,6 +160,24 @@ const ConcertPage: React.FC = () => {
         run();
         return () => controller.abort();
     }, [API_BASE_URL, groupId, activeTab]);
+
+    useEffect(() => {
+        const state = (location.state as { openConcertId?: number } | null) ?? null;
+        if (!state?.openConcertId) return;
+
+        const openFromGlobal = async () => {
+            try {
+                const res = await api.get(`${API_BASE_URL}/concerts/${state.openConcertId}`);
+                if (res.status === 200) {
+                    await onOpenDetail(res.data as ConcertDto);
+                }
+            } catch {
+                // ignore
+            }
+        };
+
+        openFromGlobal();
+    }, [location.state]);
 
     useEffect(() => {
         if (page === 0) return;
