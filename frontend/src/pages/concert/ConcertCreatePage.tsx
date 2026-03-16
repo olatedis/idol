@@ -66,7 +66,7 @@ const ConcertCreatePage: React.FC = () => {
                 showErrorToast("소속사 정보가 없습니다.");
                 return;
             }
-            const agencyId = await api.get("/agency/id")
+            const agencyId = await api.get("/agencies/id")
             const payload = {
                 agencyId: agencyId.data,
                 groupId: groupIdNum,
