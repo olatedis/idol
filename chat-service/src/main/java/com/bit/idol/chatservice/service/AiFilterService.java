@@ -17,8 +17,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class AiFilterService {
 
+    private final ChatService chatService;
     private final ChatRepository chatRepository;
-    private final ChatProducer chatProducer;
     private final OpenAiClient openAiClient;
 
     @Value("${openai.api-key}")
@@ -34,36 +34,15 @@ public class AiFilterService {
                 boolean isFlagged = response.getResults().get(0).isFlagged();
 
                 if (isFlagged) {
-                    log.warn("AI 필터링 적발! 메시지 삭제 및 제재 처리: msgId={}, content={}", messageDto.getId(), messageDto.getContent());
+                    log.warn("AI 필터링 적발! 메시지 삭제 및 캐시 갱신: msgId={}, content={}", messageDto.getId(), messageDto.getContent());
                     
-                    // 1. 메시지 삭제 (Soft Delete)
+                    // ChatService의 공통 로직을 사용하여 DB + Redis + 실시간 알림을 한 번에 처리
                     chatRepository.findById(messageDto.getId()).ifPresent(message -> {
-                        ChatMessage deletedMessage = ChatMessage.builder()
-                                .id(message.getId())
-                                .idolId(message.getIdolId())
-                                .senderId(message.getSenderId())
-                                .senderNickname(message.getSenderNickname())
-                                .senderRole(message.getSenderRole())
-                                .content("부적절한 메시지로 인해 AI에 의해 삭제되었습니다.")
-                                .type("DELETED")
-                                .parentId(message.getParentId())
-                                .reactions(message.getReactions())
-                                .createdAt(message.getCreatedAt())
-                                .build();
-                        
-                        chatRepository.save(deletedMessage);
-
-                        // 삭제 이벤트 전송
-                        ChatMessageDto deleteEvent = ChatMessageDto.builder()
-                                .id(message.getId())
-                                .idolId(message.getIdolId())
-                                .type("DELETE")
-                                .build();
-                        chatProducer.sendChatMessage(deleteEvent);
+                        chatService.performDeletion(message, "부적절한 메시지로 인해 AI에 의해 삭제되었습니다.", "AI_FILTERED");
                     });
 
-                    // 2. 유저 신고 (Kafka)
-                    chatProducer.sendReport(messageDto.getSenderId());
+                    // 유저 신고 (기존 로직 유지)
+                    chatService.sendReportEvent(messageDto.getSenderId());
                 }
             }
 

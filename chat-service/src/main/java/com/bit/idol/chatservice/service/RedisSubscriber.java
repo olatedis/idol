@@ -23,8 +23,8 @@ public class RedisSubscriber {
 
             // WebSocket으로 전송 (라우팅)
             if ("IDOL".equals(chatMessage.getSenderRole()) || "STATUS".equals(chatMessage.getType())
-                    || "ADMIN".equals(chatMessage.getSenderRole())) {
-                // 아이돌 메시지나 시스템/상태 알림 -> /sub/idol/{id} 공용 채널 구독자들에게 전송
+                    || "DELETE".equals(chatMessage.getType()) || "ADMIN".equals(chatMessage.getSenderRole())) {
+                // 아이돌 메시지나 시스템/상태 알림/삭제 이벤트 -> /sub/idol/{id} 공용 채널 구독자들에게 전송
                 messagingTemplate.convertAndSend("/sub/idol/" + chatMessage.getIdolId(), chatMessage);
 
             } else {
@@ -32,7 +32,7 @@ public class RedisSubscriber {
                 messagingTemplate.convertAndSend("/queue/idol/" + chatMessage.getIdolId(), chatMessage);
             }
 
-            log.info("Redis Sub -> WebSocket 전송 완료: room={}", chatMessage.getIdolId());
+            log.info("Redis Sub -> WebSocket 전송 완료: room={}, type={}", chatMessage.getIdolId(), chatMessage.getType());
 
         } catch (Exception e) {
             log.error("메시지 수신 중 오류 발생: {}", e.getMessage());

@@ -193,7 +193,31 @@ const ChatPage: React.FC = () => {
                     // --- 이벤트 핸들링 시작 ---
                     // 1. 메시지 삭제
                     if (parsed.type === "DELETE") {
-                        setMessages((prev) => prev.map(m => m.id === parsed.id ? { ...m, content: "삭제된 메시지입니다.", type: "DELETED" } : m));
+                        setMessages((prev) => {
+                            // ID가 일치하는 메시지 찾기
+                            let targetId = parsed.id;
+                            
+                            // 만약 본인이 보낸 메시지라면, temp ID 상태일 수 있으므로 가장 최근 메시지를 타겟으로 시도
+                            const currentUserId = user?.userId ? String(user.userId) : null;
+                            const eventSenderId = parsed.senderId ? String(parsed.senderId) : null;
+
+                            if (currentUserId && eventSenderId === currentUserId) {
+                                const lastMine = [...prev].reverse().find(m => String(m.senderId) === currentUserId);
+                                if (lastMine && String(lastMine.id).startsWith("temp-")) {
+                                    targetId = lastMine.id;
+                                }
+                            }
+
+                            return prev.map(m => m.id === targetId ? { ...m, content: "삭제된 메시지입니다.", type: "DELETED" } : m);
+                        });
+                        
+                        // AI 필터링에 의한 본인 메시지 삭제 시 즉각 피드백 (조건 비교 강화)
+                        const isAiFiltered = parsed.deleteReason === "AI_FILTERED";
+                        const isMyMessage = String(parsed.senderId) === String(user?.userId);
+                        
+                        if (isAiFiltered && isMyMessage) {
+                            showErrorToast("작성하신 메시지가 AI 필터링에 의해 부적절하다고 판단되어 삭제되었습니다.");
+                        }
                         return;
                     }
 

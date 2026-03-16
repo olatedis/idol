@@ -524,13 +524,21 @@ public class ChatService {
             throw new RuntimeException("본인의 메시지만 삭제할 수 있습니다.");
         }
 
+        // 공통 삭제 로직 호출 (DB 업데이트 + 알림 + Redis 갱신)
+        performDeletion(message, "사용자에 의해 삭제된 메시지입니다.", "MANUAL");
+    }
+
+    /**
+     * 실제 DB 저장 및 Redis 캐시 갱신을 담당하는 공통 로직
+     */
+    public void performDeletion(ChatMessage message, String deletedContent, String deleteReason) {
         ChatMessage deletedMessage = ChatMessage.builder()
                 .id(message.getId())
                 .idolId(message.getIdolId())
                 .senderId(message.getSenderId())
                 .senderNickname(message.getSenderNickname())
                 .senderRole(message.getSenderRole())
-                .content("삭제된 메시지입니다.")
+                .content(deletedContent)
                 .type("DELETED")
                 .parentId(message.getParentId())
                 .reactions(message.getReactions())
@@ -539,15 +547,26 @@ public class ChatService {
 
         chatRepository.save(deletedMessage);
 
+        // 1. Redis 미리보기(Preview) 삭제 -> 다음 조회 시 DB에서 최신본(삭제됨)을 가져오게 함
+        String previewKey = "chat:preview:" + message.getIdolId();
+        redisTemplate.delete(previewKey);
+
+        // 2. Redis 채팅 내역(List) 캐시 삭제 -> 데이터 꼬임 방지를 위해 초기화 (다시 들어올 때 DB에서 로드)
+        String roomCacheKey = "chat:room:" + message.getIdolId();
+        redisTemplate.delete(roomCacheKey);
+
+        // 3. 실시간 삭제 이벤트 전송
         ChatMessageDto deleteEvent = ChatMessageDto.builder()
-                .id(messageId)
-                .idolId(idolId)
+                .id(message.getId())
+                .idolId(message.getIdolId())
+                .senderId(message.getSenderId())
                 .type("DELETE")
+                .deleteReason(deleteReason)
                 .build();
 
         chatProducer.sendChatMessage(deleteEvent);
 
-        log.info("메시지 삭제 처리 완료: id={}", messageId);
+        log.info("메시지 삭제 및 Redis 캐시 무효화 완료: id={}, room={}", message.getId(), message.getIdolId());
     }
 
     public boolean isIdolOnline(Long idolId) {
@@ -696,6 +715,13 @@ public class ChatService {
         return chatRepository.findById(messageId)
                 .map(ChatMessage::getIdolId)
                 .orElseThrow(() -> new RuntimeException("메시지를 찾을 수 없습니다."));
+    }
+
+    /**
+     * 유저 신고 이벤트를 Kafka로 발송합니다.
+     */
+    public void sendReportEvent(int userId) {
+        chatProducer.sendReport(userId);
     }
 
     private ChatMessageDto convertToDto(ChatMessage entity) {

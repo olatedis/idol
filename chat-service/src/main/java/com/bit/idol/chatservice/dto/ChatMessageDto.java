@@ -23,6 +23,7 @@ public class ChatMessageDto {
     private String thumbnailUrl; // 이미지 전용 썸네일 URL
     private String parentId; // 답장할 메시지 ID
     private Map<String, Integer> reactions; // 반응 (좋아요 등)
+    private String deleteReason; // 삭제 사유 (AI_FILTERED 등)
     private LocalDateTime createdAt; // 발송 시간 추가
 
     // 조회 시점에 계산되는 필드

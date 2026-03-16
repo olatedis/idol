@@ -24,16 +24,15 @@ public class ChatConsumer {
             ChatMessageDto chatMessage = objectMapper.readValue(message, ChatMessageDto.class);
 
             // Redis Pub/Sub 발행 (라우팅 로직)
-            if ("IDOL".equals(chatMessage.getSenderRole())) {
-                // 아이돌이 보냄 -> 전체 팬에게 브로드캐스팅
+            // 삭제(DELETE) 이벤트는 무조건 전체 참여자에게 알려야 실시간 반영 및 알림이 가능함
+            if ("IDOL".equals(chatMessage.getSenderRole()) || "DELETE".equals(chatMessage.getType())) {
                 redisTemplate.convertAndSend("/sub/idol/" + chatMessage.getIdolId(), chatMessage);
-                
             } else {
-                // 팬이 보냄 -> 아이돌에게만 전송
+                // 일반 팬이 보낸 채팅 메시지는 아이돌에게만 전송
                 redisTemplate.convertAndSend("/queue/idol/" + chatMessage.getIdolId(), chatMessage);
             }
             
-            log.debug("Kafka -> Redis Pub/Sub 전달 완료: room={}", chatMessage.getIdolId());
+            log.info("Kafka -> Redis Pub/Sub 전달 완료: room={}, type={}", chatMessage.getIdolId(), chatMessage.getType());
 
         } catch (Exception e) {
             log.error("채팅 메시지 소비 중 오류 발생: {}", e.getMessage());
