@@ -1,21 +1,21 @@
-import React, { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "../../stores/authStore";
+import React, {useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
+import {useAuthStore} from "../../stores/authStore";
 import Header from "../main/Header";
-import { api } from '../../api/axios';
-import { showErrorToast, showSuccessToast } from "../../utils/alert";
+import {api} from '../../api/axios';
+import {showErrorToast, showSuccessToast} from "../../utils/alert";
 
 const ConcertCreatePage: React.FC = () => {
-    const { groupId } = useParams<{ groupId?: string }>();
+    const {groupId} = useParams<{ groupId?: string }>();
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const {user} = useAuthStore();
 
 
     const [seats, setSeats] = useState<{ grade: string; count: string; price: string }[]>([
-        { grade: "VIP", count: "", price: "" },
-        { grade: "R", count: "", price: "" },
-        { grade: "S", count: "", price: "" },
-        { grade: "A", count: "", price: "" },
+        {grade: "VIP", count: "", price: ""},
+        {grade: "R", count: "", price: ""},
+        {grade: "S", count: "", price: ""},
+        {grade: "A", count: "", price: ""},
     ]);
 
     const [formData, setFormData] = useState({
@@ -29,8 +29,8 @@ const ConcertCreatePage: React.FC = () => {
     const [loading, setLoading] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        const {name, value} = e.target;
+        setFormData((prev) => ({...prev, [name]: value}));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -59,22 +59,22 @@ const ConcertCreatePage: React.FC = () => {
                 return;
             }
 
-const agencyId = user?.agencyId ?? 0;
-                const groupIdNum = groupId ? Number(groupId) : null;
+            const userId = user?.userId ?? 0;
+            const groupIdNum = groupId ? Number(groupId) : null;
 
-                if (agencyId <= 0) {
-                    showErrorToast("소속사 정보가 없습니다.");
-                    return;
-                }
-
-                const payload = {
-                    agencyId,
-                    groupId: groupIdNum,
-                    title: formData.title,
-                    description: formData.description || null,
-                    venue: formData.venue,
-                    concertDate: formData.concertDate,
-                    ticketSaleDate: formData.ticketSaleDate,
+            if (userId <= 0) {
+                showErrorToast("소속사 정보가 없습니다.");
+                return;
+            }
+            const agencyId = await api.get("/agency/getAgencyId")
+            const payload = {
+                agencyId: agencyId,
+                groupId: groupIdNum,
+                title: formData.title,
+                description: formData.description || null,
+                venue: formData.venue,
+                concertDate: formData.concertDate,
+                ticketSaleDate: formData.ticketSaleDate,
                 seats: validSeats,
             };
 
@@ -91,7 +91,7 @@ const agencyId = user?.agencyId ?? 0;
 
     return (
         <div className="min-h-screen bg-idol-bg">
-            <Header />
+            <Header/>
             <main className="pt-[80px] px-6">
                 <div className="max-w-2xl mx-auto">
                     <h1 className="text-3xl font-bold mb-6">콘서트 등록</h1>

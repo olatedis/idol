@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +23,15 @@ public class AgencyService {
 
     private final AgencyRepository agencyRepository;
     private final AgencyAccountRepository agencyAccountRepository;
+
+    public int getAgencyId(int userId){
+        Optional<AgencyAccount> agencyAccount= agencyAccountRepository.findByUser_Id(userId);
+       if(agencyAccount.isEmpty()){
+           return -1;
+       }
+       AgencyAccount agencyId = agencyAccount.get();
+       return agencyId.getAgency().getId();
+    }
 
     @Transactional
     public AgencyDto createAgency(AgencyCreateRequest request) {

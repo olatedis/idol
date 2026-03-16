@@ -22,6 +22,13 @@ public class AgencyController {
 
     private final AgencyService agencyService;
 
+    @GetMapping("/getAgencyId")
+    public int getAgencyId(@RequestHeader("X-User-Id") int userId) {
+
+        return agencyService.getAgencyId(userId);
+    }
+
+
     // 소속사 등록
     @PostMapping
     public ResponseEntity<AgencyDto> createAgency(
