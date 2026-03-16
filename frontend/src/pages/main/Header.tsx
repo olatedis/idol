@@ -145,7 +145,7 @@ const Header: React.FC = () => {
     const formatNotificationTimeToKST = (value?: string | null) => {
         if (!value) return "";
 
-        const date = new Date(value);
+        const date = value.endsWith("Z") ? new Date(value) : new Date(`${value}Z`);
 
         if (Number.isNaN(date.getTime())) return value;
 
@@ -263,6 +263,11 @@ const Header: React.FC = () => {
                 ? `신고가 ${reportCount}회 누적되었습니다. 주의해주세요.`
                 : "신고가 누적되었습니다. 주의해주세요.";
         }
+
+        if(notification.type === "ACCOUNT_STATUS_CHANGED") {
+            return "유저 상태가 변경되었습니다.";
+        }
+
 
         if (notification.type === "VOTE_OPENED") {
             return voteTitle
