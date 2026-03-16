@@ -12,7 +12,7 @@ interface Concert {
     description: string;
     startDate: string;
     endDate: string;
-    imageUrl?: string;
+    img?: string;
     address: string;
     price: number;
     capacity: number;
@@ -72,7 +72,7 @@ const GlobalConcertPage: React.FC = () => {
                 concertDate: detail.concertDate ?? detail.startDate,
                 ticketSaleDate: detail.ticketSaleDate,
                 groupId: detail.groupId,
-                img: detail.img || detail.imageUrl || undefined,
+                img: detail.img || detail.img || undefined,
             });
             await fetchSeats(id);
         } catch (e) {
@@ -120,7 +120,7 @@ const GlobalConcertPage: React.FC = () => {
                             >
                                 <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 shrink-0">
                                     <img
-                                        src={concert.imageUrl || "https://via.placeholder.com/400x500?text=No+Image"}
+                                        src={concert.img || "https://via.placeholder.com/400x500?text=No+Image"}
                                         alt={concert.title}
                                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                         onError={(e) => {

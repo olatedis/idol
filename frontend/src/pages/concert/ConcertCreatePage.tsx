@@ -87,7 +87,7 @@ const ConcertCreatePage: React.FC = () => {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
 
-                imgUrl = uploadRes.data
+                imgUrl = uploadRes.data.url
             }
 
             const payload: any = {
@@ -102,9 +102,9 @@ const ConcertCreatePage: React.FC = () => {
                 seats: validSeats,
             };
 
-            // if (imgUrl) {
-            //     payload.img = imgUrl;
-            // }
+            if (imgUrl) {
+                payload.img = imgUrl;
+            }
 
             await api.post("/concerts", payload);
 
