@@ -22,7 +22,8 @@ public class AgencyController {
 
     private final AgencyService agencyService;
 
-    @GetMapping("/getAgencyId")
+//    유저아이디로 소속사 아이디 검색
+    @GetMapping("/id")
     public int getAgencyId(@RequestHeader("X-User-Id") int userId) {
 
         return agencyService.getAgencyId(userId);
