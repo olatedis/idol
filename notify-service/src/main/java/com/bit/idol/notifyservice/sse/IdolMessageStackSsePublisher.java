@@ -26,6 +26,6 @@ public class IdolMessageStackSsePublisher {
         p.setLastOccurredAt(stack.getLastOccurredAt() != null ? stack.getLastOccurredAt().format(ISO) : null);
 
         // 프론트는 이 이벤트만 받아서 "idolId별 뱃지 숫자" 갱신하면 됨
-        registry.send(userId, "idol-message-stack", p);
+        registry.send(userId, "idol_message_stack", p);
     }
 }

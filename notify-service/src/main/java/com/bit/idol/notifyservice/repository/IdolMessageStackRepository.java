@@ -51,4 +51,15 @@ public interface IdolMessageStackRepository extends JpaRepository<IdolMessageSta
         """, nativeQuery = true)
     int resetUnread(@Param("receiverId") int receiverId,
                     @Param("idolId") long idolId);
+
+
+    @Modifying
+    @Query("""
+        update IdolMessageStack s
+        set s.unreadCount = 0
+        where s.receiverId = :receiverId
+        and s.unreadCount > 0
+""")
+    void resetAllUnread(@Param("receiverId") int receiverId);
+
 }

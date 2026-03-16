@@ -32,4 +32,13 @@ public class IdolMessageStackController {
         stackService.reset(userId, idolId);
         return ResponseEntity.ok().build();
     }
+
+    // 전체 스택 unread 초기화
+    @PostMapping("/idol-message-stacks/reset-all")
+    public ResponseEntity<Void> resetAll(
+            @RequestHeader("X-User-Id") int userId
+    ) {
+        stackService.resetAll(userId);
+        return ResponseEntity.ok().build();
+    }
 }

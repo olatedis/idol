@@ -63,3 +63,8 @@ export const resetIdolMessageStack = async (idolId: number) => {
     const {data} = await api.post(`/notify/idol-message-stacks/${idolId}/reset`);
     return data;
 };
+
+export const resetAllIdolMessageStacks = async () => {
+    const { data } = await api.post("/notify/idol-message-stacks/reset-all");
+    return data;
+};

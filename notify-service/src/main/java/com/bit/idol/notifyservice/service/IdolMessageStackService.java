@@ -45,6 +45,11 @@ public class IdolMessageStackService {
         repo.resetUnread(receiverId, idolId);
     }
 
+    @Transactional
+    public void resetAll(int receiverId) {
+        repo.resetAllUnread(receiverId);
+    }
+
     /**
      * 아이돌별 unread 목록(최근 메시지 온 아이돌이 위로)
      */

@@ -7,6 +7,7 @@ import {
     getNotificationList,
     readAllNotifications,
     readOneNotification,
+    resetAllIdolMessageStacks,
     resetIdolMessageStack,
 } from "../../api/notificationApi";
 import { connectNotificationSse } from "../../utils/notificationSse";
@@ -85,23 +86,38 @@ const Header: React.FC = () => {
     };
 
     const handleReadAllNotifications = async () => {
-
         if (!accessToken) return;
 
         const targetIds = notifications.map((item) => item.notificationId);
+        const hasStacks = idolMessageStacks.some((item) => item.unreadCount > 0);
 
-        if (targetIds.length === 0) return;
+        if (targetIds.length === 0 && !hasStacks) return;
 
         try {
-            await readAllNotifications();
+            await Promise.all([
+                targetIds.length > 0 ? readAllNotifications() : Promise.resolve(),
+                hasStacks ? resetAllIdolMessageStacks() : Promise.resolve(),
+            ]);
 
-            setRemovingIds(targetIds);
+            if (targetIds.length > 0) {
+                setRemovingIds(targetIds);
+            }
 
             window.setTimeout(() => {
-                setNotifications((prev) =>
-                    prev.filter((item) => !targetIds.includes(item.notificationId))
+                if (targetIds.length > 0) {
+                    setNotifications((prev) =>
+                        prev.filter((item) => !targetIds.includes(item.notificationId))
+                    );
+                    setRemovingIds([]);
+                }
+
+                // 수정: 스택형 알림도 전체읽음 시 unreadCount 0으로 즉시 반영
+                setIdolMessageStacks((prev) =>
+                    prev.map((item) => ({
+                        ...item,
+                        unreadCount: 0,
+                    }))
                 );
-                setRemovingIds([]);
             }, 320);
         } catch (error) {
         }
@@ -455,8 +471,8 @@ const Header: React.FC = () => {
 
                                         {unreadCount > 0 && (
                                             <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">
-                                                {unreadCount > 99 ? "99+" : unreadCount}
-                                            </span>
+                                            {unreadCount > 99 ? "99+" : unreadCount}
+                                        </span>
                                         )}
                                     </button>
 
@@ -510,57 +526,130 @@ const Header: React.FC = () => {
 
                                                 <div
                                                     ref={notificationListRef}
-                                                    className="divide-y divide-gray-100 max-h-[340px] overflow-y-auto"
+                                                    className="max-h-[340px] overflow-y-auto"
                                                 >
                                                     {loadingNotifications ? (
                                                         <div className="px-4 py-6 text-sm text-gray-500 text-center">
                                                             불러오는 중...
                                                         </div>
-                                                    ) : visibleNotifications.length === 0 && idolMessageStacks.length === 0 ? (
+                                                    ) : visibleNotifications.length === 0 &&
+                                                    idolMessageStacks.filter((stack) => stack.unreadCount > 0).length === 0 ? (
                                                         <div className="px-4 py-6 text-sm text-gray-500 text-center">
                                                             알림이 없습니다.
                                                         </div>
                                                     ) : (
-                                                        visibleNotifications.map((notification) => (
-                                                            <button
-                                                                key={notification.notificationId}
-                                                                onClick={() => handleNotificationClick(notification)}
-                                                                className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition ${
-                                                                    removingIds.includes(notification.notificationId)
-                                                                        ? "translate-x-8 opacity-0"
-                                                                        : "translate-x-0 opacity-100"
-                                                                } ${
-                                                                    notification.isRead ? "bg-white" : "bg-idol/5"
-                                                                }`}
-                                                            >
-                                                                <div className="flex items-start gap-3">
-                                                                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-base">
-                                                                        {getNotificationIcon(notification)}
-                                                                    </div>
+                                                        <>
+                                                            {idolMessageStacks
+                                                                .filter((stack) => stack.unreadCount > 0)
+                                                                .sort((a, b) => {
+                                                                    const aTime = a.lastOccurredAt
+                                                                        ? new Date(`${a.lastOccurredAt}Z`).getTime()
+                                                                        : 0;
+                                                                    const bTime = b.lastOccurredAt
+                                                                        ? new Date(`${b.lastOccurredAt}Z`).getTime()
+                                                                        : 0;
+                                                                    return bTime - aTime;
+                                                                })
+                                                                .map((stack) => {
+                                                                    const latest = getLatestIdolMessageNotification(stack.idolId);
 
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <div className="flex items-center justify-between gap-2">
+                                                                    const idolName =
+                                                                        latest?.args?.idolName || `아이돌 ${stack.idolId}`;
+                                                                    const groupName =
+                                                                        latest?.args?.groupName || "그룹";
+                                                                    const idolImageUrl = latest?.args?.idolImageUrl;
+
+                                                                    return (
+                                                                        <button
+                                                                            key={`stack-${stack.idolId}`}
+                                                                            onClick={() => handleIdolStackClick(stack)}
+                                                                            className="w-full px-4 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100"
+                                                                        >
+                                                                            <div className="flex items-start gap-3">
+                                                                                <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center text-xs text-gray-400">
+                                                                                    {idolImageUrl ? (
+                                                                                        <img
+                                                                                            src={idolImageUrl}
+                                                                                            alt={idolName}
+                                                                                            className="w-full h-full object-cover"
+                                                                                        />
+                                                                                    ) : (
+                                                                                        "👤"
+                                                                                    )}
+                                                                                </div>
+
+                                                                                <div className="flex-1 min-w-0">
+                                                                                    <div className="flex items-center justify-between gap-2">
+                                                                                    <span className="text-xs font-semibold text-gray-500">
+                                                                                        아이돌 채팅
+                                                                                    </span>
+                                                                                        <span className="text-[11px] text-gray-400 shrink-0">
+                                                                                        {formatNotificationTimeToKST(
+                                                                                            stack.lastOccurredAt
+                                                                                        )}
+                                                                                    </span>
+                                                                                    </div>
+
+                                                                                    <div className="mt-1 text-sm font-medium text-gray-800 truncate">
+                                                                                        {groupName} {idolName}
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <div className="shrink-0 self-center">
+                                                                                <span className="inline-flex min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold items-center justify-center">
+                                                                                    {stack.unreadCount > 99
+                                                                                        ? "99+"
+                                                                                        : stack.unreadCount}
+                                                                                </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </button>
+                                                                    );
+                                                                })}
+
+                                                            {visibleNotifications.map((notification) => (
+                                                                <button
+                                                                    key={notification.notificationId}
+                                                                    onClick={() => handleNotificationClick(notification)}
+                                                                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100 ${
+                                                                        removingIds.includes(notification.notificationId)
+                                                                            ? "translate-x-8 opacity-0"
+                                                                            : "translate-x-0 opacity-100"
+                                                                    } ${
+                                                                        notification.isRead ? "bg-white" : "bg-idol/5"
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex items-start gap-3">
+                                                                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-base">
+                                                                            {getNotificationIcon(notification)}
+                                                                        </div>
+
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex items-center justify-between gap-2">
                                                                             <span className="text-xs font-semibold text-gray-500">
                                                                                 {getNotificationLabel(notification)}
                                                                             </span>
-                                                                            <span className="text-[11px] text-gray-400 shrink-0">
-                                                                                {formatNotificationTimeToKST(notification.occurredAt)}
+                                                                                <span className="text-[11px] text-gray-400 shrink-0">
+                                                                                {formatNotificationTimeToKST(
+                                                                                    notification.occurredAt
+                                                                                )}
                                                                             </span>
-                                                                        </div>
-
-                                                                        <div className="mt-1 text-sm font-medium text-gray-800 truncate">
-                                                                            {getNotificationTitle(notification)}
-                                                                        </div>
-
-                                                                        {!notification.isRead && (
-                                                                            <div className="mt-2 flex justify-end">
-                                                                                <span className="inline-block w-2 h-2 rounded-full bg-idol"></span>
                                                                             </div>
-                                                                        )}
+
+                                                                            <div className="mt-1 text-sm font-medium text-gray-800 truncate">
+                                                                                {getNotificationTitle(notification)}
+                                                                            </div>
+
+                                                                            {!notification.isRead && (
+                                                                                <div className="mt-2 flex justify-end">
+                                                                                    <span className="inline-block w-2 h-2 rounded-full bg-idol"></span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            </button>
-                                                        ))
+                                                                </button>
+                                                            ))}
+                                                        </>
                                                     )}
                                                 </div>
 
@@ -569,76 +658,14 @@ const Header: React.FC = () => {
                                                         알림 더 불러오는 중...
                                                     </div>
                                                 )}
-
-                                                {idolMessageStacks.length > 0 && (
-                                                    <div className="border-b border-gray-100 bg-white">
-                                                        {idolMessageStacks
-                                                            .filter((stack) => stack.unreadCount > 0)
-                                                            .sort((a, b) => {
-                                                                const aTime = a.lastOccurredAt ? new Date(`${a.lastOccurredAt}Z`).getTime() : 0;
-                                                                const bTime = b.lastOccurredAt ? new Date(`${b.lastOccurredAt}Z`).getTime() : 0;
-                                                                return bTime - aTime;
-                                                            })
-                                                            .map((stack) => {
-                                                                const latest = getLatestIdolMessageNotification(stack.idolId);
-
-                                                                const idolName = latest?.args?.idolName || `아이돌 ${stack.idolId}`;
-                                                                const groupName = latest?.args?.groupName || "그룹";
-                                                                const idolImageUrl = latest?.args?.idolImageUrl;
-
-                                                                return (
-                                                                    <button
-                                                                        key={stack.idolId}
-                                                                        onClick={() => handleIdolStackClick(stack)}
-                                                                        className="w-full px-4 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100 last:border-b-0"
-                                                                    >
-                                                                        <div className="flex items-start gap-3">
-                                                                            <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center text-xs text-gray-400">
-                                                                                {idolImageUrl ? (
-                                                                                    <img
-                                                                                        src={idolImageUrl}
-                                                                                        alt={idolName}
-                                                                                        className="w-full h-full object-cover"
-                                                                                    />
-                                                                                ) : (
-                                                                                    "👤"
-                                                                                )}
-                                                                            </div>
-
-                                                                            <div className="flex-1 min-w-0">
-                                                                                <div className="flex items-center justify-between gap-2">
-                                    <span className="text-xs font-semibold text-gray-500">
-                                        아이돌 채팅
-                                    </span>
-                                                                                    <span className="text-[11px] text-gray-400 shrink-0">
-                                        {formatNotificationTimeToKST(stack.lastOccurredAt)}
-                                    </span>
-                                                                                </div>
-
-                                                                                <div className="mt-1 text-sm font-medium text-gray-800 truncate">
-                                                                                    {groupName} {idolName}
-                                                                                </div>
-                                                                            </div>
-
-                                                                            <div className="shrink-0 self-center">
-                                <span className="inline-flex min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold items-center justify-center">
-                                    {stack.unreadCount > 99 ? "99+" : stack.unreadCount}
-                                </span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                    </div>
-                                                )}
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
 
                                 <span className="font-semibold text-gray-700">
-                                    {user?.nickname || "회원"}님
-                                </span>
+                                {user?.nickname || "회원"}님
+                            </span>
 
                                 <div className="rounded-md bg-gray-200 hover:bg-gray-300 transition">
                                     <button
