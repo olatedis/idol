@@ -90,16 +90,24 @@ export const ConcertDetailModal: React.FC<Props> = ({
                         {seatsLoading ? (
                             <div className="text-sm text-gray-500">좌석 정보 로딩중...</div>
                         ) : (
-                            <div className="grid grid-cols-2 gap-4">
-                                {(Array.from(new Set(seats.map((s) => s.grade))) as string[]).map((grade) => (
-                                    <div key={grade} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                        <span className="font-medium text-gray-900">{grade}석</span>
-                                        <span className="text-sm text-gray-600">
-                                            {getSeatCountByGrade(grade)}석 / {getSeatsByGrade(grade).length}석
-                                        </span>
+                            (() => {
+                                const grades = Array.from(new Set(seats.map((s) => s.grade))) as string[];
+                                if (grades.length === 0) {
+                                    return <div className="text-sm text-gray-500">좌석 정보가 없습니다.</div>;
+                                }
+                                return (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {grades.map((grade) => (
+                                            <div key={grade} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                                <span className="font-medium text-gray-900">{grade}석</span>
+                                                <span className="text-sm text-gray-600">
+                                                    {getSeatCountByGrade(grade)}석 / {getSeatsByGrade(grade).length}석
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                );
+                            })()
                         )}
                     </div>
 

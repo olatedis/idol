@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Header from "../../pages/main/Header";
 import { api } from "../../api/axios";
 import { ConcertDetailModal } from "../../components/concert/ConcertDetailModal";
-import type { ConcertDetail } from "../../types/concert";
+import type { ConcertDetail, SeatDto } from "../../types/concert";
 
 interface Concert {
     concertId: number;
@@ -20,6 +20,8 @@ const GlobalConcertPage: React.FC = () => {
     const [concerts, setConcerts] = useState<Concert[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedConcert, setSelectedConcert] = useState<ConcertDetail | null>(null);
+    const [concertSeats, setConcertSeats] = useState<SeatDto[]>([]);
+    const [seatsLoading, setSeatsLoading] = useState(false);
 
     useEffect(() => {
         const fetchConcerts = async () => {
@@ -38,7 +40,47 @@ const GlobalConcertPage: React.FC = () => {
 
     const fetchImage = (id: number): string => {
         return `http://localhost:8080/concerts/${id}/image`;
-    }
+    };
+
+    const fetchSeats = async (concertId: number) => {
+        try {
+            setSeatsLoading(true);
+            const res = await api.get(`/concerts/${concertId}/seats`);
+            if (res.status !== 200) {
+                throw new Error(`좌석 조회 실패 (${res.status})`);
+            }
+            setConcertSeats(Array.isArray(res.data) ? (res.data as SeatDto[]) : []);
+        } catch (e) {
+            setConcertSeats([]);
+        } finally {
+            setSeatsLoading(false);
+        }
+    };
+
+    const openConcertDetail = async (concertId: number) => {
+        try {
+            setSeatsLoading(true);
+            const detailRes = await api.get(`/concerts/${concertId}`);
+            if (detailRes.status !== 200) {
+                throw new Error("콘서트 상세정보를 불러오지 못했습니다.");
+            }
+            const detail = detailRes.data as any;
+            setSelectedConcert({
+                id: detail.id,
+                title: detail.title,
+                description: detail.description,
+                venue: detail.venue,
+                concertDate: detail.concertDate ?? detail.startDate,
+                ticketSaleDate: detail.ticketSaleDate,
+            });
+            await fetchSeats(concertId);
+        } catch (e) {
+            setSelectedConcert(null);
+            setConcertSeats([]);
+        } finally {
+            setSeatsLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -73,16 +115,7 @@ const GlobalConcertPage: React.FC = () => {
                             <div
                                 key={concert.concertId}
                                 className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-100 flex flex-col h-full cursor-pointer hover:-translate-y-2"
-                                onClick={() =>
-                                    setSelectedConcert({
-                                        id: concert.concertId,
-                                        title: concert.title,
-                                        description: concert.description,
-                                        venue: concert.address,
-                                        concertDate: concert.startDate,
-                                        ticketSaleDate: undefined,
-                                    })
-                                }
+                                onClick={() => openConcertDetail(concert.concertId)}
                             >
                                 <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 shrink-0">
                                     <img
@@ -138,9 +171,12 @@ const GlobalConcertPage: React.FC = () => {
             {selectedConcert && (
                 <ConcertDetailModal
                     concert={selectedConcert}
-                    seats={[]}
-                    seatsLoading={false}
-                    onClose={() => setSelectedConcert(null)}
+                    seats={concertSeats}
+                    seatsLoading={seatsLoading}
+                    onClose={() => {
+                        setSelectedConcert(null);
+                        setConcertSeats([]);
+                    }}
                     bookingEnabled={false}
                 />
             )}
