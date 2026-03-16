@@ -121,10 +121,8 @@ resilience4j:
 
 # OpenAI 설정
 openai:
-  api-key: sk-dummy-key-please-change-me
+  api-key: ${OPENAI_API_KEY:sk-dummy-key-please-change-me}
 
 # DeepL 설정 (번역)
 deepl:
   api-key: ${DEEPL_API_KEY:fake-key}
-
-
