@@ -1,5 +1,7 @@
 import React from "react";
 import type { ChatMessage } from "../../types/chat";
+import { api } from "../../api/axios";
+import { showErrorToast } from "../../utils/alert";
 
 interface MessageItemProps {
     message: ChatMessage;
@@ -18,6 +20,37 @@ const MessageItem: React.FC<MessageItemProps> = ({
     onImageClick,
     scrollToBottom
 }) => {
+    const [isTranslated, setIsTranslated] = React.useState(false);
+    const [translatedText, setTranslatedText] = React.useState<string | null>(null);
+    const [isTranslating, setIsTranslating] = React.useState(false);
+
+    const handleTranslate = async () => {
+        if (isTranslated) {
+            setIsTranslated(false);
+            return;
+        }
+
+        if (translatedText) {
+            setIsTranslated(true);
+            return;
+        }
+
+        try {
+            setIsTranslating(true);
+            // 브라우저 언어 감지 (예: 'ko-KR' -> 'KO', 'en-US' -> 'EN')
+            const userLang = navigator.language.split("-")[0].toUpperCase();
+            const res = await api.get(`/chat/translate/${message.id}?lang=${userLang}`);
+            setTranslatedText(res.data.text);
+            setIsTranslated(true);
+        } catch (error) {
+            showErrorToast("번역에 실패했습니다.");
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+
+    const displayContent = isTranslated && translatedText ? translatedText : message.content;
+
     return (
         <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} shrink-0 transform transition-all`}>
             {!isMine && (
@@ -50,7 +83,30 @@ const MessageItem: React.FC<MessageItemProps> = ({
                         <video src={message.content} controls className="max-w-full max-h-64 object-contain" onLoadedMetadata={scrollToBottom} />
                     </div>
                 ) : (
-                    <div className="whitespace-pre-wrap word-break">{message.content}</div>
+                    <div className="flex flex-col">
+                        <div className="whitespace-pre-wrap word-break">{displayContent}</div>
+                        {message.senderRole === "IDOL" && (
+                            <div className="mt-2 pt-2 border-t border-gray-100 flex items-center">
+                                <button
+                                    onClick={handleTranslate}
+                                    disabled={isTranslating}
+                                    className={`text-[10px] flex items-center space-x-1 px-2 py-1 rounded-md transition-colors ${
+                                        isTranslated 
+                                        ? 'bg-gray-100 text-gray-500 hover:bg-gray-200' 
+                                        : 'bg-[var(--color-idol-point)]/10 text-[var(--color-idol)] hover:bg-[var(--color-idol-point)]/20'
+                                    }`}
+                                >
+                                    <svg className={`w-3 h-3 ${isTranslating ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                                    </svg>
+                                    <span>{isTranslating ? '번역 중...' : isTranslated ? '되돌리기' : '번역하기'}</span>
+                                </button>
+                                {isTranslated && (
+                                    <span className="ml-2 text-[8px] text-gray-400 italic">Translated by DeepL</span>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {message.createdAt && (

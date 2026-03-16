@@ -125,6 +125,6 @@ openai:
 
 # DeepL 설정 (번역)
 deepl:
-  api-key: fake-key
+  api-key: ${DEEPL_API_KEY:fake-key}
 
 

@@ -58,16 +58,10 @@ public class ChatController {
             return;
         }
 
-        // --- 권한 검사 추가 (보안 강화) ---
-        if ("USER".equals(role)) {
-            @SuppressWarnings("unchecked")
-            Set<Long> subscribedIdolIds = (Set<Long>) accessor.getSessionAttributes().get("subscribedIdolIds");
+        // --- 권한 검사 (보안 강화) ---
+        chatService.validateSubscription(userId, messageDto.getIdolId(), role);
 
-            if (subscribedIdolIds == null || !subscribedIdolIds.contains(messageDto.getIdolId())) {
-                log.warn("권한 없는 채팅 시도 차단: userId={}, idolId={}", userId, messageDto.getIdolId());
-                throw new RuntimeException("구독하지 않은 채팅방입니다.");
-            }
-        } else if ("IDOL".equals(role)) {
+        if ("IDOL".equals(role)) {
             Integer myIdolId = (Integer) accessor.getSessionAttributes().get("idolId");
             if (myIdolId == null || !myIdolId.equals(messageDto.getIdolId().intValue())) {
                 log.warn("다른 아이돌 방에 채팅 시도 차단: myIdolId={}, targetIdolId={}", myIdolId, messageDto.getIdolId());
@@ -244,8 +238,15 @@ public class ChatController {
     @GetMapping("/chat/translate/{messageId}")
     @ResponseBody
     public ResponseEntity<Map<String, String>> translateMessage(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestHeader(value = "X-Role", defaultValue = "USER") String role,
             @PathVariable("messageId") String messageId,
-            @RequestParam(value = "lang", defaultValue = "EN") String lang) {
+            @RequestParam(value = "lang", defaultValue = "KO") String lang) {
+        
+        // 메시지의 아이돌ID를 조회하여 구독 권한 확인
+        Long idolId = chatService.getIdolIdByMessageId(messageId);
+        chatService.validateSubscription(userId, idolId, role);
+        
         String translatedText = translationService.translateMessage(messageId, lang);
         return ResponseEntity.ok(Map.of("text", translatedText, "lang", lang));
     }

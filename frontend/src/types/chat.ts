@@ -22,4 +22,5 @@ export interface ChatMessage {
     createdAt?: string;
     me?: boolean;
     reactions?: Record<string, number>;
+    translatedContent?: string; // 번역된 내용
 }
