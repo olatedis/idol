@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, { useEffect, useState } from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import {useAuthStore} from "../../stores/authStore";
 import Header from "../main/Header";
@@ -26,7 +26,17 @@ const ConcertCreatePage: React.FC = () => {
         ticketSaleDate: "",
     });
 
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+
+    React.useEffect(() => {
+        return () => {
+            if (imagePreview) {
+                URL.revokeObjectURL(imagePreview);
+            }
+        };
+    }, [imagePreview]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const {name, value} = e.target;
@@ -66,17 +76,35 @@ const ConcertCreatePage: React.FC = () => {
                 showErrorToast("소속사 정보가 없습니다.");
                 return;
             }
-            const agencyId = await api.get("/agencies/id")
-            const payload = {
+
+            const agencyId = await api.get("/agencies/id");
+
+            let imgUrl: string | undefined = undefined;
+            if (imageFile) {
+                const form = new FormData();
+                form.append("file", imageFile);
+                const uploadRes = await api.post("/chat/upload", form, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+
+                imgUrl = uploadRes.data.url
+            }
+
+            const payload: any = {
                 agencyId: agencyId.data,
                 groupId: groupIdNum,
                 title: formData.title,
                 description: formData.description || null,
                 venue: formData.venue,
+                img: imgUrl,
                 concertDate: formData.concertDate,
                 ticketSaleDate: formData.ticketSaleDate,
                 seats: validSeats,
             };
+
+            if (imgUrl) {
+                payload.img = imgUrl;
+            }
 
             await api.post("/concerts", payload);
 
@@ -130,6 +158,32 @@ const ConcertCreatePage: React.FC = () => {
                                 className="w-full p-2 border rounded"
                                 required
                             />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium mb-1">이미지</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0] ?? null;
+                                    setImageFile(file);
+                                    if (file) {
+                                        const url = URL.createObjectURL(file);
+                                        setImagePreview(url);
+                                    } else {
+                                        setImagePreview(null);
+                                    }
+                                }}
+                                className="border-2 border-idol-point cursor-pointer"
+                            />
+                            {imagePreview && (
+                                <img
+                                    src={imagePreview}
+                                    alt="미리보기"
+                                    className="mt-3 w-full max-h-60 object-cover rounded"
+                                />
+                            )}
                         </div>
 
                         <div>

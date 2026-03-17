@@ -1,43 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { AnimatePresence, motion } from "framer-motion";
 import { showErrorToast } from "../../utils/alert";
 
 import { api } from '../../api/axios';
+import type { ConcertDto, SeatDto, SeatGrade } from "../../types/concert";
+import { ConcertDetailModal } from "../../components/concert/ConcertDetailModal";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 20;
-
-type SeatGrade = "VIP" | "R" | "S" | "A";
-
-type SeatDto = {
-    id: number;
-    seatNumber: string;
-    grade: SeatGrade;
-    price: number;
-    locked: boolean;
-    lockedBy?: number | null;
-    reservedBy?: number | null;
-};
-
-type ConcertDto = {
-    id: number;
-    groupId?: number | null;
-    title: string;
-    description?: string;
-    venue: string;
-    concertDate: string;
-    startTime?: string;
-    price?: number;
-    totalTickets?: number;
-    status: "OPEN" | "SOLD_OUT" | "CLOSED" | string;
-    createdAt?: string;
-    agencyId: number;
-};
 
 const ConcertPage: React.FC = () => {
     const { groupId } = useParams<{ groupId?: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const { user } = useAuthStore();
 
@@ -185,6 +162,24 @@ const ConcertPage: React.FC = () => {
     }, [API_BASE_URL, groupId, activeTab]);
 
     useEffect(() => {
+        const state = (location.state as { openConcertId?: number } | null) ?? null;
+        if (!state?.openConcertId) return;
+
+        const openFromGlobal = async () => {
+            try {
+                const res = await api.get(`${API_BASE_URL}/concerts/${state.openConcertId}`);
+                if (res.status === 200) {
+                    await onOpenDetail(res.data as ConcertDto);
+                }
+            } catch {
+                // ignore
+            }
+        };
+
+        openFromGlobal();
+    }, [location.state]);
+
+    useEffect(() => {
         if (page === 0) return;
         if (!hasMore) return;
 
@@ -227,12 +222,6 @@ const ConcertPage: React.FC = () => {
         return () => io.disconnect();
     }, [hasMore, loading, loadingMore]);
 
-    const requireLogin = () => {
-        if (accessToken) return true;
-        showErrorToast("로그인이 필요합니다.");
-        return false;
-    };
-
     const onOpenDetail = async (concert: ConcertDto) => {
         setSelectedConcert(concert);
         await fetchConcertSeats(concert.id);
@@ -251,10 +240,6 @@ const ConcertPage: React.FC = () => {
 
     const getSeatsByGrade = (grade: SeatGrade): SeatDto[] => {
         return concertSeats.filter((s) => s.grade === grade);
-    };
-
-    const getSeatCountByGrade = (grade: SeatGrade): number => {
-        return concertSeats.filter((s) => s.grade === grade && !s.reservedBy && !s.locked).length;
     };
 
     const onConfirmBooking = async () => {
@@ -432,74 +417,18 @@ const ConcertPage: React.FC = () => {
             {/* 콘서트 상세 모달 */}
             <AnimatePresence>
                 {selectedConcert && (
-                    <div
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-                        onClick={() => setSelectedConcert(null)}
-                    >
-                        <motion.div
-                            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-                            onClick={(e) => e.stopPropagation()}
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                        >
-                            <div className="p-6 sm:p-8">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-gray-900">{selectedConcert.title}</h2>
-                                        <p className="text-gray-600 mt-1">{selectedConcert.venue}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => setSelectedConcert(null)}
-                                        className="text-gray-400 hover:text-gray-600 text-2xl"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4 mb-6">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">일시</span>
-                                        <span className="font-medium">{formatKST(selectedConcert.concertDate)}</span>
-                                    </div>
-                                    {selectedConcert.description && (
-                                        <div className="border-t pt-4">
-                                            <p className="text-sm text-gray-700">{selectedConcert.description}</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* 좌석 정보 */}
-                                <div className="border-t pt-6 mb-6">
-                                    <h3 className="font-bold text-gray-900 mb-4">좌석 현황</h3>
-                                    {seatsLoading ? (
-                                        <div className="text-sm text-gray-500">좌석 정보 로딩중...</div>
-                                    ) : (
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {(["VIP", "R", "S", "A"] as SeatGrade[]).map((grade) => (
-                                                <div
-                                                    key={grade}
-                                                    className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-                                                >
-                                                    <span className="font-medium text-gray-900">{grade}석</span>
-                                                    <span className="text-sm text-gray-600">
-                                                        {getSeatCountByGrade(grade)}석 / {getSeatsByGrade(grade).length}석
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <button
-                                    onClick={onOpenBooking}
-                                    className="w-full py-3 bg-[var(--color-idol)] text-white font-bold rounded-lg hover:opacity-90 transition"
-                                >
-                                    예매하기
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
+                    <ConcertDetailModal
+                        concert={selectedConcert}
+                        seats={concertSeats}
+                        seatsLoading={seatsLoading}
+                        onConfirmBooking={onOpenBooking}
+                        onClose={() => {
+                            setSelectedConcert(null);
+                            setIsBookingModalOpen(false);
+                            setSelectedSeats([]);
+                        }}
+                        bookingEnabled={true}
+                    />
                 )}
             </AnimatePresence>
 

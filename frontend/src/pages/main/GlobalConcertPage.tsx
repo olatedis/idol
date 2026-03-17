@@ -1,23 +1,30 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "../../pages/main/Header";
 import { api } from "../../api/axios";
-import { showAlert } from "../../utils/alert";
+import { ConcertDetailModal } from "../../components/concert/ConcertDetailModal";
+import type { ConcertDetail, SeatDto } from "../../types/concert";
 
 interface Concert {
-    concertId: number;
+    id: number;
+    groupId?: number;
     title: string;
     description: string;
     startDate: string;
     endDate: string;
-    imageUrl: string;
+    img?: string;
     address: string;
     price: number;
     capacity: number;
 }
 
 const GlobalConcertPage: React.FC = () => {
+    const navigate = useNavigate();
     const [concerts, setConcerts] = useState<Concert[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedConcert, setSelectedConcert] = useState<ConcertDetail | null>(null);
+    const [concertSeats, setConcertSeats] = useState<SeatDto[]>([]);
+    const [seatsLoading, setSeatsLoading] = useState(false);
 
     useEffect(() => {
         const fetchConcerts = async () => {
@@ -34,9 +41,47 @@ const GlobalConcertPage: React.FC = () => {
         fetchConcerts();
     }, []);
 
-    const fetchImage = (id: number): string => {
-        return `http://localhost:8080/concerts/${id}/image`;
-    }
+    const fetchSeats = async (id: number) => {
+        try {
+            setSeatsLoading(true);
+            const res = await api.get(`/concerts/${id}/seats`);
+            if (res.status !== 200) {
+                throw new Error(`좌석 조회 실패 (${res.status})`);
+            }
+            setConcertSeats(Array.isArray(res.data) ? (res.data as SeatDto[]) : []);
+        } catch (e) {
+            setConcertSeats([]);
+        } finally {
+            setSeatsLoading(false);
+        }
+    };
+
+    const openConcertDetail = async (id: number) => {
+        try {
+            setSeatsLoading(true);
+            const detailRes = await api.get(`/concerts/${id}`);
+            if (detailRes.status !== 200) {
+                throw new Error("콘서트 상세정보를 불러오지 못했습니다.");
+            }
+            const detail = detailRes.data as any;
+            setSelectedConcert({
+                id: detail.id,
+                title: detail.title,
+                description: detail.description,
+                venue: detail.venue,
+                concertDate: detail.concertDate ?? detail.startDate,
+                ticketSaleDate: detail.ticketSaleDate,
+                groupId: detail.groupId,
+                img: detail.img || detail.img || undefined,
+            });
+            await fetchSeats(id);
+        } catch (e) {
+            setSelectedConcert(null);
+            setConcertSeats([]);
+        } finally {
+            setSeatsLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -69,13 +114,13 @@ const GlobalConcertPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                         {concerts.map((concert) => (
                             <div
-                                key={concert.concertId}
+                                key={concert.id}
                                 className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-100 flex flex-col h-full cursor-pointer hover:-translate-y-2"
-                                onClick={() => showAlert("안내", `콘서트 상세 연동 준비중. (ID: ${concert.concertId})`, "info")}
+                                onClick={() => openConcertDetail(concert.id)}
                             >
                                 <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 shrink-0">
                                     <img
-                                        src={concert.imageUrl ? concert.imageUrl : fetchImage(concert.concertId)}
+                                        src={concert.img || "https://via.placeholder.com/400x500?text=No+Image"}
                                         alt={concert.title}
                                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                         onError={(e) => {
@@ -123,6 +168,25 @@ const GlobalConcertPage: React.FC = () => {
                     </div>
                 )}
             </main>
+
+            {selectedConcert && (
+                <ConcertDetailModal
+                    concert={selectedConcert}
+                    seats={concertSeats}
+                    seatsLoading={seatsLoading}
+                    onClose={() => {
+                        setSelectedConcert(null);
+                        setConcertSeats([]);
+                    }}
+                    bookingEnabled={true}
+                    onConfirmBooking={() => {
+                        if (!selectedConcert?.groupId) return;
+                        navigate(`/group/${selectedConcert.groupId}/concert`, {
+                            state: { openConcertId: selectedConcert.id },
+                        });
+                    }}
+                />
+            )}
         </div>
     );
 };
