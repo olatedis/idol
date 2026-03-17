@@ -1,0 +1,13 @@
+spring:
+  data:
+    redis:
+      host: redis
+      port: 6379
+  
+  kafka:
+    bootstrap-servers: kafka:29092
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/

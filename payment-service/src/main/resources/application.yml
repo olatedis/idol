@@ -43,9 +43,9 @@ spring:
 #      테스트용 키. 토스는 테스트 키로 요청해도 정상적으로 응답해줌.
 #      (결제x 응답만0)
 toss:
-  secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R
+  secret-key: ${TOSS_SECRET_KEY:test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R}
 #  백엔드에서 사용하진 않지만 찾기 쉽게 모아둠. 클라이언트 키는 공개되어도 상관 없는 키.
-  client-key: test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq
+  client-key: ${TOSS_CLIENT_KEY:test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq}
   base-url: https://api.tosspayments.com
 
 

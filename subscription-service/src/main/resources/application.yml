@@ -46,5 +46,5 @@ eureka:
 
 # Toss Payments 설정
 toss:
-  secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R
+  secret-key: ${TOSS_SECRET_KEY:test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R}
 

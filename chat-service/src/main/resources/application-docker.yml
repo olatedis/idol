@@ -1,0 +1,21 @@
+spring:
+  data:
+    mongodb:
+      host: mongo
+      port: 27017
+    redis:
+      host: redis
+      port: 6379
+
+  kafka:
+    bootstrap-servers: kafka:29092
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+
+grpc:
+  client:
+    auth-service:
+      address: static://auth-service:9091

@@ -83,7 +83,7 @@ const MyPage: React.FC = () => {
     useEffect(() => {
         const initialTab = location.state?.initialTab
 
-        if(initialTab === "notification") {
+        if (initialTab === "notification") {
             setActiveTab("notification");
         }
     }, [location.state]);
@@ -154,7 +154,7 @@ const MyPage: React.FC = () => {
                             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
                         )}
                     </button>
-                        {userInfo?.role === "AGENCY" && (
+                    {userInfo?.role === "AGENCY" && (
                         <button
                             className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "agency" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                             onClick={() => setActiveTab("agency")}

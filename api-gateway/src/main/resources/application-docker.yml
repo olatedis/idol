@@ -1,0 +1,13 @@
+spring:
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+
+# Docker 환경에서의 CORS 설정 (필요 시 수정)
+# spring.cloud.gateway.globalcors.cors-configurations.'[/**]'.allowedOrigins: "http://localhost:5173"
