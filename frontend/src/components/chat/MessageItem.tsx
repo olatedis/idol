@@ -85,24 +85,24 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 ) : (
                     <div className="flex flex-col">
                         <div className="whitespace-pre-wrap word-break">{displayContent}</div>
-                        {message.senderRole === "IDOL" && (
-                            <div className="mt-2 pt-2 border-t border-gray-100 flex items-center">
+                        {message.senderRole === "IDOL" && !isMine && (
+                            <div className="mt-2 pt-2 border-t border-gray-100/50 flex items-center justify-between">
                                 <button
                                     onClick={handleTranslate}
                                     disabled={isTranslating}
-                                    className={`text-[10px] flex items-center space-x-1 px-2 py-1 rounded-md transition-colors ${
+                                    className={`text-[10px] flex items-center space-x-1.5 px-2.5 py-1 rounded-full transition-all duration-200 border ${
                                         isTranslated 
-                                        ? 'bg-gray-100 text-gray-500 hover:bg-gray-200' 
-                                        : 'bg-[var(--color-idol-point)]/10 text-[var(--color-idol)] hover:bg-[var(--color-idol-point)]/20'
+                                        ? 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100' 
+                                        : 'bg-[var(--color-idol)]/5 text-[var(--color-idol)] border-[var(--color-idol)]/10 hover:bg-[var(--color-idol)]/10'
                                     }`}
                                 >
                                     <svg className={`w-3 h-3 ${isTranslating ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
                                     </svg>
-                                    <span>{isTranslating ? '번역 중...' : isTranslated ? '되돌리기' : '번역하기'}</span>
+                                    <span className="font-bold">{isTranslating ? '번역 중...' : isTranslated ? '원문 보기' : '번역하기'}</span>
                                 </button>
                                 {isTranslated && (
-                                    <span className="ml-2 text-[8px] text-gray-400 italic">Translated by DeepL</span>
+                                    <span className="text-[9px] text-gray-300 font-medium italic">by DeepL</span>
                                 )}
                             </div>
                         )}

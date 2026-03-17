@@ -345,6 +345,12 @@ const IdolSubscribe: React.FC = () => {
                                                 </div>
 
                                                 <ul className="max-h-60 overflow-y-auto">
+                                                    {groupIdols.map(i => (
+                                                        <li key={i.idolId} className="py-1 cursor-pointer hover:bg-gray-100" onClick={() => handleIdolClick(i)}>
+                                                            {i.stageName}
+                                                        </li>
+                                                    ))}
+                                                    {groupIdols.length === 0 && <li>아이돌 정보가 없습니다.</li>}
 
                                                     {groupIdols.map(i => {
 

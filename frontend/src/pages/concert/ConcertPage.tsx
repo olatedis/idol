@@ -32,7 +32,6 @@ const ConcertPage: React.FC = () => {
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-    const accessToken = localStorage.getItem("accessToken");
 
     // 모달 상태
     const [selectedConcert, setSelectedConcert] = useState<ConcertDto | null>(null);
@@ -221,6 +220,7 @@ const ConcertPage: React.FC = () => {
         io.observe(el);
         return () => io.disconnect();
     }, [hasMore, loading, loadingMore]);
+
 
     const onOpenDetail = async (concert: ConcertDto) => {
         setSelectedConcert(concert);

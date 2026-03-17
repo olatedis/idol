@@ -67,7 +67,7 @@ const Header: React.FC = () => {
 
     const goToNotificationSetting = () => {
         setIsNotificationOpen(false);
-        navigate("/mypage", {state: { initialTab: "notification" } })
+        navigate("/mypage", { state: { initialTab: "notification" } })
     }
 
     const handleNotificationClick = async (notification: NotificationItem) => {
@@ -709,11 +709,11 @@ const Header: React.FC = () => {
                                                                                 </div>
 
                                                                                 <div className="shrink-0 self-center">
-                                                                                <span className="inline-flex min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold items-center justify-center">
-                                                                                    {stack.unreadCount > 99
-                                                                                        ? "99+"
-                                                                                        : stack.unreadCount}
-                                                                                </span>
+                                                                                    <span className="inline-flex min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold items-center justify-center">
+                                                                                        {stack.unreadCount > 99
+                                                                                            ? "99+"
+                                                                                            : stack.unreadCount}
+                                                                                    </span>
                                                                                 </div>
                                                                             </div>
                                                                         </button>
@@ -739,14 +739,14 @@ const Header: React.FC = () => {
 
                                                                         <div className="flex-1 min-w-0">
                                                                             <div className="flex items-center justify-between gap-2">
-                                                                            <span className="text-xs font-semibold text-gray-500">
-                                                                                {getNotificationLabel(notification)}
-                                                                            </span>
+                                                                                <span className="text-xs font-semibold text-gray-500">
+                                                                                    {getNotificationLabel(notification)}
+                                                                                </span>
                                                                                 <span className="text-[11px] text-gray-400 shrink-0">
-                                                                                {formatNotificationTimeToKST(
-                                                                                    notification.occurredAt
-                                                                                )}
-                                                                            </span>
+                                                                                    {formatNotificationTimeToKST(
+                                                                                        notification.occurredAt
+                                                                                    )}
+                                                                                </span>
                                                                             </div>
 
                                                                             <div className="mt-1 text-sm font-medium text-gray-800 truncate">
@@ -766,9 +766,13 @@ const Header: React.FC = () => {
                                                     )}
                                                 </div>
 
-                                                {loadingMoreNotifications && (
-                                                    <div className="px-4 py-3 text-xs text-gray-400 text-center border-t border-gray-100">
-                                                        알림 더 불러오는 중...
+                                                {hasNext && (
+                                                    <div className="px-4 py-3 text-xs text-center text-gray-400 border-t border-gray-100">
+                                                        {loadingMoreNotifications ? (
+                                                            "알림 더 불러오는 중..."
+                                                        ) : (
+                                                            "스크롤하여 더 보기"
+                                                        )}
                                                     </div>
                                                 )}
                                             </motion.div>
@@ -777,8 +781,8 @@ const Header: React.FC = () => {
                                 </div>
 
                                 <span className="font-semibold text-gray-700">
-                                {user?.nickname || "회원"}님
-                            </span>
+                                    {user?.nickname || "회원"}님
+                                </span>
 
                                 <div className="rounded-md bg-gray-200 hover:bg-gray-300 transition">
                                     <button

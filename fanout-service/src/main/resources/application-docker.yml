@@ -1,0 +1,14 @@
+spring:
+  kafka:
+    bootstrap-servers: kafka:29092
+
+clients:
+  user-service:
+    url: http://user-service:8082
+  subscription-service:
+    url: http://subscription-service:8088
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
