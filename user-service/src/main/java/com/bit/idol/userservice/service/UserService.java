@@ -401,6 +401,7 @@ public class UserService {
                     .targetType(TargetType.USER)
                     .targetId(String.valueOf(userId))
                     .args(java.util.Map.of("reportCount", String.valueOf(user.getReportCount())))
+                    .redirectUrl("#")
                     .occurredAt(java.time.LocalDateTime.now())
                     .build();
             notificationProducer.send(event);
