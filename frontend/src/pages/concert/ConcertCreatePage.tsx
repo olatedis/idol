@@ -175,7 +175,7 @@ const ConcertCreatePage: React.FC = () => {
                                         setImagePreview(null);
                                     }
                                 }}
-                                className="w-full"
+                                className="border-2 border-idol-point cursor-pointer"
                             />
                             {imagePreview && (
                                 <img
