@@ -64,7 +64,7 @@ const NotificationHistoryTab: React.FC = () => {
     const formatNotificationTimeToKST = (value?: string | null) => {
         if (!value) return "";
 
-        const date = value.endsWith("Z") ? new Date(value) : new Date(`${value}Z`);
+        const date = new Date(value);
 
         if (Number.isNaN(date.getTime())) return value;
 
@@ -103,8 +103,8 @@ const NotificationHistoryTab: React.FC = () => {
                     return;
                 }
 
-                const prevTime = prev.occurredAt ? new Date(`${prev.occurredAt}Z`).getTime() : 0;
-                const currentTime = item.occurredAt ? new Date(`${item.occurredAt}Z`).getTime() : 0;
+                const prevTime = prev.occurredAt ? new Date(prev.occurredAt).getTime() : 0;
+                const currentTime = item.occurredAt ? new Date(item.occurredAt).getTime() : 0;
 
                 if (currentTime > prevTime) {
                     map.set(idolId, item);
@@ -149,8 +149,8 @@ const NotificationHistoryTab: React.FC = () => {
             }));
 
         return [...stackHistoryItems, ...normalNotificationItems].sort((a, b) => {
-            const aTime = a.occurredAt ? new Date(`${a.occurredAt}Z`).getTime() : 0;
-            const bTime = b.occurredAt ? new Date(`${b.occurredAt}Z`).getTime() : 0;
+            const aTime = a.occurredAt ? new Date(a.occurredAt).getTime() : 0;
+            const bTime = b.occurredAt ? new Date(b.occurredAt).getTime() : 0;
             return bTime - aTime;
         });
     }, [idolStacks, latestIdolMessageMap, notifications]);

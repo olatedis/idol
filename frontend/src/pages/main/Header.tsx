@@ -152,7 +152,7 @@ const Header: React.FC = () => {
     const formatNotificationTimeToKST = (value?: string | null) => {
         if (!value) return "";
 
-        const date = value.endsWith("Z") ? new Date(value) : new Date(`${value}Z`);
+        const date = new Date(value);
 
         if (Number.isNaN(date.getTime())) return value;
 
