@@ -50,6 +50,19 @@ public class IdolMessageStackService {
         repo.resetAllUnread(receiverId);
     }
 
+    @Transactional
+    public int deleteOne(int receiverId, long idolId) {
+        return repo.deleteOneByReceiverIdAndIdolId(receiverId, idolId);
+    }
+
+    @Transactional
+    public int deleteMany(int receiverId, List<Long> idolIds) {
+        if (idolIds == null || idolIds.isEmpty()) {
+            return 0;
+        }
+        return repo.deleteManyByReceiverIdAndIdolIds(receiverId, idolIds);
+    }
+
     /**
      * 아이돌별 unread 목록(최근 메시지 온 아이돌이 위로)
      */

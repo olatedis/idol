@@ -76,8 +76,18 @@ const MainPage: React.FC = () => {
                 navigate("/idol");
             }
 
-        } catch (error) {
-            showErrorToast("아이디 또는 비밀번호를 확인해주세요."); // 예쁜 알림으로 변경
+        } catch (error: any) {
+            const message =
+                error?.response?.data?.message ||
+                error?.response?.data ||
+                "";
+
+            if (typeof message === "string" && message.includes("잠겼습니다")) {
+                showErrorToast("로그인 실패가 누적되어 계정이 30분간 잠겼습니다.");
+                return;
+            }
+
+            showErrorToast("아이디 또는 비밀번호를 확인해주세요.");
         }
     };
 

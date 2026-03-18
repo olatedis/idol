@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 import Header from "../Header";
 import ProfileTab from "./ProfileTab";
 import SubscriptionTab from "./SubscriptionTab";
@@ -10,6 +10,7 @@ import BanHistoryTab from "./BanHistoryTab";
 import AdminPage from "./AdminPage";
 import AgencyPage from "./AgencyPage";
 import NotificationPreferenceTab from "./NotificationPreferenceTab";
+import NotificationHistoryTab from "./NotificationHistoryTab";
 
 type UserMyPageDto = {
     userId: number;
@@ -31,10 +32,10 @@ const MyPage: React.FC = () => {
     const { accessToken } = useAuthStore();
     const location = useLocation();
 
-    // UI State
-    const [activeTab, setActiveTab] = useState<"profile" | "subscription" | "payment" | "bans" | "notification" | "agency" | "admin">("profile");
+    const [activeTab, setActiveTab] = useState<
+        "profile" | "subscription" | "payment" | "bans" | "notification" | "notificationHistory" | "agency" | "admin"
+    >("profile");
 
-    // Data State
     const [userInfo, setUserInfo] = useState<UserMyPageDto | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -48,9 +49,9 @@ const MyPage: React.FC = () => {
 
             if (res.status === 401) {
                 Swal.fire({
-                    icon: 'warning',
-                    title: '인증 만료',
-                    text: '인증이 만료되었습니다. 다시 로그인해주세요.',
+                    icon: "warning",
+                    title: "인증 만료",
+                    text: "인증이 만료되었습니다. 다시 로그인해주세요.",
                 });
                 useAuthStore.getState().logout();
                 navigate("/");
@@ -63,9 +64,9 @@ const MyPage: React.FC = () => {
             setUserInfo(data);
         } catch (e) {
             Swal.fire({
-                icon: 'error',
-                title: '오류',
-                text: '사용자 정보를 불러오는 중 오류가 발생했습니다.',
+                icon: "error",
+                title: "오류",
+                text: "사용자 정보를 불러오는 중 오류가 발생했습니다.",
             });
         } finally {
             setLoading(false);
@@ -81,10 +82,14 @@ const MyPage: React.FC = () => {
     }, [accessToken, navigate]);
 
     useEffect(() => {
-        const initialTab = location.state?.initialTab
+        const initialTab = location.state?.initialTab;
 
         if (initialTab === "notification") {
             setActiveTab("notification");
+        }
+
+        if (initialTab === "notificationHistory") {
+            setActiveTab("notificationHistory");
         }
     }, [location.state]);
 
@@ -105,7 +110,6 @@ const MyPage: React.FC = () => {
             <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-24">
                 <div className="text-2xl font-bold text-gray-800 mb-6">마이페이지</div>
 
-                {/* 탭 네비게이션 */}
                 <div className="flex space-x-2 border-b border-gray-200 mb-8 backdrop-blur-md sticky top-16 z-10 bg-gray-50/90 pt-2">
                     <button
                         className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "profile" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
@@ -116,6 +120,7 @@ const MyPage: React.FC = () => {
                             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
                         )}
                     </button>
+
                     {userInfo?.role !== "AGENCY" && userInfo?.role !== "ADMIN" && (
                         <button
                             className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "subscription" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
@@ -127,6 +132,7 @@ const MyPage: React.FC = () => {
                             )}
                         </button>
                     )}
+
                     <button
                         className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "payment" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                         onClick={() => setActiveTab("payment")}
@@ -136,6 +142,7 @@ const MyPage: React.FC = () => {
                             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
                         )}
                     </button>
+
                     <button
                         className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "bans" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                         onClick={() => setActiveTab("bans")}
@@ -145,6 +152,7 @@ const MyPage: React.FC = () => {
                             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
                         )}
                     </button>
+
                     <button
                         className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "notification" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                         onClick={() => setActiveTab("notification")}
@@ -154,6 +162,17 @@ const MyPage: React.FC = () => {
                             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
                         )}
                     </button>
+
+                    <button
+                        className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "notificationHistory" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                        onClick={() => setActiveTab("notificationHistory")}
+                    >
+                        알림 히스토리
+                        {activeTab === "notificationHistory" && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-idol rounded-t-full" />
+                        )}
+                    </button>
+
                     {userInfo?.role === "AGENCY" && (
                         <button
                             className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "agency" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
@@ -165,6 +184,7 @@ const MyPage: React.FC = () => {
                             )}
                         </button>
                     )}
+
                     {userInfo?.role === "ADMIN" && (
                         <button
                             className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "admin" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
@@ -178,7 +198,6 @@ const MyPage: React.FC = () => {
                     )}
                 </div>
 
-                {/* 탭 컨텐츠 */}
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                     {activeTab === "profile" && userInfo && (
                         <ProfileTab userInfo={userInfo} onRefresh={fetchMyInfo} />
@@ -188,25 +207,19 @@ const MyPage: React.FC = () => {
                         <SubscriptionTab />
                     )}
 
-                    {activeTab === "payment" && (
-                        <PaymentHistoryTab />
-                    )}
+                    {activeTab === "payment" && <PaymentHistoryTab />}
 
-                    {activeTab === "bans" && (
-                        <BanHistoryTab />
-                    )}
+                    {activeTab === "bans" && <BanHistoryTab />}
 
-                    {activeTab === "notification" && (
-                        <NotificationPreferenceTab />
-                    )}
+                    {activeTab === "notification" && <NotificationPreferenceTab />}
+
+                    {activeTab === "notificationHistory" && <NotificationHistoryTab />}
 
                     {activeTab === "agency" && (
                         <AgencyPage agencyId={userInfo?.agencyId} />
                     )}
 
-                    {activeTab === "admin" && (
-                        <AdminPage />
-                    )}
+                    {activeTab === "admin" && <AdminPage />}
                 </div>
             </main>
         </div>

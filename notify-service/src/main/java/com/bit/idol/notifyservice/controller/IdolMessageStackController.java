@@ -41,4 +41,23 @@ public class IdolMessageStackController {
         stackService.resetAll(userId);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/idol-message-stacks/{idolId}")
+    public ResponseEntity<java.util.Map<String, Integer>> deleteOne(
+            @RequestHeader("X-User-Id") int userId,
+            @PathVariable("idolId") long idolId
+    ) {
+        int deletedCount = stackService.deleteOne(userId, idolId);
+        return ResponseEntity.ok(java.util.Map.of("deletedCount", deletedCount));
+    }
+
+    @PostMapping("/idol-message-stacks/delete")
+    public ResponseEntity<java.util.Map<String, Integer>> deleteMany(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestBody java.util.Map<String, java.util.List<Long>> body
+    ) {
+        java.util.List<Long> idolIds = body.get("idolIds");
+        int deletedCount = stackService.deleteMany(userId, idolIds);
+        return ResponseEntity.ok(java.util.Map.of("deletedCount", deletedCount));
+    }
 }

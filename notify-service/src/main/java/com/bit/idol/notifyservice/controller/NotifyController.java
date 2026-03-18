@@ -56,4 +56,24 @@ public class NotifyController {
         int updatedCount = notificationService.markOneAsRead(userId, notificationId);
         return ResponseEntity.ok(Map.of("updatedCount", updatedCount));
     }
+
+    @DeleteMapping("/notifications/{id}")
+    public ResponseEntity<Map<String, Integer>> deleteOne(
+            @RequestHeader("X-User-Id") int userId,
+            @PathVariable("id") int notificationId
+    ) {
+        int deletedCount = notificationService.deleteOne(userId, notificationId);
+        return ResponseEntity.ok(Map.of("deletedCount", deletedCount));
+    }
+
+    @PostMapping("/notifications/delete")
+    public ResponseEntity<Map<String, Integer>> deleteMany(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestBody Map<String, java.util.List<Integer>> body
+    ) {
+        java.util.List<Integer> ids = body.get("notificationIds");
+        int deletedCount = notificationService.deleteMany(userId, ids);
+        return ResponseEntity.ok(Map.of("deletedCount", deletedCount));
+    }
+
 }

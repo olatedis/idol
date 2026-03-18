@@ -71,7 +71,7 @@ public class AuthService {
                         .targetType(TargetType.USER)
                         .targetId(String.valueOf(user.getUserId()))
                         .args(Map.of("lockUntil", LocalDateTime.now().plusMinutes(30).toString()))
-                        .redirectUrl("/mypage")
+                        .redirectUrl("#")
                         .occurredAt(LocalDateTime.now())
                         .build();
                 notificationProducer.send(lockEvent);
@@ -95,7 +95,7 @@ public class AuthService {
                         .targetType(TargetType.USER)
                         .targetId(userId)
                         .args(Map.of("ip", clientIp, "loginAt", LocalDateTime.now().toString()))
-                        .redirectUrl("/mypage")
+                        .redirectUrl("#")
                         .occurredAt(LocalDateTime.now())
                         .build();
                 notificationProducer.send(event);

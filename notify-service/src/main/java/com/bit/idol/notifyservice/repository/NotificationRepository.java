@@ -62,4 +62,26 @@ public interface NotificationRepository extends JpaRepository<Notification, Inte
             @Param("notificationId") int notificationId,
             @Param("readAt") LocalDateTime readAt
     );
+
+    @Modifying
+    @Query("""
+    delete from Notification n
+     where n.notificationId = :notificationId
+       and n.receiverId = :userId
+""")
+    int deleteOneByUserId(
+            @Param("userId") int userId,
+            @Param("notificationId") int notificationId
+    );
+
+    @Modifying
+    @Query("""
+    delete from Notification n
+     where n.receiverId = :userId
+       and n.notificationId in :notificationIds
+""")
+    int deleteManyByUserId(
+            @Param("userId") int userId,
+            @Param("notificationIds") List<Integer> notificationIds
+    );
 }

@@ -70,6 +70,11 @@ const Header: React.FC = () => {
         navigate("/mypage", { state: { initialTab: "notification" } })
     }
 
+    const goToNotificationHistory = () => {
+        setIsNotificationOpen(false);
+        navigate("/mypage", { state: { initialTab: "notificationHistory" } })
+    }
+
     const handleNotificationClick = async (notification: NotificationItem) => {
         try {
             await readOneNotification(notification.notificationId);
@@ -83,6 +88,8 @@ const Header: React.FC = () => {
 
             if (
                 notification.type !== "RESERVATION_CREATED" &&
+                notification.type !== "LOGIN_NEW_DEVICE" &&
+                notification.type !== "LOGIN_FAIL_LOCKED" &&
                 notification.redirectUrl &&
                 notification.redirectUrl.trim() !== "" &&
                 notification.redirectUrl !== "#"
@@ -145,7 +152,7 @@ const Header: React.FC = () => {
     const formatNotificationTimeToKST = (value?: string | null) => {
         if (!value) return "";
 
-        const date = value.endsWith("Z") ? new Date(value) : new Date(`${value}Z`);
+        const date = new Date(value);
 
         if (Number.isNaN(date.getTime())) return value;
 
@@ -271,10 +278,17 @@ const Header: React.FC = () => {
                 : "신고가 누적되었습니다. 주의해주세요.";
         }
 
-        if(notification.type === "ACCOUNT_STATUS_CHANGED") {
+        if (notification.type === "ACCOUNT_STATUS_CHANGED") {
             return "유저 상태가 변경되었습니다.";
         }
 
+        if (notification.type === "LOGIN_NEW_DEVICE") {
+            return "새로운 기기에서 로그인했습니다.";
+        }
+
+        if (notification.type === "LOGIN_FAIL_LOCKED") {
+            return "로그인 실패가 누적되어 계정이 30분간 잠겼습니다.";
+        }
 
         if (notification.type === "VOTE_OPENED") {
             return voteTitle
@@ -351,6 +365,13 @@ const Header: React.FC = () => {
             return "콘서트";
         }
 
+        if (
+            notification.type === "LOGIN_NEW_DEVICE" ||
+            notification.type === "LOGIN_FAIL_LOCKED"
+        ) {
+            return "로그인";
+        }
+
         return "알림";
     };
 
@@ -379,6 +400,13 @@ const Header: React.FC = () => {
             notification.type === "GROUP_SUB_END"
         ) {
             return "💎";
+        }
+
+        if (
+            notification.type === "LOGIN_NEW_DEVICE" ||
+            notification.type === "LOGIN_FAIL_LOCKED"
+        ) {
+            return "🔐";
         }
 
         return "🔔";
@@ -611,8 +639,15 @@ const Header: React.FC = () => {
 
                                                     <div className="flex items-center gap-3">
                                                         <button
+                                                            onClick={goToNotificationHistory}
+                                                            className="text-xs text-gray-600 hover:text-idol transition"
+                                                        >
+                                                            히스토리
+                                                        </button>
+
+                                                        <button
                                                             onClick={handleReadAllNotifications}
-                                                            className="text-xs text-idol hover:text-idol-dark transition"
+                                                            className="text-xs text-gray-600 hover:text-idol transition"
                                                         >
                                                             전체 읽음
                                                         </button>
