@@ -65,11 +65,12 @@ public class ReportController {
     @GetMapping("/admin/users/search")
     public ResponseEntity<List<UserDto>> searchUsersForAdmin(
             @RequestHeader("X-Role") String role,
-            @RequestParam("keyword") String keyword) {
+            @RequestParam("keyword") String keyword,
+            @RequestParam(value = "status", required = false) com.bit.idol.userservice.entity.UserStatus status) {
         if (!"ADMIN".equals(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        return ResponseEntity.ok(reportService.searchUsersForAdmin(keyword));
+        return ResponseEntity.ok(reportService.searchUsersForAdmin(keyword, status));
     }
 
     // 관리자: 전체 유저 페이징 조회
@@ -77,13 +78,14 @@ public class ReportController {
     public ResponseEntity<Page<UserDto>> getAllUsersForAdmin(
             @RequestHeader("X-Role") String role,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(value = "status", required = false) com.bit.idol.userservice.entity.UserStatus status) {
         if (!"ADMIN".equals(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         Pageable pageable = PageRequest.of(page, size,
                 Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
-        return ResponseEntity.ok(userService.getAllUsersWithPaging(pageable));
+        return ResponseEntity.ok(userService.getAllUsersWithPaging(pageable, status));
     }
 
     // 관리자: 특정 유저 피신고 이력 조회
