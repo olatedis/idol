@@ -47,6 +47,9 @@ public class StompHandler implements ChannelInterceptor {
                     case SUBSCRIBE:
                         handleSubscribe(accessor);
                         break;
+                    case UNSUBSCRIBE:
+                        handleUnsubscribe(accessor);
+                        break;
                     case DISCONNECT:
                         handleDisconnect(accessor);
                         break;
@@ -80,14 +83,12 @@ public class StompHandler implements ChannelInterceptor {
             try {
                 IdolDto idol = userFeignClient.getMyIdolInfo(user.getUserId());
                 if (idol != null) {
-                    String currentSessionId = accessor.getSessionId();
-                    chatService.setIdolOnline((long) idol.getIdolId(), true,
-                            currentSessionId != null ? currentSessionId : "");
+                    // 이제 단순히 연결됐다고 온라인으로 표시하지 않음 (방 입장 시 SUBSCRIBE 에서 처리)
                     accessor.getSessionAttributes().put("idolId", idol.getIdolId());
-                    log.info("아이돌 접속 ON: idolId={}, sessionId={}", idol.getIdolId(), currentSessionId);
+                    log.info("아이돌 세션 준비 완료: idolId={}, sessionId={}", idol.getIdolId(), accessor.getSessionId());
                 }
             } catch (Exception e) {
-                log.error("아이돌 정보 조회 실패 (접속 상태 미반영): userId={}, error={}", user.getUserId(), e.getMessage());
+                log.error("아이돌 정보 조회 실패: userId={}, error={}", user.getUserId(), e.getMessage());
             }
         }
 
@@ -162,46 +163,66 @@ public class StompHandler implements ChannelInterceptor {
         String role = (String) accessor.getSessionAttributes().get("role");
         String destination = accessor.getDestination(); // 예: /sub/idol/{idolId}
 
-        if ("USER".equals(role) && destination != null) {
-            // 정규식을 사용하거나 단순히 파싱하여 idolId 추출
-            // 예: /sub/idol/123 -> idolId = 123
-            try {
-                if (destination.startsWith("/sub/idol/")) {
-                    String[] parts = destination.split("/");
-                    if (parts.length >= 4) {
-                        Long targetIdolId = Long.parseLong(parts[3]);
+        if (destination != null) {
+            // 1. 유저의 구독 권한 검증
+            if ("USER".equals(role)) {
+                try {
+                    if (destination.startsWith("/sub/idol/")) {
+                        String[] parts = destination.split("/");
+                        if (parts.length >= 4) {
+                            Long targetIdolId = Long.parseLong(parts[3]);
+                            int userIdInt = (int) accessor.getSessionAttributes().get("userId");
+                            boolean isSubscribed = connectService.isSubscribed(userIdInt, targetIdolId.intValue());
 
-                        // 실시간 구독 여부 확인 (Session에 저장된 값 대신 Redis 직접 조회)
-                        int userIdInt = (int) accessor.getSessionAttributes().get("userId");
-                        boolean isSubscribed = connectService.isSubscribed(userIdInt, targetIdolId.intValue());
-
-                        if (!isSubscribed) {
-                            log.warn("권한 없는 채팅방 구독 시도 차단: sessionId={}, userId={}, targetIdolId={}", 
-                                    accessor.getSessionId(), userIdInt, targetIdolId);
-                            throw new RuntimeException("구독하지 않은 채팅방은 실시간 수신할 수 없습니다.");
+                            if (!isSubscribed) {
+                                log.warn("권한 없는 채팅방 구독 시도 차단: sessionId={}, userId={}, targetIdolId={}", 
+                                        accessor.getSessionId(), userIdInt, targetIdolId);
+                                throw new RuntimeException("구독하지 않은 채팅방은 실시간 수신할 수 없습니다.");
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    log.error("구독 채널 검증 중 오류: {}", e.getMessage());
+                    throw new RuntimeException("구독 채널 검증 실패");
                 }
-            } catch (Exception e) {
-                log.error("구독 채널 검증 중 오류: {}", e.getMessage());
-                throw new RuntimeException("구독 채널 검증 실패");
             }
+
+            // 2. [추가] 아이돌 본인의 방 입장 실시간 감지 (온라인 상태 ON)
+            if ("IDOL".equals(role)) {
+                Integer myIdolId = (Integer) accessor.getSessionAttributes().get("idolId");
+                if (myIdolId != null && (destination.contains("/sub/idol/" + myIdolId) || destination.contains("/queue/idol/" + myIdolId))) {
+                    chatService.setIdolOnline((long) myIdolId, true, accessor.getSessionId());
+                }
+            }
+        }
+    }
+
+    private void handleUnsubscribe(StompHeaderAccessor accessor) {
+        String role = (String) accessor.getSessionAttributes().get("role");
+        Integer idolId = (Integer) accessor.getSessionAttributes().get("idolId");
+        String sessionId = accessor.getSessionId();
+
+        if ("IDOL".equals(role) && idolId != null) {
+            // 언구독 시 온라인 상태를 체크하여 뺌 (방에서 나감)
+            chatService.setIdolOnline((long) idolId, false, sessionId);
+            log.info("아이돌 방 퇴장 (UNSUBSCRIBE): idolId={}, sessionId={}", idolId, sessionId);
         }
     }
 
     private void handleDisconnect(StompHeaderAccessor accessor) {
         String sessionId = accessor.getSessionId();
-        connectService.removeUserSession(sessionId);
-
         Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
         String role = (String) accessor.getSessionAttributes().get("role");
         Integer idolId = (Integer) accessor.getSessionAttributes().get("idolId");
 
+        // 1. 온라인 상태 먼저 체크 및 필요 시 브로드캐스트 (세션 레코드가 삭제되기 전에 수행해야 정확함)
         if (userId != null && "IDOL".equals(role) && idolId != null) {
             chatService.setIdolOnline((long) idolId, false, sessionId);
-            log.info("아이돌 접속 OFF: idolId={}, sessionId={}", idolId, sessionId);
+            log.info("아이돌 접속 OFF 시도: idolId={}, sessionId={}", idolId, sessionId);
         }
 
-        log.info("웹소켓 연결 종료: sessionId={}", sessionId);
+        // 2. 그 다음 실제 세션 정보 삭제
+        connectService.removeUserSession(sessionId);
+        log.info("웹소켓 세션 및 로그아웃 처리 완료: sessionId={}", sessionId);
     }
 }

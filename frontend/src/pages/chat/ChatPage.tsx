@@ -134,6 +134,53 @@ const ChatPage: React.FC = () => {
         }
     }, [searchParams, selectedIdolId]);
 
+    // [New] Phase 1.5: 그룹 전역 상태 구독 (채팅 목록 실시간 업데이트용)
+    useEffect(() => {
+        if (!groupId || !user) return;
+
+        const client = new Client({
+            brokerURL: WS_URL,
+            connectHeaders: {
+                Authorization: `Bearer ${useAuthStore.getState().accessToken}`
+            },
+            reconnectDelay: 5000,
+            onConnect: () => {
+                // 그룹 내 모든 아이돌의 접속 상태 및 채팅 목록 변경 감지
+                client.subscribe(`/sub/group/${groupId}/status`, (message) => {
+                    const parsed = JSON.parse(message.body);
+                    if (parsed.type === "STATUS") {
+                        const isOnline = parsed.content === "ON";
+                        setChatRooms(prev => prev.map(room => 
+                            room.idolId === parsed.idolId ? { ...room, isOnline } : room
+                        ));
+                    } else if (parsed.type === "LIST_UPDATE") {
+                        setChatRooms(prev => prev.map(room => {
+                            if (room.idolId === parsed.idolId) {
+                                // 내가 현재 보고 있지 않은 방 & 상대(아이돌)가 보낸 메시지일 경우만 +1
+                                const isFocusedIdol = selectedIdolId === parsed.idolId;
+                                const isFromIdol = parsed.senderRole === "IDOL";
+                                const unreadIncrement = (!isFocusedIdol && isFromIdol) ? 1 : 0;
+                                
+                                return {
+                                    ...room,
+                                    lastMessage: parsed.content,
+                                    lastMessageTime: parsed.createdAt,
+                                    unreadCount: room.unreadCount + unreadIncrement
+                                };
+                            }
+                            return room;
+                        }));
+                    }
+                });
+            }
+        });
+
+        client.activate();
+        return () => {
+            client.deactivate();
+        };
+    }, [groupId, user?.userId]);
+
     // Phase 2: 채팅방(아이돌) 선택 시 STOMP 연결 및 기존 내역 로드
     useEffect(() => {
         if (!selectedIdolId || !user) {

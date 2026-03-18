@@ -298,6 +298,31 @@ public class ChatService {
             savedMessage.setStatus("SENT");
             chatRepository.save(savedMessage);
 
+            // 5. [추가] 채팅방 목록 실시간 업데이트 브로드캐스트
+            try {
+                // 캐시된 전체 아이돌 정보에서 groupId 찾기
+                Integer groupId = userFeignClient.getAllIdols().stream()
+                        .filter(idol -> (long) idol.getIdolId() == messageDto.getIdolId())
+                        .findFirst()
+                        .map(IdolDto::getGroupId)
+                        .orElse(null);
+
+                if (groupId != null) {
+                    ChatMessageDto listUpdateMessage = ChatMessageDto.builder()
+                            .idolId(messageDto.getIdolId())
+                            .type("LIST_UPDATE")
+                            .content("TEXT".equals(messageDto.getType()) ? messageDto.getContent() : messageDto.getType() + " 메시지")
+                            .createdAt(messageDto.getCreatedAt())
+                            .senderRole(messageDto.getSenderRole())
+                            .parentId(String.valueOf(groupId)) // RedisSubscriber 라우팅용으로 groupId 포함
+                            .build();
+
+                    redisTemplate.convertAndSend("/sub/group/" + groupId + "/status", listUpdateMessage);
+                }
+            } catch (Exception e) {
+                log.warn("목록 실시간 갱신 브로드캐스트 실패: {}", e.getMessage());
+            }
+
             log.info("메시지 처리 완료: room={}, id={}", messageDto.getIdolId(), savedMessage.getId());
         } catch (Exception e) {
             log.error("Kafka 전송 실패 (재전송 대기): {}", e.getMessage());
@@ -585,14 +610,35 @@ public class ChatService {
     }
 
     public boolean isIdolOnline(Long idolId) {
-        String onlineKey = "idol:online:sessions:" + idolId;
-        Long size = redisTemplate.opsForSet().size(onlineKey);
+        pruneZombieSessions(idolId);
+        Long size = redisTemplate.opsForSet().size("idol:online:sessions:" + idolId);
         return size != null && size > 0;
+    }
+
+    private void pruneZombieSessions(Long idolId) {
+        String onlineKey = "idol:online:sessions:" + idolId;
+        Set<Object> sessions = redisTemplate.opsForSet().members(onlineKey);
+        
+        if (sessions == null || sessions.isEmpty()) return;
+
+        List<Object> invalidSessions = sessions.stream()
+                .filter(sid -> !redisTemplate.hasKey("chat:session:" + sid))
+                .collect(Collectors.toList());
+
+        if (!invalidSessions.isEmpty()) {
+            for (Object sid : invalidSessions) {
+                redisTemplate.opsForSet().remove(onlineKey, sid);
+                log.debug("좀비 세션 제거 완료: idolId={}, sessionId={}", idolId, sid);
+            }
+        }
     }
 
     // 다중 탭/기기 환경을 고려한 접속 상태 집합 관리
     public void setIdolOnline(Long idolId, boolean isOnline, String sessionId) {
         String onlineKey = "idol:online:sessions:" + idolId;
+
+        // 작업 전 좀비 세션 청소부터 하여 정확한 카운트 확보
+        pruneZombieSessions(idolId);
 
         Long previousCount = redisTemplate.opsForSet().size(onlineKey);
         if (previousCount == null)
@@ -608,30 +654,57 @@ public class ChatService {
         if (currentCount == null)
             currentCount = 0L;
 
-        // 브로드캐스팅 최적화: 0 -> 1 (최초 접속) 이거나, 1 -> 0 (최종 종료) 일 때만 전파
+        // 브로드캐스팅 결정: 최초 0->1(ON) 또는 최종 1->0(OFF)
         boolean turnedOn = (previousCount == 0 && currentCount > 0);
         boolean turnedOff = (previousCount > 0 && currentCount == 0);
 
         if (turnedOn || turnedOff) {
-            // 상태 변경 실시간 브로드캐스팅 (프론트엔드 실시간 반영용)
+            String status = turnedOn ? "ON" : "OFF";
+            
+            // 아이돌의 그룹 ID 가져오기
+            Integer groupId = null;
+            try {
+                groupId = userFeignClient.getAllIdols().stream()
+                        .filter(idol -> (long) idol.getIdolId() == idolId)
+                        .findFirst()
+                        .map(IdolDto::getGroupId)
+                        .orElse(null);
+            } catch (Exception e) {
+                log.warn("그룹ID 조회 실패 (브로드캐스트 제한됨): {}", e.getMessage());
+            }
+
+            // 상태 변경 패키징
             ChatMessageDto statusMessage = ChatMessageDto.builder()
                     .idolId(idolId)
                     .type("STATUS")
-                    .content(turnedOn ? "ON" : "OFF")
+                    .content(status)
+                    .parentId(groupId != null ? String.valueOf(groupId) : null) // groupId 전달용 임시 필드 활용
                     .build();
 
+            // 1. 개별 채팅방 채널 브로드캐스트
             redisTemplate.convertAndSend("/sub/idol/" + idolId, statusMessage);
-            log.info("아이돌 접속 상태 브로드캐스트 전송: idolId={}, event={}", idolId,
-                    turnedOn ? "User Joined" : "All Users Disconnected");
+            
+            // 2. [추가] 그룹 전체 채널 브로드캐스트 (목록 실시간 동기화용)
+            if (groupId != null) {
+                redisTemplate.convertAndSend("/sub/group/" + groupId + "/status", statusMessage);
+                log.info("그룹 실시간 상태 브로드캐스트: groupId={}, idolId={}, status={}", groupId, idolId, status);
+            }
+
+            log.info("아이돌 접속 상태 변경 완료: idolId={}, sessions={}({}->{}), status={}", 
+                    idolId, currentCount, previousCount, currentCount, status);
 
             // 아이돌 최초 접속 시 구독자 알림 발행
             if (turnedOn) {
                 try {
-                    var idolInfo = userFeignClient.getAllIdols().stream()
-                            .filter(idol -> idol.getIdolId() == idolId)
-                            .findFirst();
-                    String idolName = idolInfo.map(IdolDto::getStageName).orElse("아이돌");
-                    Integer groupId = idolInfo.map(IdolDto::getGroupId).orElse(null);
+                    String idolName = "아이돌";
+                    try {
+                        var idolInfo = userFeignClient.getAllIdols().stream()
+                                .filter(idol -> (long) idol.getIdolId() == idolId)
+                                .findFirst();
+                        idolName = idolInfo.map(IdolDto::getStageName).orElse("아이돌");
+                    } catch (Exception e) {
+                        log.warn("알림용 아이돌 이름 조회 실패");
+                    }
 
                     String redirectUrl = (groupId != null)
                             ? "/group/" + groupId + "/chat?idolId=" + idolId
