@@ -42,8 +42,7 @@ const ConcertPage: React.FC = () => {
 
     const formatKST = (iso?: string) => {
         if (!iso) return "";
-        const d = new Date(iso);
-        const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+        const kst = new Date(iso);
         return kst.toLocaleString("ko-KR", {
             year: "numeric",
             month: "2-digit",
@@ -300,16 +299,7 @@ const ConcertPage: React.FC = () => {
         } catch (e: any) {
             console.log(e.message);
             showErrorToast('이미 선택된 자리입니다. 다른 좌석을 선택해주세요.');
-            setConcertSeats((prev) =>
-                prev.map((seat) =>
-                    selectedSeats.includes(seat.id)
-                        ? { ...seat, locked: true }
-                        : seat
-                )
-            );
 
-            // 선택 초기화
-            setSelectedSeats([]);
         }
     };
 
