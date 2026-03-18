@@ -39,7 +39,7 @@ spring:
 # 예약 만료 설정
 reservation:
   lock-expire-minutes: 5  # 5분 후 예약 만료
-  expire-check-ms: 30000  # 30초마다 체크
+  expire-check-ms: 300000  # 300초마다 체크
 
 eureka:
   client:
