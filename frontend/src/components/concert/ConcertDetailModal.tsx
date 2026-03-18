@@ -13,8 +13,7 @@ type Props = {
 
 const formatKST = (iso?: string) => {
     if (!iso) return "";
-    const d = new Date(iso);
-    const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+    const kst = new Date(iso);
     return kst.toLocaleString("ko-KR", {
         year: "numeric",
         month: "2-digit",
