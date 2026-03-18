@@ -1,0 +1,15 @@
+spring:
+  elasticsearch:
+    uris: http://elasticsearch:9200
+
+  kafka:
+    bootstrap-servers: kafka:29092
+
+  data:
+    redis:
+      host: redis
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/

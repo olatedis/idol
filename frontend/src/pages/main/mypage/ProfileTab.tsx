@@ -42,7 +42,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
                     setIdolInfo(res.data);
                     setEditForm(prev => ({ ...prev, stageName: res.data.stageName || "" }));
                 })
-                .catch(() => {});
+                .catch(() => { });
         }
     }, [userInfo.role]);
 
@@ -67,7 +67,10 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
                 headers: { "Content-Type": "multipart/form-data" }
             });
             showSuccessToast("프로필 이미지가 변경되었습니다.");
+
+            // 페이지를 자동으로 새로고침하여 변경된 이미지를 즉시 반영
             onRefresh();
+            window.location.reload();
         } catch (err: any) {
             showErrorToast(err?.response?.data?.message || "이미지 변경 에러가 발생했습니다.");
         }

@@ -30,7 +30,7 @@ const ConcertCreatePage: React.FC = () => {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
-    React.useEffect(() => {
+    useEffect(() => {
         return () => {
             if (imagePreview) {
                 URL.revokeObjectURL(imagePreview);

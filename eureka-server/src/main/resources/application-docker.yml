@@ -1,0 +1,11 @@
+eureka:
+  instance:
+    hostname: discovery-service
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+
+# 유레카 서버 자체의 등록 방지 설정 유지
+    register-with-eureka: false
+    fetch-registry: false

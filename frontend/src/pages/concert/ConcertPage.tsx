@@ -33,6 +33,7 @@ const ConcertPage: React.FC = () => {
     const sentinelRef = useRef<HTMLDivElement | null>(null);
     const fetchingRef = useRef(false);
 
+
     // 모달 상태
     const [selectedConcert, setSelectedConcert] = useState<ConcertDto | null>(null);
     const [concertSeats, setConcertSeats] = useState<SeatDto[]>([]);
@@ -236,6 +237,7 @@ const ConcertPage: React.FC = () => {
         io.observe(el);
         return () => io.disconnect();
     }, [hasMore, loading, loadingMore]);
+
 
     const onOpenDetail = async (concert: ConcertDto) => {
         setSelectedConcert(concert);

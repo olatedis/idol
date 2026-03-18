@@ -120,11 +120,12 @@ const GlobalConcertPage: React.FC = () => {
                             >
                                 <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 shrink-0">
                                     <img
-                                        src={concert.img || "https://via.placeholder.com/400x500?text=No+Image"}
+                                        src={concert.img || `${import.meta.env.VITE_API_BASE_URL}/concerts/${concert.id}/image`}
                                         alt={concert.title}
                                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                         onError={(e) => {
                                             const target = e.target as HTMLImageElement;
+                                            target.onerror = null; // 무한 루프 방지
                                             target.src = "https://via.placeholder.com/400x500?text=No+Image";
                                         }}
                                     />
