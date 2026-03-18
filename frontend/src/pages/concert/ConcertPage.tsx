@@ -31,7 +31,7 @@ const ConcertPage: React.FC = () => {
     const [hasMore, setHasMore] = useState(true);
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
-
+    const fetchingRef = useRef(false);
 
     // 모달 상태
     const [selectedConcert, setSelectedConcert] = useState<ConcertDto | null>(null);
@@ -67,46 +67,60 @@ const ConcertPage: React.FC = () => {
         return 'OPEN';
     };
     const resetInfinite = () => {
+        setHasMore(false); // observer 잠시 차단
         setConcerts([]);
         setPage(0);
-        setHasMore(true);
+
+        setTimeout(() => {
+            setHasMore(true);
+        }, 0);
     };
 
 
     const fetchPage = async (nextPage: number) => {
         if (!API_BASE_URL) return;
+        if (fetchingRef.current) return;
 
-        const params = new URLSearchParams();
-        params.set("page", String(nextPage));
-        params.set("size", String(PAGE_SIZE));
-        params.set("sort", "concertDate,desc");
-        if (groupId) params.set("groupId", groupId);
+        fetchingRef.current = true;
 
-        let url = `${API_BASE_URL}/concerts`;
-        const qs = params.toString();
-        if (qs) url += `?${qs}`;
-        const res = await api.get(url);
-        if (res.status !== 200) throw new Error("콘서트 목록 조회 실패");
+        try {
+            const params = new URLSearchParams();
+            params.set("page", String(nextPage));
+            params.set("size", String(PAGE_SIZE));
+            params.set("sort", "concertDate,desc");
+            if (groupId) params.set("groupId", groupId);
 
-        const data = res.data;
-        let content: ConcertDto[] = [];
-        let last = true;
+            let url = `${API_BASE_URL}/concerts`;
+            const qs = params.toString();
+            if (qs) url += `?${qs}`;
 
-        if (Array.isArray(data)) {
-            content = data as ConcertDto[];
-            last = true;
-        } else {
-            content = (data.content ?? []) as ConcertDto[];
-            last = Boolean(data.last);
+            const res = await api.get(url);
+            if (res.status !== 200) throw new Error("콘서트 목록 조회 실패");
+
+            const data = res.data;
+            let content: ConcertDto[] = [];
+            let last = true;
+
+            if (Array.isArray(data)) {
+                content = data;
+                last = true;
+            } else {
+                content = data.content ?? [];
+                last = Boolean(data.last);
+            }
+
+            setConcerts((prev) => {
+                const base = nextPage === 0 ? [] : prev;
+                const map = new Map(base.map((c) => [c.id, c]));
+                content.forEach((c) => map.set(c.id, c));
+                return Array.from(map.values());
+            });
+
+            setHasMore(!last && content.length > 0);
+
+        } finally {
+            fetchingRef.current = false;
         }
-
-        if (nextPage === 0) {
-            setConcerts(content);
-        } else {
-            setConcerts((prev) => [...prev, ...content]);
-        }
-
-        setHasMore(!last && content.length > 0);
     };
 
     const fetchConcertSeats = async (concertId: number) => {
@@ -121,7 +135,7 @@ const ConcertPage: React.FC = () => {
             if (res.status !== 200) {
                 throw new Error(`좌석 조회 실패 (${res.status})`);
             }
-            
+
             const seats = res.data;
 
             if (Array.isArray(seats)) {
@@ -208,9 +222,12 @@ const ConcertPage: React.FC = () => {
         const io = new IntersectionObserver(
             (entries) => {
                 const first = entries[0];
+
                 if (!first.isIntersecting) return;
-                if (loading) return;
-                if (loadingMore) return;
+                if (loading || loadingMore) return;
+                if (fetchingRef.current) return;
+                if (!hasMore) return;
+
                 setPage((prev) => prev + 1);
             },
             { root: null, rootMargin: "200px", threshold: 0 }
