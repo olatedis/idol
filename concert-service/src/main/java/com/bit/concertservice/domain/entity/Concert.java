@@ -49,7 +49,7 @@ public class Concert {
         this.concertDate = concertDate;
         this.startTime = startTime;
         this.ticketSaleDate = ticketSaleDate;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now().plusHours(9);
     }
 
     public static Concert create(int agencyId, int groupId, String title, String description, String venue, String img, LocalDateTime concertDate, LocalDateTime startTime, LocalDateTime ticketSaleDate) {
