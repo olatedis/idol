@@ -68,3 +68,15 @@ export const resetAllIdolMessageStacks = async () => {
     const { data } = await api.post("/notify/idol-message-stacks/reset-all");
     return data;
 };
+
+export const deleteOneNotification = async (notificationId: number) => {
+    const { data } = await api.delete(`/notify/notifications/${notificationId}`);
+    return data;
+};
+
+export const deleteManyNotifications = async (notificationIds: number[]) => {
+    const { data } = await api.post(`/notify/notifications/delete`, {
+        notificationIds,
+    });
+    return data;
+};

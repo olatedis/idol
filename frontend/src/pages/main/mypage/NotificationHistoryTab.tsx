@@ -1,7 +1,10 @@
-import React, {useEffect, useMemo, useState} from "react";
-import {getNotificationList} from "../../../api/notificationApi";
-import type {NotificationItem} from "../../../types/notification";
-import {showErrorToast} from "../../../utils/alert";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+    deleteManyNotifications,
+    getIdolMessageStacks,
+    getNotificationList,
+} from "../../../api/notificationApi";import type { IdolMessageStackPayload, NotificationItem } from "../../../types/notification";
+import { showErrorToast } from "../../../utils/alert";
 
 type FilterType =
     | "all"
@@ -11,11 +14,18 @@ type FilterType =
     | "concert"
     | "system";
 
+type HistoryItem = NotificationItem & {
+    historyKind?: "notification" | "stack";
+    stackUnreadCount?: number;
+};
+
 const PAGE_SIZE = 10;
 const FETCH_SIZE = 50;
 
 const NotificationHistoryTab: React.FC = () => {
-    const [items, setItems] = useState<NotificationItem[]>([]);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const [idolStacks, setIdolStacks] = useState<IdolMessageStackPayload[]>([]);
+
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -28,10 +38,16 @@ const NotificationHistoryTab: React.FC = () => {
     const loadInitial = async () => {
         try {
             setLoading(true);
-            const data = await getNotificationList(FETCH_SIZE);
-            setItems(data.items ?? []);
-            setNextCursor(data.nextCursor ?? null);
-            setHasNext(data.hasNext ?? false);
+
+            const [notificationData, stackData] = await Promise.all([
+                getNotificationList(FETCH_SIZE),
+                getIdolMessageStacks(),
+            ]);
+
+            setNotifications(notificationData.items ?? []);
+            setNextCursor(notificationData.nextCursor ?? null);
+            setHasNext(notificationData.hasNext ?? false);
+            setIdolStacks(stackData.items ?? []);
         } catch (error) {
             showErrorToast("알림 히스토리를 불러오는 중 오류가 발생했습니다.");
         } finally {
@@ -43,7 +59,101 @@ const NotificationHistoryTab: React.FC = () => {
         loadInitial();
     }, []);
 
-    const getCategory = (item: NotificationItem): FilterType => {
+    const formatNotificationTimeToKST = (value?: string | null) => {
+        if (!value) return "";
+
+        const date = value.endsWith("Z") ? new Date(value) : new Date(`${value}Z`);
+
+        if (Number.isNaN(date.getTime())) return value;
+
+        return new Intl.DateTimeFormat("ko-KR", {
+            timeZone: "Asia/Seoul",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+        }).format(date);
+    };
+
+    const parseIdolId = (notification: NotificationItem) => {
+        const idolIdFromArgs = notification.args?.idolId;
+        if (idolIdFromArgs) return Number(idolIdFromArgs);
+
+        const match = notification.redirectUrl?.match(/idolId=(\d+)/);
+        if (match) return Number(match[1]);
+
+        return null;
+    };
+
+    const latestIdolMessageMap = useMemo(() => {
+        const map = new Map<number, NotificationItem>();
+
+        notifications
+            .filter((item) => item.type === "IDOL_MESSAGE")
+            .forEach((item) => {
+                const idolId = parseIdolId(item);
+                if (!idolId) return;
+
+                const prev = map.get(idolId);
+                if (!prev) {
+                    map.set(idolId, item);
+                    return;
+                }
+
+                const prevTime = prev.occurredAt ? new Date(`${prev.occurredAt}Z`).getTime() : 0;
+                const currentTime = item.occurredAt ? new Date(`${item.occurredAt}Z`).getTime() : 0;
+
+                if (currentTime > prevTime) {
+                    map.set(idolId, item);
+                }
+            });
+
+        return map;
+    }, [notifications]);
+
+    const historyItems = useMemo<HistoryItem[]>(() => {
+        const stackHistoryItems: HistoryItem[] = idolStacks
+            .filter((stack) => !!stack.lastOccurredAt)
+            .map((stack) => {
+                const latest = latestIdolMessageMap.get(stack.idolId);
+
+                return {
+                    notificationId: -100000 - stack.idolId,
+                    eventId: `idol-stack-${stack.idolId}`,
+                    type: "IDOL_MESSAGE_STACK",
+                    targetType: "USER",
+                    targetId: "",
+                    redirectUrl: "#",
+                    occurredAt: stack.lastOccurredAt ?? "",
+                    args: {
+                        idolId: String(stack.idolId),
+                        idolName: latest?.args?.idolName ?? `아이돌 ${stack.idolId}`,
+                        groupName: latest?.args?.groupName ?? "그룹",
+                        unreadCount: String(stack.unreadCount ?? 0),
+                    },
+                    isRead: true,
+                    readAt: null,
+                    historyKind: "stack",
+                    stackUnreadCount: stack.unreadCount ?? 0,
+                };
+            });
+
+        const normalNotificationItems: HistoryItem[] = notifications
+            .filter((item) => item.type !== "IDOL_MESSAGE")
+            .map((item) => ({
+                ...item,
+                historyKind: "notification",
+            }));
+
+        return [...stackHistoryItems, ...normalNotificationItems].sort((a, b) => {
+            const aTime = a.occurredAt ? new Date(`${a.occurredAt}Z`).getTime() : 0;
+            const bTime = b.occurredAt ? new Date(`${b.occurredAt}Z`).getTime() : 0;
+            return bTime - aTime;
+        });
+    }, [idolStacks, latestIdolMessageMap, notifications]);
+
+    const getCategory = (item: HistoryItem): FilterType => {
         const type = item.type;
 
         if (
@@ -68,9 +178,7 @@ const NotificationHistoryTab: React.FC = () => {
 
         if (
             type === "CHAT_IDOL_ONLINE" ||
-            type === "IDOL_MESSAGE" ||
-            type === "LOGIN_NEW_DEVICE" ||
-            type === "LOGIN_FAIL_LOCKED"
+            type === "IDOL_MESSAGE_STACK"
         ) {
             return "chat";
         }
@@ -86,9 +194,9 @@ const NotificationHistoryTab: React.FC = () => {
     };
 
     const filteredItems = useMemo(() => {
-        if (filter === "all") return items;
-        return items.filter((item) => getCategory(item) === filter);
-    }, [items, filter]);
+        if (filter === "all") return historyItems;
+        return historyItems.filter((item) => getCategory(item) === filter);
+    }, [historyItems, filter]);
 
     const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
 
@@ -98,24 +206,7 @@ const NotificationHistoryTab: React.FC = () => {
         return filteredItems.slice(start, end);
     }, [filteredItems, page]);
 
-    const formatNotificationTimeToKST = (value?: string | null) => {
-        if (!value) return "";
-
-        const date = value.endsWith("Z") ? new Date(value) : new Date(`${value}Z`);
-
-        if (Number.isNaN(date.getTime())) return value;
-
-        return new Intl.DateTimeFormat("ko-KR", {
-            timeZone: "Asia/Seoul",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-        }).format(date);
-    };
-
-    const getNotificationTitle = (notification: NotificationItem) => {
+    const getNotificationTitle = (notification: HistoryItem) => {
         const voteTitle = notification.args?.voteTitle;
         const boardTitle = notification.args?.title;
         const idolName = notification.args?.idolName;
@@ -123,6 +214,19 @@ const NotificationHistoryTab: React.FC = () => {
         const concertName = notification.args?.concertName;
         const idolId = notification.args?.idolId;
         const groupId = notification.args?.groupId;
+        const unreadCount = notification.args?.unreadCount;
+
+        if (notification.type === "IDOL_MESSAGE_STACK") {
+            return groupName && idolName
+                ? `${groupName} ${idolName} 채팅 알림 ${unreadCount ? `(${unreadCount}개)` : ""}`.trim()
+                : `${idolName ?? "아이돌"} 채팅 알림 ${unreadCount ? `(${unreadCount}개)` : ""}`.trim();
+        }
+
+        if (notification.type === "IDOL_MESSAGE") {
+            return idolName
+                ? `${idolName}의 메시지가 도착했습니다.`
+                : "아이돌 메시지가 도착했습니다.";
+        }
 
         if (notification.type === "IDOL_SUB_STARTED") {
             return idolId
@@ -222,17 +326,19 @@ const NotificationHistoryTab: React.FC = () => {
                 : "투표 결과가 공개되었습니다.";
         }
 
-        return boardTitle || notification.type;
+        return boardTitle || "알림";
     };
 
-    const getNotificationLabel = (notification: NotificationItem) => {
+    const getNotificationLabel = (notification: HistoryItem) => {
         const boardType = notification.args?.boardType;
+
+        if (notification.type === "IDOL_MESSAGE_STACK") return "아이돌 채팅";
+        if (notification.type === "IDOL_MESSAGE") return "아이돌 메시지";
 
         if (boardType === "ADMIN_NOTICE") return "공지";
         if (boardType === "GROUP_OFFICIAL") return "그룹 공식";
         if (boardType === "GROUP_FAN") return "그룹 팬";
         if (boardType === "IDOL_OFFICIAL") return "아이돌 공식";
-        if (notification.type === "IDOL_MESSAGE") return "아이돌 메시지";
 
         if (
             notification.type === "IDOL_SUB_STARTED" ||
@@ -262,28 +368,24 @@ const NotificationHistoryTab: React.FC = () => {
         }
 
         if (
-            notification.type === "LOGIN_NEW_DEVICE" ||
-            notification.type === "LOGIN_FAIL_LOCKED"
+            notification.type === "CHAT_IDOL_ONLINE"
         ) {
-            return "로그인";
+            return "알림";
         }
 
-        if (
-            notification.type === "REPORT_RECEIVED" ||
-            notification.type === "ACCOUNT_STATUS_CHANGED"
-        ) {
-            return "시스템";
-        }
-
-        return "알림";
+        return "시스템";
     };
 
-    const getNotificationIcon = (notification: NotificationItem) => {
+    const getNotificationIcon = (notification: HistoryItem) => {
         const boardType = notification.args?.boardType;
+
+        if (notification.type === "IDOL_MESSAGE_STACK" || notification.type === "IDOL_MESSAGE") {
+            return "🎤";
+        }
 
         if (boardType === "ADMIN_NOTICE") return "📢";
         if (boardType === "GROUP_OFFICIAL" || boardType === "GROUP_FAN") return "👥";
-        if (boardType === "IDOL_OFFICIAL" || notification.type === "IDOL_MESSAGE") return "🎤";
+        if (boardType === "IDOL_OFFICIAL") return "🎤";
 
         if (
             notification.type === "VOTE_OPENED" ||
@@ -306,13 +408,6 @@ const NotificationHistoryTab: React.FC = () => {
         }
 
         if (
-            notification.type === "LOGIN_NEW_DEVICE" ||
-            notification.type === "LOGIN_FAIL_LOCKED"
-        ) {
-            return "🔐";
-        }
-
-        if (
             notification.type === "CONCERT_OPENED" ||
             notification.type === "RESERVATION_CREATED"
         ) {
@@ -320,13 +415,12 @@ const NotificationHistoryTab: React.FC = () => {
         }
 
         if (
-            notification.type === "REPORT_RECEIVED" ||
-            notification.type === "ACCOUNT_STATUS_CHANGED"
+            notification.type === "CHAT_IDOL_ONLINE"
         ) {
-            return "⚠️";
+            return "🔔";
         }
 
-        return "🔔";
+        return "⚠️";
     };
 
     const allVisibleSelected =
@@ -352,13 +446,31 @@ const NotificationHistoryTab: React.FC = () => {
         );
     };
 
-    const handleDeleteSelected = () => {
+    const handleDeleteSelected = async () => {
         if (selectedIds.length === 0) return;
 
-        setItems((prev) =>
-            prev.filter((item) => !selectedIds.includes(item.notificationId))
-        );
-        setSelectedIds([]);
+        const normalNotificationIds = selectedIds.filter((id) => id > 0);
+        const stackIds = selectedIds.filter((id) => id < 0);
+
+        try {
+            if (normalNotificationIds.length > 0) {
+                await deleteManyNotifications(normalNotificationIds);
+            }
+
+            if (stackIds.length > 0) {
+                setIdolStacks((prev) =>
+                    prev.filter((stack) => !stackIds.includes(-100000 - stack.idolId))
+                );
+            }
+
+            setNotifications((prev) =>
+                prev.filter((item) => !normalNotificationIds.includes(item.notificationId))
+            );
+
+            setSelectedIds([]);
+        } catch (error) {
+            showErrorToast("알림 삭제 중 오류가 발생했습니다.");
+        }
     };
 
     const handleFilterChange = (nextFilter: FilterType) => {
@@ -380,7 +492,7 @@ const NotificationHistoryTab: React.FC = () => {
             setLoadingMore(true);
             const data = await getNotificationList(FETCH_SIZE, nextCursor);
 
-            setItems((prev) => {
+            setNotifications((prev) => {
                 const merged = [...prev, ...(data.items ?? [])];
                 return merged.filter(
                     (item, index, arr) =>
@@ -406,12 +518,9 @@ const NotificationHistoryTab: React.FC = () => {
             await ensureNextPageData();
         }
 
-        const updatedFilteredLength =
-            filter === "all"
-                ? items.length
-                : items.filter((item) => getCategory(item) === filter).length;
+        const updatedLength = filteredItems.length;
 
-        if ((nextPage - 1) * PAGE_SIZE < updatedFilteredLength || hasNext) {
+        if ((nextPage - 1) * PAGE_SIZE < updatedLength || hasNext) {
             setPage(nextPage);
             setSelectedIds([]);
         }
@@ -425,12 +534,12 @@ const NotificationHistoryTab: React.FC = () => {
     }, [filteredItems.length, page]);
 
     const filterTabs: { key: FilterType; label: string }[] = [
-        {key: "all", label: "전체"},
-        {key: "vote", label: "투표"},
-        {key: "subscription", label: "구독"},
-        {key: "chat", label: "채팅"},
-        {key: "concert", label: "콘서트"},
-        {key: "system", label: "시스템"},
+        { key: "all", label: "전체" },
+        { key: "vote", label: "투표" },
+        { key: "subscription", label: "구독" },
+        { key: "chat", label: "채팅" },
+        { key: "concert", label: "콘서트" },
+        { key: "system", label: "시스템" },
     ];
 
     if (loading) {
@@ -512,8 +621,7 @@ const NotificationHistoryTab: React.FC = () => {
                                     />
                                 </div>
 
-                                <div
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-base">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-base">
                                     {getNotificationIcon(notification)}
                                 </div>
 
@@ -556,10 +664,7 @@ const NotificationHistoryTab: React.FC = () => {
 
                 <button
                     onClick={handleNextPage}
-                    disabled={
-                        loadingMore ||
-                        (!hasNext && page >= totalPages)
-                    }
+                    disabled={loadingMore || (!hasNext && page >= totalPages)}
                     className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
                         loadingMore || (!hasNext && page >= totalPages)
                             ? "cursor-not-allowed border-gray-200 text-gray-300"

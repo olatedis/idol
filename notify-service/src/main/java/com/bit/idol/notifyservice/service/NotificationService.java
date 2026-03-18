@@ -102,6 +102,19 @@ public class NotificationService {
         return repo.updateOneAsRead(userId, notificationId, LocalDateTime.now());
     }
 
+    @Transactional
+    public int deleteOne(int userId, int notificationId) {
+        return repo.deleteOneByUserId(userId, notificationId);
+    }
+
+    @Transactional
+    public int deleteMany(int userId, List<Integer> notificationIds) {
+        if (notificationIds == null || notificationIds.isEmpty()) {
+            return 0;
+        }
+        return repo.deleteManyByUserId(userId, notificationIds);
+    }
+
     private Map<String, String> parseArgs(String json) {
         if (json == null || json.isBlank()) return null;
         try {
