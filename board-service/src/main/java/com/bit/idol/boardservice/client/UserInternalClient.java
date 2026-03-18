@@ -3,6 +3,8 @@ package com.bit.idol.boardservice.client;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import com.bit.idol.boardservice.dto.InternalUserResponse;
 
 @FeignClient(name = "user-service", url = "${clients.user-service.url}")
 public interface UserInternalClient {
@@ -34,4 +36,7 @@ public interface UserInternalClient {
             @PathVariable("agencyUserId") Integer agencyUserId,
             @PathVariable("groupId") Long groupId
     );
+
+    @PostMapping("/internal/users/info/ids")
+    java.util.Map<Integer, InternalUserResponse> getUsersByIds(@org.springframework.web.bind.annotation.RequestBody java.util.List<Integer> userIds);
 }

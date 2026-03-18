@@ -31,7 +31,7 @@ const IdolPostWritePage: React.FC = () => {
     if (!accessToken) {
         return <div className="text-sm text-red-600">로그인이 필요합니다.</div>;
     }
-    if (user?.status === "RESTRICTED") {
+    if (user?.status?.toUpperCase() === "RESTRICTED") {
         return <div className="text-sm text-red-600">활동 제한 상태에서는 글을 작성할 수 없습니다.</div>;
     }
     if (!canWrite) {
@@ -42,7 +42,7 @@ const IdolPostWritePage: React.FC = () => {
         setError("");
 
         if (!accessToken) return setError("로그인이 필요합니다.");
-        if (user?.status === "RESTRICTED") return setError("활동 제한 상태에서는 글을 작성할 수 없습니다.");
+        if (user?.status?.toUpperCase() === "RESTRICTED") return setError("활동 제한 상태에서는 글을 작성할 수 없습니다.");
         if (!canWrite) return setError("권한이 없습니다.");
         if (!groupId) return setError("groupId가 없습니다.");
         if (!idolId) return setError("idolId가 없습니다.");

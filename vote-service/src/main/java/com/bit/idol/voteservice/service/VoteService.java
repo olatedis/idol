@@ -151,10 +151,7 @@ public class VoteService {
                     voteResultArgs.put("groupId", String.valueOf(vote.getTargetGroupId()));
                 }
 
-                String voteResultRedirectUrl = "/vote";
-                if (vote.getTargetGroupId() != null) {
-                    voteResultRedirectUrl = "/group/" + vote.getTargetGroupId() + "/vote";
-                }
+                String voteResultRedirectUrl = "/group/" + vote.getTargetGroupId() + "/vote";
 
                 NotificationEventDto voteResultEvent = NotificationEventDto.builder()
                         .eventId(java.util.UUID.randomUUID().toString())
@@ -246,10 +243,7 @@ public class VoteService {
                 submitArgs.put("groupId", String.valueOf(voteInfo2.getTargetGroupId()));
             }
 
-            String submitRedirectUrl = "/vote";
-            if (voteInfo2.getTargetGroupId() != null) {
-                submitRedirectUrl = "/group/" + voteInfo2.getTargetGroupId() + "/vote";
-            }
+            String submitRedirectUrl = "/group/" + voteInfo2.getTargetGroupId() + "/vote";
 
             NotificationEventDto submitEvent = NotificationEventDto.builder()
                     .eventId(java.util.UUID.randomUUID().toString())

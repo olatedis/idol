@@ -114,17 +114,16 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private Mono<Void> mutateAndForward(ServerWebExchange exchange, GatewayFilterChain chain, String userId,
             String username, String nickname, String role) {
         ServerHttpRequest.Builder builder = exchange.getRequest().mutate()
-                .header("X-User-Id", userId)
-                .header("X-Role", role);
-
-        if (username != null) {
-            builder.header("X-Username", username);
-        }
-
-        if (nickname != null) {
-            // 한글 닉네임 인코딩 처리
-            builder.header("X-Nickname", URLEncoder.encode(nickname, StandardCharsets.UTF_8));
-        }
+                .headers(headers -> {
+                    headers.set("X-User-Id", userId);
+                    headers.set("X-Role", role);
+                    if (username != null) {
+                        headers.set("X-Username", username);
+                    }
+                    if (nickname != null) {
+                        headers.set("X-Nickname", URLEncoder.encode(nickname, StandardCharsets.UTF_8));
+                    }
+                });
 
         ServerWebExchange mutatedExchange = exchange.mutate().request(builder.build()).build();
         return chain.filter(mutatedExchange);

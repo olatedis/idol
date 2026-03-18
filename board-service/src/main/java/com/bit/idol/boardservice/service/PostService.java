@@ -3,6 +3,7 @@ package com.bit.idol.boardservice.service;
 import com.bit.idol.boardservice.client.SearchInternalClient;
 import com.bit.idol.boardservice.client.SubscriptionInternalClient;
 import com.bit.idol.boardservice.client.UserInternalClient;
+import com.bit.idol.boardservice.dto.InternalUserResponse;
 import com.bit.idol.boardservice.dto.PostListResponse;
 import com.bit.idol.boardservice.dto.PostResponse;
 import com.bit.idol.boardservice.dto.PostUpdateRequest;
@@ -91,7 +92,18 @@ public class PostService {
         // 알림 이벤트(기존)
         eventPublisher.publishEvent(new PostCreatedEvent(saved));
 
-        return toResponse(saved);
+        PostResponse response = toResponse(saved);
+        // 작성 직후에는 자신의 닉네임을 user-service에서 가져와 채움 (선택적: 프론트에서 이미 알고 있긴 함)
+        try {
+            var userMap = userInternalClient.getUsersByIds(List.of(userId));
+            if (userMap.containsKey(userId)) {
+                response.setAuthorNickname(userMap.get(userId).getNickname());
+            }
+        } catch (Exception e) {
+            log.warn("작성자 닉네임 조회 실패: {}", e.getMessage());
+        }
+
+        return response;
     }
 
     @Transactional
@@ -163,6 +175,9 @@ public class PostService {
                     .map(this::toListResponse)
                     .toList();
 
+            // [추가] 닉네임 배치 조회 및 매핑
+            populateNicknames(dtoList);
+
             return new org.springframework.data.domain.PageImpl<>(dtoList, pageable, searchPage.getTotalElements());
         }
 
@@ -184,7 +199,26 @@ public class PostService {
                     : postRepository.findByBoardTypeOrderByCreatedAtDesc(boardType, pageable);
         }
 
-        return page.map(this::toListResponse);
+        return page.map(p -> {
+            PostListResponse res = toListResponse(p);
+            // 단건 변환 시에는 배치 처리가 어려우므로 전체 리스트에 대해 나중에 처리하거나,
+            // Page.map 이후에 content를 가져와서 처리하는 것이 효율적
+            return res;
+        });
+    }
+
+    // selectAll에서 Page 반환 전에 닉네임 채우기 위해 오버로딩 또는 내부 처리
+    @Transactional(readOnly = true)
+    public Page<PostListResponse> selectAllWithNicknames(
+            BoardType boardType,
+            Long idolId,
+            Long groupId,
+            String keyword,
+            Pageable pageable
+    ) {
+        Page<PostListResponse> page = selectAll(boardType, idolId, groupId, keyword, pageable);
+        populateNicknames(page.getContent());
+        return page;
     }
 
     @Transactional
@@ -459,6 +493,18 @@ public class PostService {
         PostResponse res = new PostResponse();
         BeanUtils.copyProperties(post, res);
 
+        // [추가] 단건 조회 시 닉네임 채우기
+        try {
+            var userMap = userInternalClient.getUsersByIds(List.of(post.getAuthorId()));
+            if (userMap.containsKey(post.getAuthorId())) {
+                res.setAuthorNickname(userMap.get(post.getAuthorId()).getNickname());
+            } else {
+                res.setAuthorNickname("알 수 없음");
+            }
+        } catch (Exception e) {
+            log.warn("상세조회 닉네임 조회 실패: authorId={}, err={}", post.getAuthorId(), e.getMessage());
+        }
+
         // comments 포함(최신이 위)
         List<Comment> comments = commentRepository.findByPost_PostIdOrderByCreatedAtDesc(post.getPostId());
         List<CommentResponse> commentResponses = comments.stream()
@@ -507,5 +553,28 @@ public class PostService {
         if (t.isEmpty())
             throw new RuntimeException("빈 문자열은 허용되지 않습니다.");
         return t;
+    }
+
+    private void populateNicknames(List<PostListResponse> list) {
+        if (list == null || list.isEmpty()) return;
+
+        List<Integer> authorIds = list.stream()
+                .map(PostListResponse::getAuthorId)
+                .distinct()
+                .toList();
+
+        try {
+            var userMap = userInternalClient.getUsersByIds(authorIds);
+            for (PostListResponse res : list) {
+                var u = userMap.get(res.getAuthorId());
+                if (u != null) {
+                    res.setAuthorNickname(u.getNickname());
+                } else {
+                    res.setAuthorNickname("알 수 없음");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("게시글 목록 닉네임 배치 조회 실패: {}", e.getMessage());
+        }
     }
 }

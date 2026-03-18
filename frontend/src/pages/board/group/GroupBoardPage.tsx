@@ -1,7 +1,8 @@
-import React, {useEffect, useMemo, useRef, useState} from "react";
-import {useNavigate, useParams, useSearchParams} from "react-router-dom";
-import {useAuthStore} from "../../../stores/authStore.ts";
-import {api} from "../../../api/axios.ts";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useAuthStore } from "../../../stores/authStore.ts";
+import { api } from "../../../api/axios.ts";
+import { showErrorToast } from "../../../utils/alert";
 
 type BoardKind = "official" | "fan";
 
@@ -12,6 +13,7 @@ type PostListResponse = {
     groupId?: number | null;
 
     authorId: number;
+    authorNickname: string | null;
     title: string;
 
     viewCount: number;
@@ -63,11 +65,11 @@ const formatDateToKST = (dateString: string) => {
 };
 
 const GroupBoardPage: React.FC = () => {
-    const {groupId} = useParams();
+    const { groupId } = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
 
-    const {accessToken} = useAuthStore();
+    const { accessToken, user } = useAuthStore();
 
     // URL 상태 (필터/정렬/검색만 유지)
     const board = (sp.get("type") as BoardKind) || "official";
@@ -101,8 +103,8 @@ const GroupBoardPage: React.FC = () => {
     // 필터 버튼
     const leftFilters = useMemo(() => {
         return [
-            {label: "그룹 공식", type: "official" as BoardKind},
-            {label: "그룹 팬", type: "fan" as BoardKind},
+            { label: "그룹 공식", type: "official" as BoardKind },
+            { label: "그룹 팬", type: "fan" as BoardKind },
         ];
     }, []);
 
@@ -166,7 +168,7 @@ const GroupBoardPage: React.FC = () => {
         // search-service 연동: keyword가 있을 때만 전달 (서버 파라미터명: keyword)
         if (q && q.trim()) params.keyword = q.trim();
 
-        const res = await api.get("/board/posts", {params});
+        const res = await api.get("/board/posts", { params });
         const data = res.data as any;
         const content = (data.content ?? []) as PostListResponse[];
 
@@ -285,7 +287,7 @@ const GroupBoardPage: React.FC = () => {
 
                 setPage((prev) => prev + 1);
             },
-            {root: null, rootMargin: "200px", threshold: 0}
+            { root: null, rootMargin: "200px", threshold: 0 }
         );
 
         io.observe(el);
@@ -305,11 +307,12 @@ const GroupBoardPage: React.FC = () => {
         return () => document.removeEventListener("mousedown", onDocDown);
     }, [idolOpen]);
 
-    const scrollTop = () => window.scrollTo({top: 0, behavior: "smooth"});
+    const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
     const requireLoginOrStop = () => {
         if (accessToken) return true;
-        alert("로그인이 필요합니다.");
+        // alert("로그인이 필요합니다.");
+        showErrorToast("로그인이 필요합니다.");
         return false;
     };
 
@@ -542,13 +545,13 @@ const GroupBoardPage: React.FC = () => {
                                     {p.title}
                                     {Number((p as any).commentCount) > 0 && (
                                         <span className="ml-3 text-[var(--color-idol-dark)]/80 text-sm font-normal">
-                                        [ {Number((p as any).commentCount)} ]
-                                    </span>
+                                            [ {Number((p as any).commentCount)} ]
+                                        </span>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="text-sm text-gray-700 tabular-nums">{p.authorId}</div>
+                            <div className="text-sm text-gray-700 truncate">{p.authorNickname || p.authorId}</div>
 
                             <div className="text-sm text-gray-600">{formatDateToKST(p.createdAt)}</div>
 
@@ -560,7 +563,7 @@ const GroupBoardPage: React.FC = () => {
             </div>
 
             {/* 무한스크롤 sentinel */}
-            <div ref={sentinelRef} className="h-10"/>
+            <div ref={sentinelRef} className="h-10" />
 
             {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
             {!loading && !loadingMore && posts.length > 0 && !hasMore && (
@@ -584,20 +587,24 @@ const GroupBoardPage: React.FC = () => {
                     ↑
                 </button>
 
-                <button
-                    type="button"
-                    onClick={onClickWrite}
-                    className="
+                {(!(board === 'official') || (user?.role === 'IDOL' || user?.role === 'AGENCY' || user?.role === 'ADMIN')) && (
+                    <button
+                        type="button"
+                        onClick={onClickWrite}
+                        disabled={user?.status?.toUpperCase() === 'RESTRICTED'}
+                        className={`
                     px-5 py-3 rounded-2xl
-                    bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)]
                     text-white text-sm font-semibold
                     shadow-md shadow-[var(--color-idol-point)]/20
-                    hover:brightness-90 active:scale-[0.99]
-                    transition
-                "
-                >
-                    글쓰기
-                </button>
+                    transition active:scale-[0.99]
+                    ${user?.status?.toUpperCase() === 'RESTRICTED'
+                                ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                                : 'bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] hover:brightness-90'}
+                `}
+                    >
+                        글쓰기
+                    </button>
+                )}
             </div>
         </div>
     );

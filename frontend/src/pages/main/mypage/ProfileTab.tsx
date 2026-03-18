@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { api } from "../../../api/axios";
+import { useAuthStore } from "../../../stores/authStore";
 import { showAlert, showConfirm, showErrorToast, showSuccessToast } from "../../../utils/alert";
 
 interface UserMyPageDto {
@@ -126,7 +127,8 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
         try {
             await api.post("/users/withdraw", { password: userInfo.provider ? "" : withdrawPwd });
             await showSuccessToast("회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.");
-            window.location.href = "/"; // 메인으로 튕기면서 로그아웃 처리
+            useAuthStore.getState().logout(); // 세션 정리 (로그아웃)
+            window.location.href = "/"; // 메인으로 이동
         } catch (err: any) {
             showErrorToast(err?.response?.data?.message || "회원 탈퇴에 실패했습니다.");
         }

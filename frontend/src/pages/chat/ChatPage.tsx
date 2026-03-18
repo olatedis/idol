@@ -20,8 +20,9 @@ const WS_URL = API_BASE_URL.replace("http", "ws") + "/ws-chat";
 const ChatPage: React.FC = () => {
     const { groupId } = useParams<{ groupId?: string }>();
     const [searchParams] = useSearchParams();
-    const { user } = useAuthStore();
-
+    const user = useAuthStore(state => state.user);
+    const updateUser = useAuthStore(state => state.updateUser);
+    
     // UI 상태 관리
     const [selectedIdolId, setSelectedIdolId] = useState<number | null>(null);
     const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
@@ -61,9 +62,9 @@ const ChatPage: React.FC = () => {
         if (user?.role === 'IDOL') {
             api.get('/idols/me')
                 .then(res => setMyIdolId(res.data.idolId))
-                .catch(() => {});
+                .catch(() => { });
         }
-    }, [user]);
+    }, [user?.role]);
 
     // 채팅방 목록(그룹 내 멤버 리스트) 불러오기
     const fetchChatRooms = useCallback(async () => {
@@ -196,13 +197,14 @@ const ChatPage: React.FC = () => {
                         setMessages((prev) => {
                             // ID가 일치하는 메시지 찾기
                             let targetId = parsed.id;
-                            
+
                             // 만약 본인이 보낸 메시지라면, temp ID 상태일 수 있으므로 가장 최근 메시지를 타겟으로 시도
-                            const currentUserId = user?.userId ? String(user.userId) : null;
+                            const latestUser = useAuthStore.getState().user;
+                            const currentUserId = latestUser?.userId ? String(latestUser.userId) : null;
                             const eventSenderId = parsed.senderId ? String(parsed.senderId) : null;
 
                             if (currentUserId && eventSenderId === currentUserId) {
-                                const lastMine = [...prev].reverse().find(m => String(m.senderId) === currentUserId);
+                                const lastMine = prev.slice().reverse().find(m => String(m.senderId) === currentUserId);
                                 if (lastMine && String(lastMine.id).startsWith("temp-")) {
                                     targetId = lastMine.id;
                                 }
@@ -210,11 +212,12 @@ const ChatPage: React.FC = () => {
 
                             return prev.map(m => m.id === targetId ? { ...m, content: "삭제된 메시지입니다.", type: "DELETED" } : m);
                         });
-                        
+
                         // AI 필터링에 의한 본인 메시지 삭제 시 즉각 피드백 (조건 비교 강화)
                         const isAiFiltered = parsed.deleteReason === "AI_FILTERED";
-                        const isMyMessage = String(parsed.senderId) === String(user?.userId);
-                        
+                        const latestUser = useAuthStore.getState().user;
+                        const isMyMessage = String(parsed.senderId) === String(latestUser?.userId);
+
                         if (isAiFiltered && isMyMessage) {
                             showErrorToast("작성하신 메시지가 AI 필터링에 의해 부적절하다고 판단되어 삭제되었습니다.");
                         }
@@ -261,11 +264,11 @@ const ChatPage: React.FC = () => {
                         // 2. 내가 보낸 메시지인 경우, 기존의 Optimistic UI(temp-) 메시지를 서버 데이터로 교체
                         if (String(parsed.senderId) === String(user.userId) && parsed.id && !String(parsed.id).startsWith("temp-")) {
                             // 가장 최근의 매칭되는 임시 메시지 찾기
-                            const lastTempIndex = [...prev].reverse().findIndex(m => 
-                                String(m.id).startsWith("temp-") && 
+                            const lastTempIndex = [...prev].reverse().findIndex(m =>
+                                String(m.id).startsWith("temp-") &&
                                 (m.content === parsed.content || m.type !== "TEXT") // 미디어는 URL이 다를 수 있으므로 타입으로 체크
                             );
-                            
+
                             if (lastTempIndex !== -1) {
                                 const realIndex = prev.length - 1 - lastTempIndex;
                                 const newMessages = [...prev];
@@ -275,10 +278,11 @@ const ChatPage: React.FC = () => {
                         }
 
                         // 3. 남이 보낸 메시지이거나 매칭되는 임시 메시지가 없는 경우 새로 추가
-                        return [...prev, { ...parsed, me: String(parsed.senderId) === String(user.userId) }];
+                        const latestUser = useAuthStore.getState().user;
+                        return [...prev, { ...parsed, me: String(parsed.senderId) === String(latestUser?.userId) }];
                     });
                     setTimeout(scrollToBottom, 100);
-                    setIsIdolTyping(false); 
+                    setIsIdolTyping(false);
                 };
 
                 // 공지성 및 아이돌 발송 메시지용 공용 채널
@@ -286,15 +290,32 @@ const ChatPage: React.FC = () => {
 
                 // 에러 발생 및 도배 방지 시 서버 브로드캐스팅 수신
                 client.subscribe(`/queue/errors/${user.userId}`, (message: any) => {
-                    const errorPayload = JSON.parse(message.body);
-                    // console.error("STOMP Error Received:", errorPayload);
+                    const payload = JSON.parse(message.body);
 
-                    if (errorPayload.code === "RATE_LIMIT") {
-                        showErrorToast(`전송 제한: ${errorPayload.message}`);
-                    } else if (errorPayload.code === "FORBIDDEN") {
-                        showErrorToast(`권한 오류: ${errorPayload.message}`);
+                    // 1. 회원 탈퇴 알림 (타 기기/탭 로그아웃 대응)
+                    if (payload.type === "WITHDRAWAL") {
+                        showAlert("안내", payload.message || "회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.", "info").then(() => {
+                            useAuthStore.getState().logout();
+                            window.location.href = "/";
+                        });
+                        return;
+                    }
+
+                    // 2. 활동 제한 알림
+                    if (payload.type === "STATUS_UPDATE" && payload.status?.toUpperCase() === "RESTRICTED") {
+                        showAlert("활동 제한", "부적절한 활동으로 인해 서비스 이용이 제한되었습니다.", "warning");
+                        
+                        // 전역 상태에 즉시 반영
+                        updateUser({ status: "RESTRICTED" });
+                        return;
+                    }
+
+                    if (payload.code === "RATE_LIMIT") {
+                        showErrorToast(`전송 제한: ${payload.message}`);
+                    } else if (payload.code === "FORBIDDEN") {
+                        showErrorToast(`권한 오류: ${payload.message}`);
                     } else {
-                        showErrorToast(`서버 오류: ${errorPayload.message || "메시지 전송 중 문제가 발생했습니다."}`);
+                        showErrorToast(`서버 오류: ${payload.message || "메시지 전송 중 문제가 발생했습니다."}`);
                     }
 
                     // Optimistic UI로 올라간 실패한 임시 메시지 즉각 롤백(제거)
@@ -322,7 +343,7 @@ const ChatPage: React.FC = () => {
             isMounted = false;
             client.deactivate();
         };
-    }, [selectedIdolId, user]);
+    }, [selectedIdolId, user?.userId, user?.role]); // user 객체 전체 대신 필요한 필드만 의존성으로 설정
 
     // 과거 메시지 불러오기 로직 (무한 스크롤)
     const loadMoreHistory = useCallback(async () => {
@@ -510,14 +531,15 @@ const ChatPage: React.FC = () => {
     const handleBackToList = useCallback(() => {
         setChatRooms(prev => prev.map(r => r.idolId === selectedIdolId ? { ...r, unreadCount: 0 } : r));
         if (selectedIdolId) {
-            api.post(`/chat/read/${selectedIdolId}`).catch(() => {});
+            api.post(`/chat/read/${selectedIdolId}`).catch(() => { });
         }
         setIsSearchOpen(false);
         setSelectedIdolId(null);
     }, [selectedIdolId]);
 
     const isOtherIdolRoom = useMemo(() => user?.role === 'IDOL' && myIdolId !== null && selectedIdolId !== myIdolId, [user?.role, myIdolId, selectedIdolId]);
-    const isRestricted = useMemo(() => user?.status === 'RESTRICTED', [user?.status]);
+    const isRestricted = useMemo(() => user?.status?.toUpperCase() === 'RESTRICTED', [user?.status]);
+    
     const isInputDisabled = isOtherIdolRoom || isSending || isUploading || isRestricted;
 
     const currentRoom = useMemo(() => chatRooms.find(r => r.idolId === selectedIdolId), [chatRooms, selectedIdolId]);
@@ -528,9 +550,9 @@ const ChatPage: React.FC = () => {
             <div className="absolute -bottom-10 left-20 w-80 h-80 bg-[var(--color-idol)] rounded-full mix-blend-multiply filter blur-3xl opacity-20 pointer-events-none"></div>
 
             {selectedIdolId === null ? (
-                <ChatRoomList 
-                    rooms={chatRooms} 
-                    isLoading={isLoading} 
+                <ChatRoomList
+                    rooms={chatRooms}
+                    isLoading={isLoading}
                     onSelectRoom={handleSelectRoom}
                     currentUserIdolId={myIdolId}
                     userRole={user?.role}
@@ -562,10 +584,10 @@ const ChatPage: React.FC = () => {
                         </button>
                     </div>
 
-                    <SearchDrawer 
-                        isOpen={isSearchOpen} 
-                        onClose={() => setIsSearchOpen(false)} 
-                        keyword={searchKeyword} 
+                    <SearchDrawer
+                        isOpen={isSearchOpen}
+                        onClose={() => setIsSearchOpen(false)}
+                        keyword={searchKeyword}
                         onKeywordChange={setSearchKeyword}
                         onSearch={handleSearch}
                         isSearching={isSearching}
@@ -588,7 +610,7 @@ const ChatPage: React.FC = () => {
                         )}
 
                         {messages.map((msg, idx) => (
-                            <MessageItem 
+                            <MessageItem
                                 key={msg.id || `msg-${idx}`}
                                 message={msg}
                                 isMine={Boolean(msg.me || String(msg.senderId) === String(user?.userId))}
@@ -596,6 +618,7 @@ const ChatPage: React.FC = () => {
                                 stageName={currentRoom?.stageName}
                                 onImageClick={(url) => window.open(url, "_blank")}
                                 scrollToBottom={scrollToBottom}
+                                viewerRole={user?.role}
                             />
                         ))}
 
@@ -605,7 +628,7 @@ const ChatPage: React.FC = () => {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    <ChatInput 
+                    <ChatInput
                         onSendMessage={handleSendMessage}
                         onFileUpload={handleFileUpload}
                         onTyping={handleTyping}

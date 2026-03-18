@@ -2,6 +2,8 @@ package com.bit.idol.boardservice.service;
 
 import com.bit.idol.boardservice.client.SubscriptionInternalClient;
 import com.bit.idol.boardservice.dto.reaction.PostReactionResponse;
+import com.bit.idol.boardservice.dto.event.NotifyRequestEvent;
+import com.bit.idol.boardservice.dto.event.TargetType;
 import com.bit.idol.boardservice.entity.BoardType;
 import com.bit.idol.boardservice.entity.Idol;
 import com.bit.idol.boardservice.entity.Post;
@@ -11,11 +13,17 @@ import com.bit.idol.boardservice.repository.IdolRepository;
 import com.bit.idol.boardservice.repository.PostReactionRepository;
 import com.bit.idol.boardservice.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PostReactionService {
@@ -27,6 +35,8 @@ public class PostReactionService {
 
     // IDOL 본인 체크용 (board DB idols)
     private final IdolRepository idolRepository;
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional
     public PostReactionResponse like(Long postId, Integer userId, Role role) {
@@ -72,6 +82,8 @@ public class PostReactionService {
             if (requested == ReactionType.LIKE) {
                 postRepository.incrementLikeCount(postId);
                 post.setLikeCount(post.getLikeCount() + 1); // 객체 동기화
+                // [알림] 게시글 작성자에게 알림 발송
+                sendNotification(post, userId);
             } else {
                 postRepository.incrementDislikeCount(postId);
                 post.setDislikeCount(post.getDislikeCount() + 1); // 객체 동기화
@@ -113,6 +125,8 @@ public class PostReactionService {
         if (requested == ReactionType.LIKE) {
             postRepository.incrementLikeCount(postId);
             post.setLikeCount(post.getLikeCount() + 1);
+            // [알림] 게시글 작성자에게 알림 발송
+            sendNotification(post, userId);
         } else {
             postRepository.incrementDislikeCount(postId);
             post.setDislikeCount(post.getDislikeCount() + 1);
@@ -178,5 +192,44 @@ public class PostReactionService {
         res.setDislikeCount(post.getDislikeCount());
         res.setMyReaction(my);
         return res;
+    }
+
+    private void sendNotification(Post post, Integer actorId) {
+        if (post.getAuthorId().equals(actorId)) return; // 본인 글에 본인이 좋아요 누르면 생략
+
+        try {
+            String redirectUrl = getRedirectUrl(post);
+
+            NotifyRequestEvent event = NotifyRequestEvent.builder()
+                    .eventId(UUID.randomUUID().toString() + ":" + actorId)
+                    .type("POST_LIKED")
+                    .targetType(TargetType.USER)
+                    .targetId(String.valueOf(post.getAuthorId()))
+                    .args(Map.of(
+                            "postId", String.valueOf(post.getPostId()),
+                            "actorId", String.valueOf(actorId)
+                    ))
+                    .redirectUrl(redirectUrl)
+                    .occurredAt(LocalDateTime.now().toString())
+                    .build();
+
+            kafkaTemplate.send("notify-request-topic", event);
+            log.info("좋아요 알림 발송 완료: postId={}, receiverId={}", post.getPostId(), post.getAuthorId());
+        } catch (Exception e) {
+            log.warn("좋아요 알림 발송 실패: {}", e.getMessage());
+        }
+    }
+
+    private String getRedirectUrl(Post post) {
+        if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
+            return "/idol/" + post.getIdolId() + "/board/" + post.getPostId();
+        }
+        if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
+            return "/group/" + post.getGroupId() + "/board/" + post.getPostId();
+        }
+        if (post.getBoardType() == BoardType.ADMIN_NOTICE) {
+            return "/notices/" + post.getPostId();
+        }
+        return "/idol"; // Safe fallback
     }
 }

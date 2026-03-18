@@ -33,7 +33,7 @@ public class PostController {
             @RequestParam(value = "keyword", required = false) String keyword,
             Pageable pageable
     ) {
-        Page<PostListResponse> page = postService.selectAll(boardType, idolId, groupId, keyword, pageable);
+        Page<PostListResponse> page = postService.selectAllWithNicknames(boardType, idolId, groupId, keyword, pageable);
         return ResponseEntity.ok(page);
     }
 

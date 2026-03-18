@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
         @Index(name = "idx_user_id", columnList = "user_id"),
         @Index(name = "idx_idol_id", columnList = "idol_id"),
         @Index(name = "idx_status", columnList = "status"),
-        @Index(name = "idx_idol_stage_name", columnList = "stage_name")
+        @Index(name = "idx_idol_stage_name", columnList = "idol_stage_name")
 })
 @Getter
 @NoArgsConstructor
@@ -65,6 +65,13 @@ public class Subscription {
             this.expiredAt = LocalDateTime.now().plusYears(1);
         }
         this.nextRenewalAt = LocalDateTime.now().plusMonths(plan.getDurationInMonths());
+    }
+
+    public void update(SubscriptionPlan plan, boolean autoRenew) {
+        this.plan = plan;
+        this.autoRenew = autoRenew;
+        this.status = SubscriptionStatus.PENDING; // 이미 PENDING일 수도 있지만, 해지된 걸 다시 살릴 수도 있으므로
+        this.startedAt = LocalDateTime.now();
     }
 
     public void cancel() {

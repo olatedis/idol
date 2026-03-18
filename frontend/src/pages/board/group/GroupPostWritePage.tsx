@@ -1,8 +1,9 @@
-import {Editor} from "@toast-ui/react-editor";
-import React, {useEffect, useMemo, useRef, useState} from "react";
-import {useNavigate, useParams, useSearchParams} from "react-router-dom";
-import {api} from "../../../api/axios.ts";
-import {useAuthStore} from "../../../stores/authStore.ts";
+import { Editor } from "@toast-ui/react-editor";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { api } from "../../../api/axios.ts";
+import { useAuthStore } from "../../../stores/authStore.ts";
+import Swal from "sweetalert2";
 
 type BoardKind = "official" | "fan";
 
@@ -19,7 +20,7 @@ function resolveBoardType(type: BoardKind): string {
 }
 
 const GroupPostWritePage: React.FC = () => {
-    const {groupId} = useParams();
+    const { groupId } = useParams();
     const [sp] = useSearchParams();
     const navigate = useNavigate();
 
@@ -33,20 +34,32 @@ const GroupPostWritePage: React.FC = () => {
 
     const editorRef = useRef<Editor>(null);
 
-    const {accessToken, user} = useAuthStore();
+    const { accessToken, user } = useAuthStore();
 
     // USER는 GROUP_OFFICIAL 글쓰기 진입 자체 차단 (/write 직접 접근 포함)
     useEffect(() => {
         if (!accessToken || !user) return;
 
-        if (user.status === "RESTRICTED") {
-            alert("활동 제한 상태에서는 글을 작성할 수 없습니다.");
+        if (user?.status?.toUpperCase() === "RESTRICTED") {
+            // alert("활동 제한 상태에서는 글을 작성할 수 없습니다.");
+            Swal.fire({
+                icon: 'warning',
+                title: '활동 제한',
+                text: '활동 제한 상태에서는 글을 작성할 수 없습니다.',
+                confirmButtonColor: '#FF9292'
+            });
             navigate(-1);
             return;
         }
 
         if (boardType === "GROUP_OFFICIAL" && user.role === "USER") {
-            alert("권한이 없습니다. (그룹 공식 글쓰기는 USER가 작성할 수 없습니다.)");
+            // alert("권한이 없습니다. (그룹 공식 글쓰기...
+            Swal.fire({
+                icon: 'error',
+                title: '권한 없음',
+                text: '그룹 공식 글은 권한이 있는 사용자만 작성할 수 있습니다.',
+                confirmButtonColor: '#FF9292'
+            });
             navigate(-1);
         }
     }, [accessToken, user, boardType, navigate]);
@@ -59,7 +72,7 @@ const GroupPostWritePage: React.FC = () => {
             return;
         }
 
-        if (user.status === "RESTRICTED") {
+        if (user?.status?.toUpperCase() === "RESTRICTED") {
             setError("활동 제한 상태에서는 글을 작성할 수 없습니다.");
             return;
         }

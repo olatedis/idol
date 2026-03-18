@@ -3,6 +3,7 @@ import { Editor } from "@toast-ui/react-editor";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore.ts";
 import { api } from "../../../api/axios.ts";
+import Swal from "sweetalert2";
 
 type PostResponse = {
     postId: number;
@@ -142,7 +143,13 @@ const IdolPostEditPage: React.FC = () => {
 
             await api.put(`/board/posts/${postId}`, req);
 
-            alert("수정되었습니다.");
+            // alert("수정되었습니다.");
+            Swal.fire({
+                icon: 'success',
+                title: '수정 완료',
+                text: '게시글이 성공적으로 수정되었습니다.',
+                confirmButtonColor: '#FF9292'
+            });
             navigate(`/group/${groupId}/idol/${idolId}/board`);
         } catch (e: any) {
             const status = e?.response?.status;

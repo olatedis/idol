@@ -21,6 +21,7 @@ type PostResponse = {
     groupId: number | null;
 
     authorId: number;
+    authorNickname: string | null;
     title: string;
     content: string;
 
@@ -216,7 +217,9 @@ const GroupPostDetailPage: React.FC = () => {
         } catch (e: any) {
             const status = e?.response?.status;
             if (status === 401) showErrorToast("로그인이 필요합니다.");
-            else if (status === 403) showErrorToast("권한이 없습니다.");
+            else if (status === 403) {
+                // Axios interceptor handles 403 with Swal, so we don't need a double toast here.
+            }
             else showErrorToast(e?.response?.data?.message || e?.message || "추천 처리 실패");
         } finally {
             setReacting(false);
@@ -272,7 +275,7 @@ const GroupPostDetailPage: React.FC = () => {
             showErrorToast("로그인이 필요합니다.");
             return;
         }
-        if (user?.status === "RESTRICTED") {
+        if (user?.status?.toUpperCase() === "RESTRICTED") {
             showErrorToast("활동 제한 상태에서는 댓글을 작성할 수 없습니다.");
             return;
         }
@@ -292,8 +295,10 @@ const GroupPostDetailPage: React.FC = () => {
         } catch (e: any) {
             const status = e?.response?.status;
             if (status === 401) showErrorToast("로그인이 필요합니다.");
-            else if (status === 403) showErrorToast("권한이 없습니다.");
-            else showErrorToast(e?.response?.data?.message || e?.message || "댓글 작성 실패");
+            else if (status === 403) {
+                // Interceptor handles this
+            }
+            else showErrorToast(e?.response?.data?.message || e?.message || "댓글 등록 실패");
         } finally {
             setSubmittingComment(false);
         }
@@ -342,7 +347,8 @@ const GroupPostDetailPage: React.FC = () => {
     // [추가] 댓글 수정 저장
     const onSubmitEditComment = async () => {
         if (!accessToken) {
-            alert("로그인이 필요합니다.");
+            // alert("로그인이 필요합니다.");
+            showErrorToast("로그인이 필요합니다.");
             return;
         }
         if (!editingCommentId) return;
@@ -457,7 +463,9 @@ const GroupPostDetailPage: React.FC = () => {
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
-                        <span className="font-medium text-gray-800">{data.authorId}</span>
+                        <span className="font-medium text-gray-800">
+                            {data.authorNickname || `User ${data.authorId}`}
+                        </span>
                         <span>{formatDateToKST(data.createdAt)}</span>
                         <span>조회 {data.viewCount}</span>
                     </div>
@@ -631,8 +639,8 @@ const GroupPostDetailPage: React.FC = () => {
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") onSubmitComment();
                             }}
-                            placeholder={user?.status === "RESTRICTED" ? "활동이 제한되어 댓글을 작성할 수 없습니다." : "댓글을 입력하세요"}
-                            disabled={user?.status === "RESTRICTED"}
+                            placeholder={user?.status?.toUpperCase() === "RESTRICTED" ? "활동이 제한되어 댓글을 작성할 수 없습니다." : "댓글을 입력하세요"}
+                            disabled={user?.status?.toUpperCase() === "RESTRICTED"}
                             className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none
                             focus:border-gray-300 focus:ring-2 focus:ring-gray-100 transition disabled:bg-gray-100 disabled:text-gray-500"
                         />
@@ -640,7 +648,7 @@ const GroupPostDetailPage: React.FC = () => {
                         <button
                             type="button"
                             onClick={onSubmitComment}
-                            disabled={submittingComment || user?.status === "RESTRICTED"}
+                            disabled={submittingComment || user?.status?.toUpperCase() === "RESTRICTED"}
                             className="px-4 py-3 rounded-2xl bg-[var(--color-idol-mid)] text-white text-sm font-semibold
 shadow-md shadow-[var(--color-idol-point)]/20 hover:brightness-95 active:scale-[0.99] transition disabled:opacity-60 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
                         >

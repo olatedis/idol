@@ -33,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -156,6 +157,13 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public Map<Integer, UserDto> getUsersByIds(List<Integer> userIds) {
+        if (userIds == null || userIds.isEmpty()) return Map.of();
+        return userRepository.findAllById(userIds).stream()
+                .map(UserDto::fromEntity)
+                .collect(Collectors.toMap(UserDto::getUserId, user -> user));
+    }
+
     public Page<UserDto> getAllUsersWithPaging(Pageable pageable) {
         return userRepository.findAll(pageable).map(UserDto::fromEntity);
     }
@@ -195,7 +203,7 @@ public class UserService {
         userRepository.save(user);
 
         // 이벤트 발행 (커밋 후 실행됨)
-        eventPublisher.publishEvent(new UserEvent(user.getId(), "CREATE"));
+        eventPublisher.publishEvent(new UserEvent(user.getId(), "CREATE", user.getStatus().name()));
 
         log.info("회원가입 완료: username={}, userId={}", user.getUsername(), user.getId());
     }
@@ -231,7 +239,7 @@ public class UserService {
                     User savedUser = userRepository.save(newUser);
 
                     // 이벤트 발행
-                    eventPublisher.publishEvent(new UserEvent(savedUser.getId(), "CREATE"));
+                    eventPublisher.publishEvent(new UserEvent(savedUser.getId(), "CREATE", savedUser.getStatus().name()));
 
                     log.info("소셜 회원가입 완료: provider={}, userId={}", userDto.getProvider(), savedUser.getId());
                     return UserDto.fromEntity(savedUser);
@@ -262,7 +270,7 @@ public class UserService {
             user.setImgUrl(userUpdateDto.getImgUrl());
 
         // 이벤트 발행
-        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
+        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE", user.getStatus().name()));
         updateUsernameCache(user);
 
         log.info("사용자 정보 업데이트 완료: userId={}", userId);
@@ -307,7 +315,7 @@ public class UserService {
         }
 
         // 이벤트 발행
-        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
+        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE", user.getStatus().name()));
         updateUsernameCache(user);
 
         return UserDto.fromEntity(user);
@@ -367,7 +375,7 @@ public class UserService {
         userRepository.delete(user);
 
         // 이벤트 발행
-        eventPublisher.publishEvent(new UserEvent(userId, "DELETE"));
+        eventPublisher.publishEvent(new UserEvent(userId, "DELETE", "DELETED"));
 
         evictUserCache(user);
     }
@@ -408,7 +416,7 @@ public class UserService {
         }
 
         // 이벤트 발행
-        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
+        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE", user.getStatus().name()));
         updateUsernameCache(user);
 
         return UserDto.fromEntity(user);
@@ -440,9 +448,10 @@ public class UserService {
                 .reason(reason)
                 .build();
         banHistoryRepository.save(history);
+        userRepository.save(user);
 
         // 이벤트 발행
-        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE"));
+        eventPublisher.publishEvent(new UserEvent(user.getId(), "UPDATE", user.getStatus().name()));
         updateUsernameCache(user);
 
         log.info("유저 상태 변경 완료: userId={}, status={}", userId, newStatus);

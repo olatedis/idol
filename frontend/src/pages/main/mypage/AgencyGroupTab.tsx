@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../../api/axios';
 import { motion, AnimatePresence } from 'framer-motion';
+import { showConfirm, showErrorToast, showSuccessToast } from '../../../utils/alert';
 
 interface Idol {
     idolId: number;
@@ -105,9 +106,11 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
     };
 
     const handleRemoveMember = async (groupId: number, idolId: number, stageName: string) => {
-        if (!window.confirm(`'${stageName}' 멤버를 그룹에서 제외하시겠습니까?`)) {
-            return;
-        }
+        // if (!window.confirm(`'${stageName}' 멤버를 그룹에서 제외하시겠습니까?`)) {
+        //     return;
+        // }
+        const ok = await showConfirm("멤버 제외", `'${stageName}' 멤버를 그룹에서 제외하시겠습니까?`, "제외");
+        if (!ok) return;
 
         try {
             await api.post(`/groups/${groupId}/members/remove?idolId=${idolId}`);
@@ -120,10 +123,12 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
                 return g;
             }));
             
-            alert("멤버가 성공적으로 제외되었습니다.");
+            // alert("멤버가 성공적으로 제외되었습니다.");
+            showSuccessToast("멤버가 성공적으로 제외되었습니다.");
         } catch (err: any) {
             console.error("멤버 제외 실패:", err);
-            alert(err.response?.data || "멤버 제외에 실패했습니다.");
+            // alert(err.response?.data || "멤버 제외에 실패했습니다.");
+            showErrorToast(err.response?.data || "멤버 제외에 실패했습니다.");
         }
     };
 

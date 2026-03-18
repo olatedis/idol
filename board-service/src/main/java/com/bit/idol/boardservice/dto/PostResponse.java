@@ -16,6 +16,7 @@ public class PostResponse {
     private Long groupId;
 
     private Integer authorId;
+    private String authorNickname; // 추가
     private String title;
     private String content;
 

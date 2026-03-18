@@ -10,6 +10,7 @@ interface MessageItemProps {
     stageName?: string;
     onImageClick: (url: string) => void;
     scrollToBottom: () => void;
+    viewerRole?: string;
 }
 
 const MessageItem: React.FC<MessageItemProps> = ({
@@ -18,7 +19,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
     profileImage,
     stageName,
     onImageClick,
-    scrollToBottom
+    scrollToBottom,
+    viewerRole
 }) => {
     const [isTranslated, setIsTranslated] = React.useState(false);
     const [translatedText, setTranslatedText] = React.useState<string | null>(null);
@@ -85,7 +87,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 ) : (
                     <div className="flex flex-col">
                         <div className="whitespace-pre-wrap word-break">{displayContent}</div>
-                        {message.senderRole === "IDOL" && !isMine && (
+                        {((message.senderRole === "IDOL" || viewerRole === "IDOL" || viewerRole === "AGENCY" || viewerRole === "ADMIN") && !isMine && message.type === "TEXT") && (
                             <div className="mt-2 pt-2 border-t border-gray-100/50 flex items-center justify-between">
                                 <button
                                     onClick={handleTranslate}
