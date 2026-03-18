@@ -9,6 +9,8 @@ interface ChatInputProps {
     isRestricted: boolean;
     isOtherIdolRoom: boolean;
     isSending: boolean;
+    replyingTo?: { senderNickname: string; content: string; type: string } | null;
+    onCancelReply?: () => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -19,7 +21,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
     isUploading,
     isRestricted,
     isOtherIdolRoom,
-    isSending
+    isSending,
+    replyingTo,
+    onCancelReply
 }) => {
     const [newMessage, setNewMessage] = React.useState("");
     const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -56,6 +60,19 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
     return (
         <div className="p-3 pb-5 sm:p-4 bg-white border-t border-gray-200 shrink-0 relative">
+            {replyingTo && (
+                <div className="absolute top-0 left-0 w-full transform -translate-y-full px-4 pb-0 z-0">
+                    <div className="bg-gray-50 border border-[var(--color-idol)]/30 rounded-t-xl p-2 sm:p-2.5 shadow-sm relative flex justify-between items-start border-b-0">
+                        <div className="flex-1 pr-6 flex flex-col justify-center">
+                            <span className="text-[10px] sm:text-xs font-bold text-[var(--color-idol)] mb-0.5">{replyingTo.senderNickname}에게 답장</span>
+                            <span className="text-xs text-gray-500 line-clamp-1">{replyingTo.type === 'IMAGE' ? '사진' : replyingTo.type === 'VIDEO' ? '동영상' : replyingTo.content}</span>
+                        </div>
+                        <button onClick={onCancelReply} className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200 transition-colors absolute right-2 top-2">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            )}
             {isUploading && (
                 <div className="absolute -top-10 left-0 w-full flex justify-center">
                     <div className="bg-black/60 text-white text-xs px-4 py-1.5 rounded-full shadow-lg flex items-center">

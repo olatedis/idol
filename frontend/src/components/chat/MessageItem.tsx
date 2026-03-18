@@ -11,6 +11,8 @@ interface MessageItemProps {
     onImageClick: (url: string) => void;
     scrollToBottom: () => void;
     viewerRole?: string;
+    onReplyClick?: (msg: ChatMessage) => void;
+    parentMessage?: ChatMessage | null;
 }
 
 const MessageItem: React.FC<MessageItemProps> = ({
@@ -20,7 +22,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
     stageName,
     onImageClick,
     scrollToBottom,
-    viewerRole
+    viewerRole,
+    onReplyClick,
+    parentMessage
 }) => {
     const [isTranslated, setIsTranslated] = React.useState(false);
     const [translatedText, setTranslatedText] = React.useState<string | null>(null);
@@ -76,6 +80,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
                     </div>
                 )}
 
+                {parentMessage && (
+                    <div className={`text-[11px] p-2 mb-2 rounded-lg border-l-2 ${isMine ? 'bg-white/10 border-white/50 text-white/80' : 'bg-gray-50 border-[var(--color-idol)] text-gray-500'}`}>
+                        <div className="font-semibold text-[10px] mb-0.5">{parentMessage.senderNickname}에게 답장</div>
+                        <div className="line-clamp-1 break-all">{parentMessage.type === 'IMAGE' ? '사진' : parentMessage.type === 'VIDEO' ? '동영상' : parentMessage.content}</div>
+                    </div>
+                )}
+
                 {message.type === 'IMAGE' ? (
                     <div className="mt-1 mb-1 relative overflow-hidden rounded-xl border border-black/5 bg-white/50 cursor-pointer" onClick={() => onImageClick(message.content)}>
                         <img src={message.thumbnailUrl || message.content} alt="Media" className="max-w-full max-h-64 object-contain transition-transform hover:scale-105" onLoad={scrollToBottom} />
@@ -103,10 +114,36 @@ const MessageItem: React.FC<MessageItemProps> = ({
                                     </svg>
                                     <span className="font-bold">{isTranslating ? '번역 중...' : isTranslated ? '원문 보기' : '번역하기'}</span>
                                 </button>
-                                {isTranslated && (
-                                    <span className="text-[9px] text-gray-300 font-medium italic">by DeepL</span>
+                                {viewerRole === "IDOL" && onReplyClick && (
+                                    <button
+                                        onClick={() => onReplyClick(message)}
+                                        className="text-[10px] flex items-center space-x-1 px-2.5 py-1 rounded-full transition-all duration-200 border bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 ml-2"
+                                    >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                        </svg>
+                                        <span className="font-bold">답장</span>
+                                    </button>
                                 )}
+                                <div className="flex-1 flex justify-end">
+                                    {isTranslated && (
+                                        <span className="text-[9px] text-gray-300 font-medium italic">by DeepL</span>
+                                    )}
+                                </div>
                             </div>
+                        )}
+                        {(viewerRole === "IDOL" && message.type !== "TEXT" && onReplyClick) && (
+                           <div className="mt-2 flex">
+                               <button
+                                   onClick={() => onReplyClick(message)}
+                                   className={`text-[10px] flex items-center space-x-1 px-2.5 py-1 rounded-full transition-all duration-200 border ${isMine ? 'bg-white/10 text-white border-white/20 hover:bg-white/20' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                               >
+                                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                   </svg>
+                                   <span className="font-bold">답장</span>
+                               </button>
+                           </div>
                         )}
                     </div>
                 )}

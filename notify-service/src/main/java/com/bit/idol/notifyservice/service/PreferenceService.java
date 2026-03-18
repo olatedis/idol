@@ -60,7 +60,7 @@ public class PreferenceService {
             return false;
         }
 
-        if ("IDOL_MESSAGE".equals(type)) {
+        if ("IDOL_MESSAGE".equals(type) || "REPLY_MESSAGE".equals(type) || "CHAT_IDOL_ONLINE".equals(type)) {
             return pref.isChatEnabled();
         }
 

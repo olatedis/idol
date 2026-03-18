@@ -223,8 +223,14 @@ public class ChatService {
     }
 
     public void processMessage(ChatMessageDto messageDto) {
-        // 0. 도배 방지
+        // 0. 도배 방지 및 답장 권한 체크
         if ("USER".equals(messageDto.getSenderRole())) {
+            // [추가] 팬 계정은 답장 기능을 사용할 수 없음
+            if (messageDto.getParentId() != null) {
+                log.warn("권한 없는 답장 시도 차단: userId={}", messageDto.getSenderId());
+                messageDto.setParentId(null); // 강제로 차단
+            }
+
             String limitKey = "chat:limit:" + messageDto.getSenderId();
             if (redisTemplate.hasKey(limitKey)) {
                 throw new RuntimeException("메시지를 너무 빠르게 보낼 수 없습니다. 잠시 후 다시 시도해주세요.");
@@ -622,7 +628,13 @@ public class ChatService {
         if (sessions == null || sessions.isEmpty()) return;
 
         List<Object> invalidSessions = sessions.stream()
-                .filter(sid -> !redisTemplate.hasKey("chat:session:" + sid))
+                .filter(sid -> {
+                    String sidStr = sid.toString();
+                    if (sidStr.startsWith("\"") && sidStr.endsWith("\"")) {
+                        sidStr = sidStr.substring(1, sidStr.length() - 1);
+                    }
+                    return !redisTemplate.hasKey("chat:session:" + sidStr);
+                })
                 .collect(Collectors.toList());
 
         if (!invalidSessions.isEmpty()) {
@@ -637,6 +649,8 @@ public class ChatService {
     public void setIdolOnline(Long idolId, boolean isOnline, String sessionId) {
         String onlineKey = "idol:online:sessions:" + idolId;
 
+        log.info("setIdolOnline START: idolId={}, isOnline={}, sessionId={}", idolId, isOnline, sessionId);
+
         // 작업 전 좀비 세션 청소부터 하여 정확한 카운트 확보
         pruneZombieSessions(idolId);
 
@@ -646,13 +660,17 @@ public class ChatService {
 
         if (isOnline) {
             redisTemplate.opsForSet().add(onlineKey, sessionId);
+            log.info("Redis ADD: key={}, value={}", onlineKey, sessionId);
         } else {
-            redisTemplate.opsForSet().remove(onlineKey, sessionId);
+            Long removed = redisTemplate.opsForSet().remove(onlineKey, sessionId);
+            log.info("Redis REMOVE: key={}, value={}, removedCount={}", onlineKey, sessionId, removed);
         }
 
         Long currentCount = redisTemplate.opsForSet().size(onlineKey);
         if (currentCount == null)
             currentCount = 0L;
+
+        log.info("setIdolOnline 카운트 체크: previous={}, current={}", previousCount, currentCount);
 
         // 브로드캐스팅 결정: 최초 0->1(ON) 또는 최종 1->0(OFF)
         boolean turnedOn = (previousCount == 0 && currentCount > 0);

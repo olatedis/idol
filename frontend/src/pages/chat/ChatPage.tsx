@@ -49,6 +49,9 @@ const ChatPage: React.FC = () => {
     const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
     const [isSearching, setIsSearching] = useState(false);
 
+    // 답장 상태 관리
+    const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+
     const typingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastTypingTimeRef = React.useRef<number>(0);
 
@@ -450,11 +453,14 @@ const ChatPage: React.FC = () => {
             setTimeout(() => setIsSending(false), 3000);
         }
 
-        const payload = {
+        const payload: any = {
             idolId: selectedIdolId,
             content: content,
             type: "TEXT"
         };
+        if (replyingTo) {
+            payload.parentId = replyingTo.id;
+        }
 
         try {
             stompClientRef.current.publish({
@@ -472,9 +478,11 @@ const ChatPage: React.FC = () => {
                 senderNickname: user.nickname,
                 content: content,
                 type: "TEXT",
+                parentId: replyingTo?.id || null,
                 createdAt: new Date().toISOString()
             }]);
 
+            setReplyingTo(null); // 전송 후 답장 상태 해제
             setTimeout(scrollToBottom, 100);
         } catch (err) {
         }
@@ -501,12 +509,15 @@ const ChatPage: React.FC = () => {
 
             const uploadedData = uploadRes.data; // { url, thumbnailUrl, type }
 
-            const payload = {
+            const payload: any = {
                 idolId: selectedIdolId,
                 content: uploadedData.url,
                 thumbnailUrl: uploadedData.thumbnailUrl,
                 type: uploadedData.type === "VIDEO" ? "VIDEO" : "IMAGE"
             };
+            if (replyingTo) {
+                payload.parentId = replyingTo.id;
+            }
 
             stompClientRef.current.publish({
                 destination: "/pub/chat/send",
@@ -524,9 +535,11 @@ const ChatPage: React.FC = () => {
                 content: uploadedData.url,
                 thumbnailUrl: uploadedData.thumbnailUrl,
                 type: payload.type,
+                parentId: replyingTo?.id || null,
                 createdAt: new Date().toISOString()
             }]);
 
+            setReplyingTo(null); // 전송 후 답장 상태 해제
             setTimeout(scrollToBottom, 500); // 이미지가 로드될 시간을 고려해 여유있게
         } catch (err) {
             showErrorToast("파일 업로드에 실패했습니다.");
@@ -666,6 +679,8 @@ const ChatPage: React.FC = () => {
                                 onImageClick={(url) => window.open(url, "_blank")}
                                 scrollToBottom={scrollToBottom}
                                 viewerRole={user?.role}
+                                onReplyClick={user?.role === 'IDOL' ? setReplyingTo : undefined}
+                                parentMessage={msg.parentId ? messages.find(m => String(m.id) === String(msg.parentId)) : null}
                             />
                         ))}
 
@@ -684,6 +699,8 @@ const ChatPage: React.FC = () => {
                         isRestricted={isRestricted}
                         isOtherIdolRoom={isOtherIdolRoom}
                         isSending={isSending}
+                        replyingTo={replyingTo}
+                        onCancelReply={() => setReplyingTo(null)}
                     />
                 </div>
             )}
