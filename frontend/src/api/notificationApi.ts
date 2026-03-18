@@ -80,3 +80,15 @@ export const deleteManyNotifications = async (notificationIds: number[]) => {
     });
     return data;
 };
+
+export const deleteOneIdolMessageStack = async (idolId: number) => {
+    const { data } = await api.delete(`/notify/idol-message-stacks/${idolId}`);
+    return data;
+};
+
+export const deleteManyIdolMessageStacks = async (idolIds: number[]) => {
+    const { data } = await api.post(`/notify/idol-message-stacks/delete`, {
+        idolIds,
+    });
+    return data;
+};

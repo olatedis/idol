@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+    deleteManyIdolMessageStacks,
     deleteManyNotifications,
     getIdolMessageStacks,
     getNotificationList,
-} from "../../../api/notificationApi";import type { IdolMessageStackPayload, NotificationItem } from "../../../types/notification";
+} from "../../../api/notificationApi";
+import type { IdolMessageStackPayload, NotificationItem } from "../../../types/notification";
 import { showErrorToast } from "../../../utils/alert";
 
 type FilterType =
@@ -452,19 +454,23 @@ const NotificationHistoryTab: React.FC = () => {
         const normalNotificationIds = selectedIds.filter((id) => id > 0);
         const stackIds = selectedIds.filter((id) => id < 0);
 
+        const idolIdsToDelete = stackIds.map((id) => Math.abs(id + 100000));
+
         try {
             if (normalNotificationIds.length > 0) {
                 await deleteManyNotifications(normalNotificationIds);
             }
 
-            if (stackIds.length > 0) {
-                setIdolStacks((prev) =>
-                    prev.filter((stack) => !stackIds.includes(-100000 - stack.idolId))
-                );
+            if (idolIdsToDelete.length > 0) {
+                await deleteManyIdolMessageStacks(idolIdsToDelete);
             }
 
             setNotifications((prev) =>
                 prev.filter((item) => !normalNotificationIds.includes(item.notificationId))
+            );
+
+            setIdolStacks((prev) =>
+                prev.filter((stack) => !idolIdsToDelete.includes(stack.idolId))
             );
 
             setSelectedIds([]);

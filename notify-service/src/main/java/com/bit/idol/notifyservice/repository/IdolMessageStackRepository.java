@@ -62,4 +62,26 @@ public interface IdolMessageStackRepository extends JpaRepository<IdolMessageSta
 """)
     void resetAllUnread(@Param("receiverId") int receiverId);
 
+    @Modifying
+    @Query("""
+    delete from IdolMessageStack s
+    where s.receiverId = :receiverId
+      and s.idolId = :idolId
+""")
+    int deleteOneByReceiverIdAndIdolId(
+            @Param("receiverId") int receiverId,
+            @Param("idolId") long idolId
+    );
+
+    @Modifying
+    @Query("""
+    delete from IdolMessageStack s
+    where s.receiverId = :receiverId
+      and s.idolId in :idolIds
+""")
+    int deleteManyByReceiverIdAndIdolIds(
+            @Param("receiverId") int receiverId,
+            @Param("idolIds") List<Long> idolIds
+    );
+
 }
