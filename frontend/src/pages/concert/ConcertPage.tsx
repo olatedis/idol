@@ -9,7 +9,7 @@ import type { ConcertDto, SeatDto, SeatGrade } from "../../types/concert";
 import { ConcertDetailModal } from "../../components/concert/ConcertDetailModal";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const ConcertPage: React.FC = () => {
     const { groupId } = useParams<{ groupId?: string }>();
@@ -32,7 +32,6 @@ const ConcertPage: React.FC = () => {
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-    const accessToken = localStorage.getItem("accessToken");
 
     // 모달 상태
     const [selectedConcert, setSelectedConcert] = useState<ConcertDto | null>(null);
@@ -299,7 +298,18 @@ const ConcertPage: React.FC = () => {
 
             setIsBookingModalOpen(false);
         } catch (e: any) {
-            showErrorToast(e?.message || '예약 중 오류가 발생했습니다. 다른 좌석을 선택해주세요.');
+            console.log(e.message);
+            showErrorToast('이미 선택된 자리입니다. 다른 좌석을 선택해주세요.');
+            setConcertSeats((prev) =>
+                prev.map((seat) =>
+                    selectedSeats.includes(seat.id)
+                        ? { ...seat, locked: true }
+                        : seat
+                )
+            );
+
+            // 선택 초기화
+            setSelectedSeats([]);
         }
     };
 
