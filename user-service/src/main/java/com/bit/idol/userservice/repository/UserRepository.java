@@ -20,6 +20,13 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     List<User> findByStatusAndReportCountGreaterThanOrderByReportCountDesc(
             com.bit.idol.userservice.entity.UserStatus status, int reportCount);
 
+    // 상태별 조회 (전체 유저 목록용)
+    org.springframework.data.domain.Page<User> findByStatus(com.bit.idol.userservice.entity.UserStatus status, org.springframework.data.domain.Pageable pageable);
+
     // 관리자 유저 검색
     List<User> findByNicknameContainingIgnoreCaseOrEmailContainingIgnoreCase(String nickname, String email);
+
+    // 상태 + 관리자 유저 검색
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE u.status = :status AND (LOWER(u.nickname) LIKE LOWER(CONCAT('%',:keyword,'%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%',:keyword,'%')))")
+    List<User> findByStatusAndKeyword(@org.springframework.data.repository.query.Param("status") com.bit.idol.userservice.entity.UserStatus status, @org.springframework.data.repository.query.Param("keyword") String keyword);
 }

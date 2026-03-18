@@ -164,8 +164,12 @@ public class UserService {
                 .collect(Collectors.toMap(UserDto::getUserId, user -> user));
     }
 
-    public Page<UserDto> getAllUsersWithPaging(Pageable pageable) {
-        return userRepository.findAll(pageable).map(UserDto::fromEntity);
+    public Page<UserDto> getAllUsersWithPaging(Pageable pageable, com.bit.idol.userservice.entity.UserStatus status) {
+        if (status == null) {
+            return userRepository.findAll(pageable).map(UserDto::fromEntity);
+        } else {
+            return userRepository.findByStatus(status, pageable).map(UserDto::fromEntity);
+        }
     }
 
     @Transactional

@@ -84,11 +84,18 @@ public class ReportService {
 
     // 관리자 유저 검색
     @Transactional(readOnly = true)
-    public List<UserDto> searchUsersForAdmin(String keyword) {
-        return userRepository.findByNicknameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword)
-                .stream()
-                .map(UserDto::fromEntity)
-                .collect(Collectors.toList());
+    public List<UserDto> searchUsersForAdmin(String keyword, UserStatus status) {
+        if (status == null) {
+            return userRepository.findByNicknameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword)
+                    .stream()
+                    .map(UserDto::fromEntity)
+                    .collect(Collectors.toList());
+        } else {
+            return userRepository.findByStatusAndKeyword(status, keyword)
+                    .stream()
+                    .map(UserDto::fromEntity)
+                    .collect(Collectors.toList());
+        }
     }
 
     // 특정 유저의 피신고 내역 리스트 조회

@@ -16,6 +16,7 @@ interface AdminUserDto {
 
 const AdminUserSearch: React.FC = () => {
     const [keyword, setKeyword] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
     const [users, setUsers] = useState<AdminUserDto[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
@@ -32,11 +33,12 @@ const AdminUserSearch: React.FC = () => {
     // 상태 변경 폼 상태
     const [actionForms, setActionForms] = useState<Record<number, { newStatus: string, durationDays: number | "", reason: string }>>({});
 
-    // 페이징된 전체 유저 목록 불러오기
-    const fetchPaginatedUsers = async (page: number) => {
+    // Пей징된 전체 유저 목록 불러오기
+    const fetchPaginatedUsers = async (page: number, status: string = "ALL") => {
         setIsFetchingPage(true);
         try {
-            const res = await api.get(`/admin/users?page=${page}&size=10`);
+            const statusQuery = status !== "ALL" ? `&status=${status}` : "";
+            const res = await api.get(`/admin/users?page=${page}&size=10${statusQuery}`);
             setPaginatedUsers(res.data.content);
             setTotalPages(res.data.totalPages);
 
@@ -58,12 +60,12 @@ const AdminUserSearch: React.FC = () => {
 
     useEffect(() => {
         if (!hasSearched) {
-            fetchPaginatedUsers(currentPage);
+            fetchPaginatedUsers(currentPage, statusFilter);
         }
-    }, [currentPage, hasSearched]);
+    }, [currentPage, hasSearched, statusFilter]);
 
     const handleSearch = async () => {
-        if (!keyword.trim()) {
+        if (!keyword.trim() && statusFilter === "ALL") {
             setHasSearched(false);
             setUsers([]);
             return;
@@ -71,7 +73,8 @@ const AdminUserSearch: React.FC = () => {
         setLoading(true);
         setHasSearched(true);
         try {
-            const res = await api.get(`/admin/users/search?keyword=${encodeURIComponent(keyword)}`);
+            const statusQuery = statusFilter !== "ALL" ? `&status=${statusFilter}` : "";
+            const res = await api.get(`/admin/users/search?keyword=${encodeURIComponent(keyword)}${statusQuery}`);
             setUsers(res.data);
             setActionForms(prev => {
                 const updated = { ...prev };
@@ -130,7 +133,7 @@ const AdminUserSearch: React.FC = () => {
             if (hasSearched) {
                 handleSearch(); // 재검색
             } else {
-                fetchPaginatedUsers(currentPage); // 현재 페이지 재로딩
+                fetchPaginatedUsers(currentPage, statusFilter); // 현재 페이지 재로딩
             }
         } catch (err: any) {
             console.error("상태 변경 에러", err);
@@ -157,9 +160,27 @@ const AdminUserSearch: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-800">유저 검색 및 관리 (키워드 검색)</h3>
 
             <div className="flex space-x-2">
+                <select
+                    className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-idol focus:ring-1 focus:ring-idol transition-colors bg-white text-gray-700"
+                    value={statusFilter}
+                    onChange={(e) => {
+                        setStatusFilter(e.target.value);
+                        if (hasSearched) {
+                            handleSearch();
+                        } else {
+                            setCurrentPage(0);
+                        }
+                    }}
+                >
+                    <option value="ALL">전체 상태</option>
+                    <option value="ACTIVE">활성 (ACTIVE)</option>
+                    <option value="RESTRICTED">제한 (RESTRICTED)</option>
+                    <option value="SUSPENDED">정지 (SUSPENDED)</option>
+                    <option value="BANNED">영구정지 (BANNED)</option>
+                </select>
                 <input
                     type="text"
-                    placeholder="이메일 또는 닉네임 입력"
+                    placeholder="이메일 또는 닉네임 입력 (검색어 없이 상태만 선택 가능)"
                     className="border border-gray-300 rounded-lg px-4 py-2 flex-1 focus:outline-none focus:border-idol focus:ring-1 focus:ring-idol transition-colors"
                     value={keyword}
                     onChange={e => setKeyword(e.target.value)}
