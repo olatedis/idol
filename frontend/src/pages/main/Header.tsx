@@ -252,8 +252,15 @@ const Header: React.FC = () => {
 
         if (notification.type === "CHAT_IDOL_ONLINE") {
             return idolName
-                ? `${idolName}의 채팅이 시작되었습니다.`
-                : "아이돌의 채팅이 시작되었습니다.";
+                ? `${idolName}님이 채팅을 시작했습니다.`
+                : "아이돌이 채팅을 시작했습니다.";
+        }
+
+        if (notification.type === "REPLY_MESSAGE") {
+            const replierName = notification.args?.replierName;
+            return replierName
+                ? `${replierName}님이 답장을 남겼습니다.`
+                : "새로운 답장이 도착했습니다.";
         }
 
         if (notification.type === "REPORT_RECEIVED") {
@@ -315,7 +322,7 @@ const Header: React.FC = () => {
         if (boardType === "GROUP_OFFICIAL") return "그룹 공식";
         if (boardType === "GROUP_FAN") return "그룹 팬";
         if (boardType === "IDOL_OFFICIAL") return "아이돌 공식";
-        if (notification.type === "IDOL_MESSAGE") return "아이돌 메시지";
+        if (notification.type === "IDOL_MESSAGE" || notification.type === "CHAT_IDOL_ONLINE" || notification.type === "REPLY_MESSAGE") return "채팅";
 
         if (
             notification.type === "IDOL_SUB_STARTED" ||
@@ -352,7 +359,8 @@ const Header: React.FC = () => {
 
         if (boardType === "ADMIN_NOTICE") return "📢";
         if (boardType === "GROUP_OFFICIAL" || boardType === "GROUP_FAN") return "👥";
-        if (boardType === "IDOL_OFFICIAL" || notification.type === "IDOL_MESSAGE") return "🎤";
+        if (boardType === "IDOL_OFFICIAL" || notification.type === "IDOL_MESSAGE" || notification.type === "CHAT_IDOL_ONLINE") return "🎤";
+        if (notification.type === "REPLY_MESSAGE") return "💬";
 
         // 추가: 투표 알림 아이콘
         if (

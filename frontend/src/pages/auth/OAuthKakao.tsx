@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/axios';
 import { useAuthStore } from '../../stores/authStore';
+import { showErrorToast } from '../../utils/alert';
 
 const OAuthKakao: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -35,7 +36,8 @@ const OAuthKakao: React.FC = () => {
                 navigate('/idol'); 
             } catch (error) {
                 console.error('카카오 로그인 실패:', error);
-                alert('로그인에 실패했습니다.');
+                // alert('로그인에 실패했습니다.');
+                showErrorToast('로그인에 실패했습니다.');
                 // 로그인 페이지가 없으므로 메인으로 이동 (로그인 섹션 스크롤)
                 navigate('/', { state: { scrollToLogin: true } });
             }

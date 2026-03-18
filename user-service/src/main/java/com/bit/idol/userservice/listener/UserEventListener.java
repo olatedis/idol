@@ -20,7 +20,7 @@ public class UserEventListener {
     public void handleUserEvent(UserEvent event) {
         log.info("UserEvent 처리 (After Commit): userId={}, type={}", event.userId(), event.type());
         try {
-            userSyncProducer.send(event.userId(), event.type());
+            userSyncProducer.send(event.userId(), event.type(), event.status());
         } catch (Exception e) {
             log.error("Kafka 이벤트 발행 실패: {}", e.getMessage());
             // 여기서 실패하면 재시도 로직이 필요할 수 있음 (Outbox Pattern의 필요성)

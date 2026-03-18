@@ -11,6 +11,7 @@ public class PostListResponse {
     private Long groupId;
 
     private Integer authorId;
+    private String authorNickname; // 추가
     private String title;
 
     private Integer viewCount;

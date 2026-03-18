@@ -260,7 +260,7 @@ const IdolPostDetailPage: React.FC = () => {
             showErrorToast("로그인이 필요합니다.");
             return;
         }
-        if (user?.status === "RESTRICTED") {
+        if (user?.status?.toUpperCase() === "RESTRICTED") {
             showErrorToast("활동 제한 상태에서는 댓글을 작성할 수 없습니다.");
             return;
         }
@@ -589,15 +589,15 @@ const IdolPostDetailPage: React.FC = () => {
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") onSubmitComment();
                             }}
-                            placeholder={user?.status === "RESTRICTED" ? "활동이 제한되어 댓글을 작성할 수 없습니다." : "댓글을 입력하세요"}
-                            disabled={user?.status === "RESTRICTED"}
+                            placeholder={user?.status?.toUpperCase() === "RESTRICTED" ? "활동이 제한되어 댓글을 작성할 수 없습니다." : "댓글을 입력하세요"}
+                            disabled={user?.status?.toUpperCase() === "RESTRICTED"}
                             className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none disabled:bg-gray-100 disabled:text-gray-500"
                         />
 
                         <button
                             type="button"
                             onClick={onSubmitComment}
-                            disabled={submittingComment || user?.status === "RESTRICTED"}
+                            disabled={submittingComment || user?.status?.toUpperCase() === "RESTRICTED"}
                             className="px-4 py-3 rounded-2xl bg-[var(--color-idol-mid)] text-white text-sm font-semibold
                      hover:bg-[var(--color-idol-dark)] active:scale-[0.99] transition disabled:opacity-60 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
                         >

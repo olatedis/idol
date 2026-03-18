@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore";
 import Header from "../Header";
+import { showConfirm, showErrorToast, showSuccessToast } from "../../../utils/alert";
 
 type NoticeDetail = {
     postId: number;
@@ -82,16 +83,20 @@ const NoticeDetailPage: React.FC = () => {
 
     const handleDelete = async () => {
         if (!API_BASE_URL) {
-            alert("VITE_API_BASE_URL이 설정되지 않았습니다.");
+            // alert("VITE_API_BASE_URL이 설정되지 않았습니다.");
+            showErrorToast("VITE_API_BASE_URL이 설정되지 않았습니다.");
             return;
         }
 
         if (!accessToken) {
-            alert("로그인이 필요합니다.");
+            // alert("로그인이 필요합니다.");
+            showErrorToast("로그인이 필요합니다.");
             return;
         }
 
-        if (!window.confirm("정말 삭제하시겠습니까?")) return;
+        // if (!window.confirm("정말 삭제하시겠습니까?")) return;
+        const ok = await showConfirm("공지 삭제", "정말 삭제하시겠습니까? 삭제된 공지는 복구할 수 없습니다.", "삭제");
+        if (!ok) return;
 
         try {
             const res = await fetch(`${API_BASE_URL}/admin/notices/${postId}`, {
@@ -102,21 +107,25 @@ const NoticeDetailPage: React.FC = () => {
             });
 
             if (res.status === 401) {
-                alert("로그인이 필요합니다.");
+                // alert("로그인이 필요합니다.");
+                showErrorToast("로그인이 필요합니다.");
                 return;
             }
 
             if (res.status === 403) {
-                alert("권한이 없습니다. (ADMIN 전용)");
+                // alert("권한이 없습니다. (ADMIN 전용)");
+                showErrorToast("권한이 없습니다. (ADMIN 전용)");
                 return;
             }
 
             if (!res.ok) throw new Error("삭제 실패");
 
-            alert("삭제되었습니다.");
+            // alert("삭제되었습니다.");
+            showSuccessToast("공지가 성공적으로 삭제되었습니다.");
             navigate("/notices");
         } catch (e: any) {
-            alert(e?.message || "삭제 실패");
+            // alert(e?.message || "삭제 실패");
+            showErrorToast(e?.message || "삭제 실패");
         }
     };
 

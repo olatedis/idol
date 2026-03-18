@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../api/axios';
 import { useAuthStore } from '../../stores/authStore';
+import Swal from 'sweetalert2';
 
 interface SignupModalProps {
     isOpen: boolean;
@@ -37,7 +38,13 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
             await api.post('/auth/email/send', { email });
             setIsEmailSent(true);
             setError('');
-            alert('인증번호가 발송되었습니다. 이메일을 확인해주세요.');
+            // @ts-ignore
+            Swal.fire({
+                icon: 'success',
+                title: '인증번호 발송',
+                text: '인증번호가 발송되었습니다. 이메일을 확인해주세요.',
+                confirmButtonColor: '#FF9292'
+            });
         } catch (err: any) {
             console.error(err);
             setError(err.response?.data || '이메일 전송 실패');
@@ -55,7 +62,13 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
             setVerificationToken(res.data); // 토큰 저장
             setIsEmailVerified(true);
             setError('');
-            alert('이메일 인증이 완료되었습니다.');
+            // alert('이메일 인증이 완료되었습니다.');
+            Swal.fire({
+                icon: 'success',
+                title: '인증 완료',
+                text: '이메일 인증이 완료되었습니다.',
+                confirmButtonColor: '#FF9292'
+            });
         } catch (err: any) {
             console.error(err);
             setError('인증번호가 올바르지 않습니다.');
@@ -96,7 +109,13 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
             // 4. Store 저장 및 모달 닫기
             login(userRes.data, accessToken, refreshToken);
             onClose();
-            alert('회원가입을 환영합니다! 🎉');
+            // alert('회원가입을 환영합니다! 🎉');
+            Swal.fire({
+                icon: 'success',
+                title: '환영합니다!',
+                text: '회원가입을 환영합니다! 🎉',
+                confirmButtonColor: '#FF9292'
+            });
 
         } catch (err: any) {
             console.error(err);
@@ -189,14 +208,25 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
                                             placeholder="example@email.com"
                                             required
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={handleSendEmail}
-                                            disabled={isEmailVerified || isEmailSent}
-                                            className="px-3 py-2 bg-gray-800 text-white text-sm rounded-lg hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap"
-                                        >
-                                            {isEmailSent ? '전송됨' : '인증'}
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={handleSendEmail}
+                                                disabled={isEmailVerified || isEmailSent}
+                                                className="px-3 py-2 bg-gray-800 text-white text-sm rounded-lg hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap transition"
+                                            >
+                                                {isEmailSent ? '전송됨' : '인증'}
+                                            </button>
+                                            {isEmailSent && !isEmailVerified && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSendEmail}
+                                                    className="text-[11px] text-gray-400 hover:text-idol-point hover:underline transition whitespace-nowrap"
+                                                >
+                                                    재인증
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 

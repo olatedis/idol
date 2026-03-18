@@ -3,6 +3,7 @@ import { Editor } from "@toast-ui/react-editor";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore.ts";
 import { api } from "../../../api/axios.ts";
+import { showSuccessToast } from "../../../utils/alert";
 
 type PostResponse = {
     postId: number;
@@ -132,7 +133,8 @@ const GroupPostEditPage: React.FC = () => {
 
             await api.put(`/board/posts/${postId}`, req);
 
-            alert("수정되었습니다.");
+            // alert("수정되었습니다.");
+            showSuccessToast("게시글이 성공적으로 수정되었습니다.");
             navigate(`../`);
         } catch (e: any) {
             const status = e?.response?.status;

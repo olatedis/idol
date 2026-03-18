@@ -1,5 +1,6 @@
 package com.bit.subscriptionservice.service;
 
+import com.bit.subscriptionservice.client.UserServiceClient;
 import com.bit.subscriptionservice.dto.*;
 import com.bit.subscriptionservice.dto.event.PaymentRequestEvent;
 import com.bit.subscriptionservice.dto.event.SubscriptionEventWrapper;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -33,6 +35,7 @@ public class SubscriptionService {
     private final GroupSubscriptionRepository groupSubscriptionRepository;
     private final StringRedisTemplate redisTemplate;
     private final ApplicationEventPublisher eventPublisher; // 추가됨
+    private final UserServiceClient userServiceClient;
 
     private static final String KEY_PREFIX_IDOL = "sub:";
     private static final String KEY_PREFIX_GROUP = "gsub:";
@@ -48,23 +51,28 @@ public class SubscriptionService {
             throw new RuntimeException("이미 구독 중인 아이돌입니다.");
         }
 
-        subscriptionRepository.findByUserIdAndIdolId(userId, request.getIdolId())
-                .ifPresent(sub -> {
-                    if (sub.getStatus() == SubscriptionStatus.ACTIVE) {
-                        throw new RuntimeException("이미 구독 중인 아이돌입니다.");
-                    }
-                });
-
-        Subscription subscription = Subscription.builder()
-                .userId(userId)
-                .idolId(request.getIdolId())
-                .status(SubscriptionStatus.PENDING)
-                .startedAt(LocalDateTime.now())
-                .plan(request.getPlan())
-                .autoRenew(request.isAutoRenew())
-                .build();
-
-        subscriptionRepository.save(subscription);
+        Optional<Subscription> existingSub = subscriptionRepository.findByUserIdAndIdolId(userId, request.getIdolId());
+        
+        Subscription subscription;
+        if (existingSub.isPresent()) {
+            subscription = existingSub.get();
+            if (subscription.getStatus() == SubscriptionStatus.ACTIVE) {
+                throw new RuntimeException("이미 구독 중인 아이돌입니다.");
+            }
+            // PENDING이나 EXPIRED 등인 경우 정보를 업데이트하여 재사용
+            subscription.update(request.getPlan(), request.isAutoRenew());
+        } else {
+            // 신규 가입
+            subscription = Subscription.builder()
+                    .userId(userId)
+                    .idolId(request.getIdolId())
+                    .status(SubscriptionStatus.PENDING)
+                    .startedAt(LocalDateTime.now())
+                    .plan(request.getPlan())
+                    .autoRenew(request.isAutoRenew())
+                    .build();
+            subscriptionRepository.save(subscription);
+        }
 
         redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.PENDING.name(), Duration.ofDays(1)); // PENDING은 짧게 1일
 
@@ -120,6 +128,9 @@ public class SubscriptionService {
 
         eventPublisher.publishEvent(new SubscriptionEventWrapper("IDOL_SUB_STARTED", subEvent));
 
+        // [추가] 그룹 자동 구독 처리
+        tryAutoSubscribeGroup(subscription.getUserId(), subscription.getIdolId());
+
         log.info("PENDING 구독 활성화 (billing): userId={}, idolId={}", userId, idolId);
     }
 
@@ -166,6 +177,9 @@ public class SubscriptionService {
 
         // 이벤트 발행 (커밋 후 실행됨)
         eventPublisher.publishEvent(new SubscriptionEventWrapper("IDOL_SUB_STARTED", subEvent));
+
+        // [추가] 그룹 자동 구독 처리
+        tryAutoSubscribeGroup(subscription.getUserId(), subscription.getIdolId());
 
         log.info("개인(아이돌) 구독 완료: userId={}, idolId={}", subscription.getUserId(), subscription.getIdolId());
     }
@@ -418,6 +432,33 @@ public class SubscriptionService {
     // 아이돌 구독자 수 조회
     public int getSubscriptionCount(int idolId) {
         return subscriptionRepository.countByIdolIdAndStatus(idolId, SubscriptionStatus.ACTIVE);
+    }
+
+    /**
+     * [내부 로직] 아이돌 구독 시 해당 아이돌이 속한 그룹을 자동 구독한다.
+     */
+    private void tryAutoSubscribeGroup(int userId, int idolId) {
+        try {
+            IdolResponse idol = userServiceClient.getIdol(idolId);
+            if (idol != null && idol.getGroupId() != null) {
+                int groupId = idol.getGroupId();
+                // 이미 해당 그룹을 구독 중인지 체크
+                if (!isGroupSubscribed(userId, groupId)) {
+                    log.info("그룹 자동 구독 실행: userId={}, groupId={}, groupName={}",
+                            userId, groupId, idol.getGroupName());
+
+                    GroupSubscriptionCreateRequest request = new GroupSubscriptionCreateRequest(
+                            groupId,
+                            idol.getGroupName(),
+                            true // 자동 갱신 기본값
+                    );
+                    subscribeGroup(userId, request);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("그룹 자동 구독 중 오류 발생 (무시하고 진행): userId={}, idolId={}, error={}",
+                    userId, idolId, e.getMessage());
+        }
     }
 
 }

@@ -44,6 +44,11 @@ public class InternalUserController {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
+    @PostMapping("/info/ids")
+    public ResponseEntity<Map<Integer, UserDto>> getUsersByIds(@RequestBody List<Integer> userIds) {
+        return ResponseEntity.ok(userService.getUsersByIds(userIds));
+    }
+
     // ========================================================================
 
     // Idol 본인 검증

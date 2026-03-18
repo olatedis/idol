@@ -24,8 +24,9 @@ public class RedisConfig {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
 
-        // /sub/idol/* 및 /queue/idol/* 패턴의 토픽 구독
+        // /sub/groups/*, /sub/idol/* 및 /queue/idol/* 패턴의 토픽 구독
         container.addMessageListener(listenerAdapter, new PatternTopic("/sub/idol/*"));
+        container.addMessageListener(listenerAdapter, new PatternTopic("/sub/group/*"));
         container.addMessageListener(listenerAdapter, new PatternTopic("/queue/idol/*"));
 
         return container;

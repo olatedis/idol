@@ -2,9 +2,12 @@ package com.bit.idol.boardservice.service;
 
 import com.bit.idol.boardservice.client.SubscriptionInternalClient;
 import com.bit.idol.boardservice.client.UserInternalClient;
+import com.bit.idol.boardservice.dto.InternalUserResponse;
 import com.bit.idol.boardservice.dto.comment.CommentResponse;
 import com.bit.idol.boardservice.dto.comment.CommentUpdateRequest;
 import com.bit.idol.boardservice.dto.comment.CommentWriteRequest;
+import com.bit.idol.boardservice.dto.event.NotifyRequestEvent;
+import com.bit.idol.boardservice.dto.event.TargetType;
 import com.bit.idol.boardservice.entity.BoardType;
 import com.bit.idol.boardservice.entity.Comment;
 import com.bit.idol.boardservice.entity.Idol;
@@ -13,14 +16,19 @@ import com.bit.idol.boardservice.repository.CommentRepository;
 import com.bit.idol.boardservice.repository.IdolRepository;
 import com.bit.idol.boardservice.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CommentService {
@@ -33,6 +41,8 @@ public class CommentService {
 
     // IDOL 본인 체크용 (board DB idols)
     private final IdolRepository idolRepository;
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     // 댓글 작성
     @Transactional
@@ -51,6 +61,9 @@ public class CommentService {
 
         // 댓글 수 증가 (삭제 제외 정책)
         post.setCommentCount(post.getCommentCount() + 1);
+
+        // [알림] 게시글 작성자에게 알림 발송
+        sendNotification(post, comment, userId);
 
         return toResponse(comment);
     }
@@ -200,7 +213,18 @@ public class CommentService {
         CommentResponse res = new CommentResponse();
         res.setCommentId(c.getCommentId());
         res.setAuthorId(c.getAuthorId());
-        res.setAuthorNickname(c.getAuthorNickname()); // 닉네임 반환
+        
+        // 닉네임 실시간 조회 (user-service 기준)
+        try {
+            var userMap = userInternalClient.getUsersByIds(List.of(c.getAuthorId()));
+            if (userMap.containsKey(c.getAuthorId())) {
+                res.setAuthorNickname(userMap.get(c.getAuthorId()).getNickname());
+            } else {
+                res.setAuthorNickname(c.getAuthorNickname()); // 없으면 백업
+            }
+        } catch (Exception e) {
+            res.setAuthorNickname(c.getAuthorNickname());
+        }
 
         boolean deleted = Boolean.TRUE.equals(c.getIsDeleted());
         res.setIsDeleted(deleted);
@@ -213,5 +237,46 @@ public class CommentService {
             res.setUpdatedAt(c.getUpdatedAt().format(formatter));
 
         return res;
+    }
+
+    private void sendNotification(Post post, Comment comment, Integer actorId) {
+        if (post.getAuthorId().equals(actorId)) return; // 본인 글에 본인이 댓글 달면 생략
+
+        try {
+            String redirectUrl = getRedirectUrl(post);
+            
+            NotifyRequestEvent event = NotifyRequestEvent.builder()
+                    .eventId(UUID.randomUUID().toString() + ":" + actorId)
+                    .type("COMMENT_ADDED")
+                    .targetType(TargetType.USER)
+                    .targetId(String.valueOf(post.getAuthorId()))
+                    .args(Map.of(
+                            "postId", String.valueOf(post.getPostId()),
+                            "commentId", String.valueOf(comment.getCommentId()),
+                            "actorId", String.valueOf(actorId),
+                            "commentContent", comment.getContent()
+                    ))
+                    .redirectUrl(redirectUrl)
+                    .occurredAt(LocalDateTime.now().toString())
+                    .build();
+
+            kafkaTemplate.send("notify-request-topic", event);
+            log.info("댓글 알림 발송 완료: postId={}, receiverId={}", post.getPostId(), post.getAuthorId());
+        } catch (Exception e) {
+            log.warn("댓글 알림 발송 실패: {}", e.getMessage());
+        }
+    }
+
+    private String getRedirectUrl(Post post) {
+        if (post.getBoardType() == BoardType.IDOL_OFFICIAL) {
+            return "/idol/" + post.getIdolId() + "/board/" + post.getPostId();
+        }
+        if (post.getBoardType() == BoardType.GROUP_OFFICIAL || post.getBoardType() == BoardType.GROUP_FAN) {
+            return "/group/" + post.getGroupId() + "/board/" + post.getPostId();
+        }
+        if (post.getBoardType() == BoardType.ADMIN_NOTICE) {
+            return "/notices/" + post.getPostId();
+        }
+        return "/idol"; // Safe fallback
     }
 }

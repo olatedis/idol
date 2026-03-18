@@ -1,4 +1,4 @@
-package com.bit.idol.userservice.dto.kafka;
+package com.bit.idol.chatservice.dto.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -19,16 +19,17 @@ public class UserSyncProducer {
     @Value("${spring.kafka.topic.user-update}")
     private String topic;
 
-    public void send(int userId, String type) {
+    public void send(int userId, String type, String status) {
         try {
             UserEventDto event = UserEventDto.builder()
                     .userId(userId)
                     .type(type)
+                    .status(status)
                     .build();
             
             String jsonMessage = objectMapper.writeValueAsString(event);
             kafkaTemplate.send(topic, jsonMessage);
-            log.info("유저 동기화 이벤트 발행: userId={}, type={}", userId, type);
+            log.info("유저 동기화 이벤트 발행: userId={}, type={}, status={}", userId, type, status);
         } catch (Exception e) {
             log.error("유저 동기화 이벤트 발행 실패: {}", e.getMessage());
             // 여기서 실패하면 MongoDB 동기화가 안 되므로, 
