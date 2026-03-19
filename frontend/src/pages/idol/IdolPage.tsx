@@ -51,6 +51,7 @@ const IdolPage: React.FC = () => {
                 // 에이전시 계정은 관리 중인 그룹 목록을 서버에서 직접 조회
                 const { data: managedGroups } = await api.get<GroupDto[]>("/groups/managed");
                 setSubscribedGroups(managedGroups);
+            } else {
                 // 일반/아이돌 계정은 구독한 그룹 목록 조회
                 const { data: subs } = await api.get<any[]>("/subscriptions/groups/me");
 
