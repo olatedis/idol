@@ -13,7 +13,6 @@ const PaymentPage: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [method, setMethod] = useState<'toss' | 'card' | 'bank'>('toss');
 
     const rawDomain = location.state?.domain || 'CONCERT';
     const domain: 'CONCERT' | 'SUBSCRIPTION' =
@@ -34,6 +33,23 @@ const PaymentPage: React.FC = () => {
         }
     }, [domain, idolId]);
     const { user } = useAuthStore();
+
+    const nextBillingDate = plan === 'MONTHLY'
+        ? (() => {
+            const d = new Date();
+            d.setMonth(d.getMonth() + 1);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        })()
+        : null;
+    const expiryDate = plan === 'ANNUAL'
+        ? (() => {
+            const d = new Date();
+            d.setFullYear(d.getFullYear() + 1);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        })()
+        : null;
 
     const [readyOrderId, setReadyOrderId] = useState<string | null>(null);
 
@@ -143,13 +159,12 @@ const PaymentPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-idol-bg">
+        <div className="min-h-screen bg-[var(--color-idol-bg)]">
             <Header />
 
             <main className="pt-[80px] px-6">
                 <div className="max-w-2xl mx-auto">
-                    <h2 className="text-2xl font-semibold mb-4">결제</h2>
-
+                    <h2 className="text-3xl font-extrabold mb-4 text-slate-800">결제</h2>
                     <div className="bg-white rounded p-6 shadow">
                         <div className="space-y-4">
                             {domain === 'CONCERT' ? (
@@ -179,29 +194,24 @@ const PaymentPage: React.FC = () => {
                                     <div className="border-t pt-4">
                                         <div className="font-bold">총 금액: {(plan === 'ANNUAL' ? 89100 : 9900).toLocaleString()}원</div>
                                     </div>
+                                    <div className="border-t pt-4 mt-3 p-3 rounded-lg bg-slate-50">
+                                        <div className="text-sm text-slate-600">
+                                            {plan === 'MONTHLY' && nextBillingDate && (
+                                                <>다음 결제일: {nextBillingDate.toLocaleDateString('ko-KR')} 00:00</>
+                                            )}
+                                            {plan === 'ANNUAL' && expiryDate && (
+                                                <>구독 만료일: {expiryDate.toLocaleDateString('ko-KR')}</>
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-slate-500 mt-1">토스 결제를 완료하면 구독이 자동 활성화됩니다.</div>
+                                    </div>
                                 </>
                             )}
                         </div>
                         <div className="border-t pt-4 mt-4">
-                            <div className="font-semibold mb-2">결제 수단</div>
-                            <div className="flex gap-3 items-center">
-                                <label className="flex items-center gap-2">
-                                    <input type="radio" name="method" value="toss" checked={method === 'toss'} onChange={() => setMethod('toss')} />
-                                    <span className="text-sm">Toss (카드)</span>
-                                </label>
-                                <label className="flex items-center gap-2">
-                                    <input type="radio" name="method" value="card" checked={method === 'card'} onChange={() => setMethod('card')} />
-                                    <span className="text-sm">신용/체크카드</span>
-                                </label>
-                                <label className="flex items-center gap-2">
-                                    <input type="radio" name="method" value="bank" checked={method === 'bank'} onChange={() => setMethod('bank')} />
-                                    <span className="text-sm">계좌이체(추후)</span>
-                                </label>
-                            </div>
-
                             <div className="mt-6">
-                                <button onClick={handlePay} disabled={loading} className="py-3 px-4 rounded bg-[var(--color-idol-point)] text-white">
-                                    {loading ? '로딩 중...' : '결제하기'}
+                                <button onClick={handlePay} disabled={loading} className="w-full py-3 px-4 rounded-xl bg-[var(--color-idol-point)] text-white font-bold shadow-lg hover:shadow-xl transition-all duration-200">
+                                    {loading ? '로딩 중...' : '토스로 결제하기'}
                                 </button>
                                 <button onClick={async () => {
                                     // 취소: domain 따라 대기중 데이터 제거 후 뒤로

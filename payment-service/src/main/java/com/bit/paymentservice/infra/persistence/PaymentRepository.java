@@ -15,6 +15,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     List<Payment> findByUserIdOrderByCreatedAtDesc(int userId);
 
+    List<Payment> findByUserIdAndTargetIdAndDomainAndStatus(int userId, int targetId, com.bit.paymentservice.domain.enumtype.PaymentDomain domain, com.bit.paymentservice.domain.enumtype.PaymentStatus status);
+
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.agencyId = :agencyId AND p.status = 'COMPLETED'")
     long sumAmountByAgencyIdAndStatusCompleted(@Param("agencyId") int agencyId);
 
