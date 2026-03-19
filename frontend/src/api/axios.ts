@@ -114,6 +114,24 @@ api.interceptors.response.use(
             }
         }
 
+        // 5xx 서버 오류 또는 네트워크 연결 오류 처리
+        if (axiosError.response?.status && axiosError.response.status >= 500) {
+            Swal.fire({
+                icon: 'error',
+                title: '서버 오류',
+                text: '서버와 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.',
+                confirmButtonColor: '#FF9292'
+            });
+        } else if (!axiosError.response) {
+            // 응답 자체가 없는 경우 (네트워크 다운 등)
+            Swal.fire({
+                icon: 'warning',
+                title: '네트워크 연결 확인',
+                text: '인터넷 연결을 확인하거나 서버가 구동 중인지 확인해 주세요.',
+                confirmButtonColor: '#FF9292'
+            });
+        }
+
         return Promise.reject(error);
     }
 );

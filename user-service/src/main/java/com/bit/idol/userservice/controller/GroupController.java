@@ -31,6 +31,12 @@ public class GroupController {
         return ResponseEntity.ok(groupService.getAllGroups());
     }
 
+    // 그룹 벌크 조회 (N+1 방지용)
+    @GetMapping("/bulk")
+    public ResponseEntity<List<GroupDto>> getGroupsByIds(@RequestParam List<Integer> ids) {
+        return ResponseEntity.ok(groupService.getGroupsByIds(ids));
+    }
+
     // 에이전시 관리 그룹 목록 조회
     @GetMapping("/managed")
     public ResponseEntity<List<GroupDto>> getManagedGroups(

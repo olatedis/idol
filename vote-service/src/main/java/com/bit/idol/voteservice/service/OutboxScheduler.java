@@ -60,7 +60,6 @@ public class OutboxScheduler {
             String processedKey = (String) payload.get("processedKey");
 
             // 1. Kafka 전송 (랭킹 서비스 ZSET 차감용)
-            // 랭킹 서비스는 마이너스 번호를 받으면 점수를 차감하도록 설계되어 있다고 가정 (기존 로직 유지)
             String uuid = UUID.randomUUID().toString();
             String kafkaMessage = uuid + ":" + voteId + ":" + userId + ":-" + candidateNumber;
             kafkaTemplate.send("vote-complete-topic", kafkaMessage);
@@ -69,6 +68,19 @@ public class OutboxScheduler {
             redisTemplate.delete(Arrays.asList(redisKey, processedKey));
             
             log.info("VOTE_CANCELLED 이벤트 외부 시스템 전파 완료: voteId={}, userId={}", voteId, userId);
+        } else if ("VOTE_CAST".equals(event.getEventType())) {
+            Map<String, Object> payload = objectMapper.readValue(event.getPayload(), new TypeReference<Map<String, Object>>() {});
+            
+            String uuid = (String) payload.get("uuid");
+            int voteId = ((Number) payload.get("voteId")).intValue();
+            int userId = ((Number) payload.get("userId")).intValue();
+            int candidateNumber = ((Number) payload.get("candidateNumber")).intValue();
+
+            // Kafka 전송 (vote-service-topic -> VoteConsumer가 수신)
+            String kafkaMessage = uuid + ":" + voteId + ":" + userId + ":" + candidateNumber;
+            kafkaTemplate.send("vote-service-topic", kafkaMessage);
+            
+            log.info("VOTE_CAST 이벤트 외부 시스템 전파 완료: voteId={}, userId={}", voteId, userId);
         }
     }
 }

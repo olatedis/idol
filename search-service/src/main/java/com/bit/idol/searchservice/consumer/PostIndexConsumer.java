@@ -51,9 +51,8 @@ public class PostIndexConsumer {
                         .groupId(event.getGroupId())
                         .title(event.getTitle())
                         .content(event.getContent())
-                        // createdAt/updatedAt 파싱은 실제 스키마에 맞춰 보완 가능
-                        .createdAt(LocalDate.now())
-                        .updatedAt(LocalDate.now())
+                        .createdAt(parseToDate(event.getCreatedAt()))
+                        .updatedAt(parseToDate(event.getUpdatedAt()))
                         .build();
 
                 upserts.add(doc);
@@ -71,6 +70,19 @@ public class PostIndexConsumer {
         if (!upserts.isEmpty()) {
             postSearchRepository.saveAll(upserts);
             log.info("게시글 ES Bulk Indexing 완료: {}건", upserts.size());
+        }
+    }
+
+    private LocalDate parseToDate(String dateStr) {
+        if (dateStr == null || dateStr.isEmpty()) {
+            return LocalDate.now();
+        }
+        try {
+            // ISO 형식(LocalDateTime)에서 LocalDate만 추출
+            return LocalDateTime.parse(dateStr).toLocalDate();
+        } catch (Exception e) {
+            log.warn("날짜 파싱 실패: {}, 기본값(오늘) 사용", dateStr);
+            return LocalDate.now();
         }
     }
 }

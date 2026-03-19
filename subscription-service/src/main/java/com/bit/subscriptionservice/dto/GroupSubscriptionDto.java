@@ -24,6 +24,7 @@ public class GroupSubscriptionDto {
     private LocalDateTime startedAt;
     private LocalDateTime expiredAt;
     private boolean autoRenew;
+    private String groupImage;
 
     public static GroupSubscriptionDto fromEntity(GroupSubscription gs) {
         return GroupSubscriptionDto.builder()
@@ -36,5 +37,9 @@ public class GroupSubscriptionDto {
                 .expiredAt(gs.getExpiredAt())
                 .autoRenew(gs.isAutoRenew())
                 .build();
+    }
+
+    public void setGroupImage(String groupImage) {
+        this.groupImage = groupImage;
     }
 }

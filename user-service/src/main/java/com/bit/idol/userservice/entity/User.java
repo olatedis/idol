@@ -16,6 +16,8 @@ import java.time.LocalDateTime;
         @Index(name = "idx_nickname", columnList = "nickname"),
         @Index(name = "idx_provider", columnList = "provider, providerId") // 소셜 로그인 조회용 복합 인덱스
 })
+@org.hibernate.annotations.SQLDelete(sql = "UPDATE users SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
+@org.hibernate.annotations.Where(clause = "is_deleted = false")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -69,4 +71,9 @@ public class User {
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt; // 가입일 (뉴비 차단용)
+
+    @Builder.Default
+    private boolean isDeleted = false;
+
+    private LocalDateTime deletedAt;
 }

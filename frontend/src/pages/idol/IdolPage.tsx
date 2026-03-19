@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../../api/axios";
 import { useAuthStore } from "../../stores/authStore";
 import SignupModal from "../../components/auth/SignupModal";
+import SafeImage from "../../components/common/SafeImage";
 
 const CARD_WIDTH = 176;
 
@@ -14,17 +15,6 @@ interface GroupDto {
     agencyId: number;
     agencyName: string;
     members?: any[];
-}
-
-interface GroupSubscriptionDto {
-    subscriptionId: number;
-    userId: number;
-    groupId: number;
-    groupName: string;
-    status: string;
-    startedAt: string;
-    expiredAt: string;
-    autoRenew: boolean;
 }
 
 const IdolPage: React.FC = () => {
@@ -61,15 +51,18 @@ const IdolPage: React.FC = () => {
                 // 에이전시 계정은 관리 중인 그룹 목록을 서버에서 직접 조회
                 const { data: managedGroups } = await api.get<GroupDto[]>("/groups/managed");
                 setSubscribedGroups(managedGroups);
-            } else {
                 // 일반/아이돌 계정은 구독한 그룹 목록 조회
-                const { data: subs } = await api.get<GroupSubscriptionDto[]>("/subscriptions/groups/me");
+                const { data: subs } = await api.get<any[]>("/subscriptions/groups/me");
 
-                const groupPromises = subs.map(sub =>
-                    api.get<GroupDto>(`/groups/${sub.groupId}`).then(res => res.data)
-                );
+                // GroupSubscriptionDto를 GroupDto 형식으로 변환 (이름 매핑 등)
+                const groupResults: GroupDto[] = subs.map(sub => ({
+                    groupId: sub.groupId,
+                    name: sub.groupName, // groupName -> name 매핑
+                    groupImage: sub.groupImage,
+                    agencyId: 0, // 상세 정보에 없으므로 기본값 (필요 시 백엔드 보완 가능)
+                    agencyName: ""
+                }));
 
-                const groupResults = await Promise.all(groupPromises);
                 setSubscribedGroups(groupResults);
             }
         } catch (error) {
@@ -108,10 +101,11 @@ const IdolPage: React.FC = () => {
                 onClick={() => handleClick(group)}
                 className="flex-shrink-0 flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
             >
-                <img
-                    src={group.groupImage || "https://api.dicebear.com/7.x/identicon/svg?seed=" + group.groupId}
+                <SafeImage
+                    src={group.groupImage}
                     alt={group.name}
                     className="w-40 h-40 rounded-full border-2 border-idol-point object-cover shadow-md"
+                    text={group.name}
                 />
                 <p className="mt-4 text-sm font-medium text-gray-800">{group.name}</p>
             </div>

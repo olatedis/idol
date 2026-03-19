@@ -58,14 +58,15 @@ public class GroupService {
 
     // 전체 그룹 목록 조회 (추가됨)
     public List<GroupDto> getAllGroups() {
-        List<Group> groups = groupRepository.findAllWithAgency();
+        return groupRepository.findAllWithAgency().stream()
+                .map(group -> GroupDto.fromEntity(group, null))
+                .collect(Collectors.toList());
+    }
 
-        return groups.stream()
-                .map(group -> {
-                    // 목록 조회 시에는 멤버 목록을 비워두거나, 필요하면 조회 (여기서는 성능을 위해 비움)
-                    // 만약 멤버 수도 필요하다면 batch size 설정이나 별도 쿼리 필요
-                    return GroupDto.fromEntity(group, null);
-                })
+    // 벌크 조회 (N+1 방지용)
+    public List<GroupDto> getGroupsByIds(List<Integer> ids) {
+        return groupRepository.findAllById(ids).stream()
+                .map(group -> GroupDto.fromEntity(group, null))
                 .collect(Collectors.toList());
     }
 

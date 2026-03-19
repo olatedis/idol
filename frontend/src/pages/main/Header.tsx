@@ -928,15 +928,17 @@ const Header: React.FC = () => {
                                         콘서트 페이지
                                     </Link>
                                 </li>
-                                <li>
-                                    <Link
-                                        to="/mypage"
-                                        onClick={closeMenu}
-                                        className="block p-3 rounded-xl hover:bg-idol/10 hover:text-idol font-medium transition-colors"
-                                    >
-                                        마이페이지
-                                    </Link>
-                                </li>
+                                {isLoggedIn && (
+                                    <li>
+                                        <Link
+                                            to="/mypage"
+                                            onClick={closeMenu}
+                                            className="block p-3 rounded-xl hover:bg-idol/10 hover:text-idol font-medium transition-colors"
+                                        >
+                                            마이페이지
+                                        </Link>
+                                    </li>
+                                )}
                             </ul>
                         </nav>
 

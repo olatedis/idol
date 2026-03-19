@@ -367,7 +367,7 @@ public class UserService {
             }
         }
 
-        // 프로필 이미지 삭제 추가
+        // 1. 프로필 이미지 삭제 추가
         if (user.getImgUrl() != null && !user.getImgUrl().isEmpty()) {
             try {
                 s3Service.deleteFile(user.getImgUrl());
@@ -376,7 +376,15 @@ public class UserService {
             }
         }
 
-        userRepository.delete(user);
+        // 2. 논리 삭제 처리
+        user.setDeleted(true);
+        user.setDeletedAt(LocalDateTime.now());
+        user.setStatus(UserStatus.WITHDRAWN); // 상태도 WITHDRAWN으로 변경
+        
+        // 3. 중복 방지를 위해 식별 정보 무작위 변경 (닉네임 등)
+        user.setNickname(user.getNickname() + "_withdrawn_" + UUID.randomUUID().toString().substring(0, 8));
+        
+        userRepository.save(user);
 
         // 이벤트 발행
         eventPublisher.publishEvent(new UserEvent(userId, "DELETE", "DELETED"));
@@ -500,6 +508,7 @@ public class UserService {
                 .status(UserStatus.valueOf(view.getStatus()))
                 .reportCount(view.getReportCount())
                 .suspendedUntil(view.getSuspendedUntil())
+                .createdAt(view.getCreatedAt())
                 .build();
     }
 

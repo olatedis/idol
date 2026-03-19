@@ -185,6 +185,7 @@ public class VoteService {
     }
 
     @CircuitBreaker(name = "redis-vote", fallbackMethod = "castVoteFallback")
+    @Transactional
     public String castVote(int voteId, int userId, int candidateNumber, String clientIp) {
         validateIp(clientIp);
 
@@ -223,7 +224,7 @@ public class VoteService {
         }
 
         try {
-            sendToKafka(voteId, userId, candidateNumber, redisKey);
+            saveToOutbox(voteId, userId, candidateNumber, redisKey);
         } catch (Exception e) {
             redisTemplate.delete(redisKey);
             throw e;
@@ -293,15 +294,27 @@ public class VoteService {
         throw new RuntimeException(t);
     }
 
-    private void sendToKafka(int voteId, int userId, int candidateNumber, String redisKey) {
+    private void saveToOutbox(int voteId, int userId, int candidateNumber, String redisKey) {
         String uuid = UUID.randomUUID().toString();
-        String message = uuid + ":" + voteId + ":" + userId + ":" + candidateNumber;
+        Map<String, Object> payloadMap = new HashMap<>();
+        payloadMap.put("uuid", uuid);
+        payloadMap.put("voteId", voteId);
+        payloadMap.put("userId", userId);
+        payloadMap.put("candidateNumber", candidateNumber);
 
         try {
-            kafkaTemplate.send(voteTopic, message);
-        } catch (Exception e) {
-            redisTemplate.delete(redisKey);
-            throw new RuntimeException("투표 전송 중 오류가 발생했습니다. 다시 시도해주세요.", e);
+            String payload = objectMapper.writeValueAsString(payloadMap);
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .aggregateId(String.valueOf(voteId))
+                    .aggregateType("VOTE")
+                    .eventType("VOTE_CAST")
+                    .payload(payload)
+                    .build();
+            outboxRepository.save(outboxEvent);
+            log.info("투표 생성 이벤트 Outbox 저장 완료: voteId={}, userId={}", voteId, userId);
+        } catch (JsonProcessingException e) {
+            log.error("Outbox 페이로드 직렬화 실패: {}", e.getMessage());
+            throw new RuntimeException("투표 처리 중 오류가 발생했습니다.");
         }
     }
 

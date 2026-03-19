@@ -125,8 +125,9 @@ const GlobalConcertPage: React.FC = () => {
                                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                         onError={(e) => {
                                             const target = e.target as HTMLImageElement;
-                                            target.onerror = null; // 무한 루프 방지
-                                            target.src = "https://via.placeholder.com/400x500?text=No+Image";
+                                            if (target.src.includes('placehold.jp')) return; // 이미 대체 이미지인 경우 중단
+                                            target.onerror = null;
+                                            target.src = "https://placehold.jp/24/cccccc/ffffff/400x500.png?text=No%20Image";
                                         }}
                                     />
                                     {/* 날짜 뱃지 */}
