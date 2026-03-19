@@ -91,4 +91,23 @@ public class GroupController {
         groupService.removeMemberFromGroup(groupId, idolId);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/{groupId}/image")
+    public ResponseEntity<String> updateGroupImage(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestHeader(value = "X-Role", defaultValue = "USER") String role,
+            @PathVariable int groupId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+
+        if (!"AGENCY".equals(role)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        if (!internalValidationService.canAgencyManageGroup(userId, groupId)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        String fileUrl = groupService.updateGroupImage(groupId, file);
+        return ResponseEntity.ok(fileUrl);
+    }
 }

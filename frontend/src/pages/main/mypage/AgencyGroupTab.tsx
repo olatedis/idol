@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../../../api/axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { showConfirm, showErrorToast, showSuccessToast } from '../../../utils/alert';
@@ -34,6 +34,10 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
     const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
     const [newMemberIdolId, setNewMemberIdolId] = useState<string>('');
     const [actionError, setActionError] = useState<string>('');
+
+    // 이미지 업로드 관리
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploadingGroupId, setUploadingGroupId] = useState<number | null>(null);
 
     useEffect(() => {
         if (!agencyId) return;
@@ -132,11 +136,50 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
         }
     };
 
+    const triggerImageUpload = (groupId: number) => {
+        setUploadingGroupId(groupId);
+        fileInputRef.current?.click();
+    };
+
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!uploadingGroupId || !e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const res = await api.post(`/groups/${uploadingGroupId}/image`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            const newImageUrl = res.data;
+
+            setGroups(prevGroups => prevGroups.map(g => 
+                g.groupId === uploadingGroupId ? { ...g, groupImage: newImageUrl } : g
+            ));
+            
+            showSuccessToast("그룹 이미지가 성공적으로 변경되었습니다.");
+        } catch (err: any) {
+            console.error("이미지 업로드 실패:", err);
+            showErrorToast("이미지 업로드에 실패했습니다.");
+        } finally {
+            setUploadingGroupId(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
     if (loading) return <div className="py-10 text-center">Loading Data...</div>;
     if (error) return <div className="py-10 text-center text-red-500">{error}</div>;
 
     return (
         <div className="space-y-6 mt-8 border-t border-gray-100 pt-8 animate-fade-in font-sans">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleImageChange} 
+            />
+
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="text-xl font-bold text-gray-900">소속 그룹 목록 및 멤버 관리</h3>
@@ -154,12 +197,19 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
                         <div key={group.groupId} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-idol/30 transition-colors">
                             <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-4">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gray-100 rounded-xl overflow-hidden shadow-inner">
+                                    <div 
+                                        className="relative w-12 h-12 bg-gray-100 rounded-xl overflow-hidden shadow-inner cursor-pointer group/img"
+                                        onClick={() => triggerImageUpload(group.groupId)}
+                                        title="클릭하여 그룹 이미지 변경"
+                                    >
                                         {group.groupImage ? (
-                                            <img src={group.groupImage} alt={group.name} className="w-full h-full object-cover" />
+                                            <img src={group.groupImage} alt={group.name} className="w-full h-full object-cover group-hover/img:opacity-50 transition-opacity" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-gray-400">G</div>
+                                            <div className="w-full h-full flex items-center justify-center text-gray-400 group-hover/img:text-gray-600 transition-colors">G</div>
                                         )}
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none">
+                                            <span className="text-[10px] bg-black/60 text-white px-1 py-0.5 rounded">변경</span>
+                                        </div>
                                     </div>
                                     <div>
                                         <h4 className="text-lg font-bold text-gray-900">{group.name}</h4>

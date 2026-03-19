@@ -24,6 +24,7 @@ public class GroupService {
     private final GroupRepository groupRepository; // 추가됨
     private final com.bit.idol.userservice.repository.IdolRepository idolRepository;
     private final com.bit.idol.userservice.repository.AgencyAccountRepository agencyAccountRepository;
+    private final S3Service s3Service;
 
 
     // 그룹 소속 아이돌 목록 조회 (기존 메서드 유지)
@@ -96,5 +97,20 @@ public class GroupService {
         com.bit.idol.userservice.entity.Idol idol = idolRepository.findById(idolId)
                 .orElseThrow(() -> new RuntimeException("Idol not found"));
         idol.setGroup(null);
+    }
+
+    @Transactional
+    public String updateGroupImage(int groupId, org.springframework.web.multipart.MultipartFile file) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        try {
+            String fileUrl = s3Service.uploadFile(file);
+            group.setGroupImage(fileUrl);
+            groupRepository.saveAndFlush(group);
+            return fileUrl;
+        } catch (Exception e) {
+            throw new RuntimeException("이미지 업로드 실패", e);
+        }
     }
 }
