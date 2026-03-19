@@ -51,6 +51,15 @@ public class PostIndexEventPublisher {
             payload.put("groupId", post.getGroupId());
             payload.put("title", post.getTitle());
             payload.put("content", post.getContent());
+            
+            // 타임스탬프 추가 (ISO 형식 권장)
+            java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            if (post.getCreatedAt() != null) {
+                payload.put("createdAt", post.getCreatedAt().format(formatter));
+            }
+            if (post.getUpdatedAt() != null) {
+                payload.put("updatedAt", post.getUpdatedAt().format(formatter));
+            }
 
             String json = objectMapper.writeValueAsString(payload);
 

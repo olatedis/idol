@@ -645,34 +645,39 @@ public class ChatService {
         }
     }
 
-    // 다중 탭/기기 환경을 고려한 접속 상태 집합 관리
+    // 다중 탭/기기 환경을 고려한 접속 상태 집합 관리 (Lua 스크립트를 통한 원자성 확보)
     public void setIdolOnline(Long idolId, boolean isOnline, String sessionId) {
         String onlineKey = "idol:online:sessions:" + idolId;
 
         log.info("setIdolOnline START: idolId={}, isOnline={}, sessionId={}", idolId, isOnline, sessionId);
 
-        // 작업 전 좀비 세션 청소부터 하여 정확한 카운트 확보
+        // 1. 작업 전 좀비 세션 청소 (정확한 카운트 확보)
         pruneZombieSessions(idolId);
 
-        Long previousCount = redisTemplate.opsForSet().size(onlineKey);
-        if (previousCount == null)
-            previousCount = 0L;
+        // 2. Lua 스크립트를 통해 상태 변경 및 이전/현재 카운트 획득
+        String script = 
+            "local prevCount = redis.call('SCARD', KEYS[1]); " +
+            "if ARGV[1] == 'ON' then " +
+            "  redis.call('SADD', KEYS[1], ARGV[2]); " +
+            "else " +
+            "  redis.call('SREM', KEYS[1], ARGV[2]); " +
+            "end " +
+            "local currentCount = redis.call('SCARD', KEYS[1]); " +
+            "return {prevCount, currentCount}";
 
-        if (isOnline) {
-            redisTemplate.opsForSet().add(onlineKey, sessionId);
-            log.info("Redis ADD: key={}, value={}", onlineKey, sessionId);
-        } else {
-            Long removed = redisTemplate.opsForSet().remove(onlineKey, sessionId);
-            log.info("Redis REMOVE: key={}, value={}, removedCount={}", onlineKey, sessionId, removed);
-        }
+        List<Long> counts = (List<Long>) redisTemplate.execute(
+            new org.springframework.data.redis.core.script.DefaultRedisScript<>(script, List.class),
+            java.util.Collections.singletonList(onlineKey),
+            isOnline ? "ON" : "OFF",
+            sessionId
+        );
 
-        Long currentCount = redisTemplate.opsForSet().size(onlineKey);
-        if (currentCount == null)
-            currentCount = 0L;
+        long previousCount = counts.get(0);
+        long currentCount = counts.get(1);
 
-        log.info("setIdolOnline 카운트 체크: previous={}, current={}", previousCount, currentCount);
+        log.info("setIdolOnline Lua 결과: previous={}, current={}", previousCount, currentCount);
 
-        // 브로드캐스팅 결정: 최초 0->1(ON) 또는 최종 1->0(OFF)
+        // 3. 브로드캐스팅 결정: 최초 0->1(ON) 또는 최종 1->0(OFF)
         boolean turnedOn = (previousCount == 0 && currentCount > 0);
         boolean turnedOff = (previousCount > 0 && currentCount == 0);
 
@@ -696,48 +701,42 @@ public class ChatService {
                     .idolId(idolId)
                     .type("STATUS")
                     .content(status)
-                    .parentId(groupId != null ? String.valueOf(groupId) : null) // groupId 전달용 임시 필드 활용
+                    .parentId(groupId != null ? String.valueOf(groupId) : null)
                     .build();
 
             // 1. 개별 채팅방 채널 브로드캐스트
             redisTemplate.convertAndSend("/sub/idol/" + idolId, statusMessage);
             
-            // 2. [추가] 그룹 전체 채널 브로드캐스트 (목록 실시간 동기화용)
+            // 2. 그룹 전체 채널 브로드캐스트
             if (groupId != null) {
                 redisTemplate.convertAndSend("/sub/group/" + groupId + "/status", statusMessage);
-                log.info("그룹 실시간 상태 브로드캐스트: groupId={}, idolId={}, status={}", groupId, idolId, status);
             }
 
             log.info("아이돌 접속 상태 변경 완료: idolId={}, sessions={}({}->{}), status={}", 
                     idolId, currentCount, previousCount, currentCount, status);
 
-            // 아이돌 최초 접속 시 구독자 알림 발행
+            // 최초 접속 시 알림
             if (turnedOn) {
                 try {
                     String idolName = "아이돌";
-                    try {
-                        var idolInfo = userFeignClient.getAllIdols().stream()
-                                .filter(idol -> (long) idol.getIdolId() == idolId)
-                                .findFirst();
-                        idolName = idolInfo.map(IdolDto::getStageName).orElse("아이돌");
-                    } catch (Exception e) {
-                        log.warn("알림용 아이돌 이름 조회 실패");
-                    }
+                    var idolInfo = userFeignClient.getAllIdols().stream()
+                            .filter(idol -> (long) idol.getIdolId() == idolId)
+                            .findFirst();
+                    idolName = idolInfo.map(IdolDto::getStageName).orElse("아이돌");
 
                     String redirectUrl = (groupId != null)
                             ? "/group/" + groupId + "/chat?idolId=" + idolId
                             : "/mypage";
 
-                    com.bit.idol.chatservice.dto.notification.NotificationEventDto notifyEvent =
-                            com.bit.idol.chatservice.dto.notification.NotificationEventDto.builder()
-                                    .eventId(java.util.UUID.randomUUID().toString())
-                                    .type("CHAT_IDOL_ONLINE")
-                                    .targetType(com.bit.idol.chatservice.dto.notification.TargetType.IDOL_SUB)
-                                    .targetId(String.valueOf(idolId))
-                                    .args(java.util.Map.of("idolName", idolName))
-                                    .redirectUrl(redirectUrl)
-                                    .occurredAt(java.time.LocalDateTime.now())
-                                    .build();
+                    NotificationEventDto notifyEvent = NotificationEventDto.builder()
+                            .eventId(java.util.UUID.randomUUID().toString())
+                            .type("CHAT_IDOL_ONLINE")
+                            .targetType(TargetType.IDOL_SUB)
+                            .targetId(String.valueOf(idolId))
+                            .args(java.util.Map.of("idolName", idolName))
+                            .redirectUrl(redirectUrl)
+                            .occurredAt(java.time.LocalDateTime.now())
+                            .build();
                     notificationProducer.send(notifyEvent);
                 } catch (Exception e) {
                     log.error("아이돌 접속 알림 발행 실패: idolId={}, err={}", idolId, e.getMessage());

@@ -127,8 +127,8 @@ const VotePage: React.FC = () => {
     }, [selectedVote?.id, selectedVote?.status]);
 
     const connectWebSocket = (voteId: number) => {
-        const wsUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000")
-            .replace("http", "ws") + "/ws-ranking";
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+        const wsUrl = baseUrl.replace(/^http/, "ws") + "/ws-ranking";
 
         const client = new Client({
             brokerURL: wsUrl,

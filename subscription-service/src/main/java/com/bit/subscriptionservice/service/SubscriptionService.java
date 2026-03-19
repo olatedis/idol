@@ -366,13 +366,29 @@ public class SubscriptionService {
         log.info("그룹 구독 해지 완료: userId={}, groupId={}", userId, request.getGroupId());
     }
 
-    // 내 그룹 구독 목록 조회
+    // 내 그룹 구독 목록 조회 (벌크로 이미지 정보 채우기)
     public List<GroupSubscriptionDto> getMyGroupSubscriptions(int userId) {
-        return groupSubscriptionRepository
+        List<GroupSubscriptionDto> dtos = groupSubscriptionRepository
                 .findAllByUserIdAndStatus(userId, SubscriptionStatus.ACTIVE)
                 .stream()
                 .map(GroupSubscriptionDto::fromEntity)
                 .toList();
+
+        if (dtos.isEmpty()) return dtos;
+
+        try {
+            List<Integer> groupIds = dtos.stream().map(GroupSubscriptionDto::getGroupId).toList();
+            List<GroupResponse> groupInfos = userServiceClient.getGroupsByIds(groupIds);
+
+            Map<Integer, String> imageMap = groupInfos.stream()
+                    .collect(java.util.stream.Collectors.toMap(GroupResponse::getGroupId, GroupResponse::getGroupImage));
+
+            dtos.forEach(dto -> dto.setGroupImage(imageMap.get(dto.getGroupId())));
+        } catch (Exception e) {
+            log.warn("그룹 이미지 벌크 조회 중 오류 발생: {}", e.getMessage());
+        }
+
+        return dtos;
     }
 
     // 그룹 구독 여부 체크(필요하면 사용)
