@@ -78,15 +78,22 @@ public class ReservationHandler {
     }
 
     @Transactional
-    public java.util.List<Integer> saveDbReserveBulk(int userId, int concertId, java.util.List<Integer> seatIds, int price) {
+    public java.util.List<Integer> saveDbReserveBulk(int userId, int concertId, java.util.List<Integer> seatIds, java.util.List<Integer> seatPrices) {
         if (seatIds == null || seatIds.isEmpty()) {
             throw new IllegalArgumentException("좌석이 선택되지 않았습니다.");
+        }
+        if (seatPrices == null || seatPrices.size() != seatIds.size()) {
+            throw new IllegalArgumentException("seatPrices 는 seatIds 와 길이가 같아야 합니다.");
         }
 
         java.util.List<Integer> reservationIds = new java.util.ArrayList<>();
         java.util.List<Integer> savedSeatIds = new java.util.ArrayList<>();
 
-        for (int seatId : seatIds) {
+        int totalPrice = 0;
+        for (int i = 0; i < seatIds.size(); i++) {
+            int seatId = seatIds.get(i);
+            int price = seatPrices.get(i);
+
             Reservation reservation = persistReservation(userId, concertId, seatId, price);
             log.info("예약 저장 완료 (bulk): reservationId={}, userId={}, concertId={}, seatId={}",
                     reservation.getId(), userId, concertId, seatId);
@@ -98,6 +105,7 @@ public class ReservationHandler {
 
             reservationIds.add(reservation.getId());
             savedSeatIds.add(seatId);
+            totalPrice += price;
         }
 
         PaymentEvent event = new PaymentEvent(
@@ -105,7 +113,7 @@ public class ReservationHandler {
                 null,
                 "CONCERT",
                 concertId,
-                price * seatIds.size(),
+                totalPrice,
                 0,
                 reservationIds,
                 savedSeatIds);

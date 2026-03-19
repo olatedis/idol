@@ -29,9 +29,12 @@ public class ReservationService {
         return reservationHandler.saveDbReserve(userId, concertId, seatId, price);
     }
 
-    public java.util.List<Integer> reserveMany(int userId, int concertId, java.util.List<Integer> seatIds, int price) {
+    public java.util.List<Integer> reserveMany(int userId, int concertId, java.util.List<Integer> seatIds, java.util.List<Integer> seatPrices) {
         if (seatIds == null || seatIds.isEmpty()) {
             throw new IllegalArgumentException("좌석 목록이 비어 있습니다.");
+        }
+        if (seatPrices == null || seatPrices.size() != seatIds.size()) {
+            throw new IllegalArgumentException("seatPrices 는 seatIds 와 길이가 같아야 합니다.");
         }
 
         // 모든 좌석에 대해 락 확보
@@ -43,7 +46,7 @@ public class ReservationService {
         }
 
         // 트랜잭션으로 저장 + 한 번에 결제 요청 이벤트 발행
-        return reservationHandler.saveDbReserveBulk(userId, concertId, seatIds, price);
+        return reservationHandler.saveDbReserveBulk(userId, concertId, seatIds, seatPrices);
     }
 
     public void cancel(int userId, int reservationId) {

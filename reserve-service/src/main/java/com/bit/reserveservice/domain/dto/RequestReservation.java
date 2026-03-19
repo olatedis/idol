@@ -11,4 +11,5 @@ public class RequestReservation {
     private int seatId;
     private java.util.List<Integer> seatIds;
     private int price;
+    private java.util.List<Integer> seatPrices;
 }

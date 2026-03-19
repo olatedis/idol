@@ -59,7 +59,7 @@ public class ReservationController {
                     userId,
                     requestReservation.getConcertId(),
                     requestReservation.getSeatIds(),
-                    requestReservation.getPrice());
+                    requestReservation.getSeatPrices());
             log.info("예약 서비스 bulk 반환 ids={}", ids);
             return ids;
         } catch (IllegalStateException | IllegalArgumentException e) {
