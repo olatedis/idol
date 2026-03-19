@@ -657,7 +657,7 @@ public class ChatService {
         // 2. Lua 스크립트를 통해 상태 변경 및 이전/현재 카운트 획득
         String script = 
             "local prevCount = redis.call('SCARD', KEYS[1]); " +
-            "if ARGV[1] == 'ON' then " +
+            "if ARGV[1] == 'ON' or ARGV[1] == '\"ON\"' then " +
             "  redis.call('SADD', KEYS[1], ARGV[2]); " +
             "else " +
             "  redis.call('SREM', KEYS[1], ARGV[2]); " +
