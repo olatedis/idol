@@ -38,6 +38,21 @@ public class PaymentService {
             throw new IllegalArgumentException("유효하지 않은 대상 ID");
         }
 
+        // 중복 결제 준비 방지 - 동일 user, target, domain, READY 상태, reservationIds 동일
+        if (request.getReservationIds() != null && !request.getReservationIds().isEmpty()) {
+            var candidates = paymentRepository.findByUserIdAndTargetIdAndDomainAndStatus(
+                    request.getUserId(), request.getTargetId(), request.getDomain(),
+                    com.bit.paymentservice.domain.enumtype.PaymentStatus.READY);
+
+            for (var candidate : candidates) {
+                if (candidate.deserializeReservationIds().equals(request.getReservationIds())) {
+                    log.info("중복 결제 준비 감지: 기존 orderId 재사용. userId={}, targetId={}, reservationIds={}",
+                            request.getUserId(), request.getTargetId(), request.getReservationIds());
+                    return new PaymentCreateResponse(candidate.getOrderId(), candidate.getAmount());
+                }
+            }
+        }
+
         String orderId = UUID.randomUUID().toString();
 
         Payment payment = Payment.ready(
