@@ -1,5 +1,6 @@
 package com.bit.paymentservice.infra.kafka;
 
+import com.bit.paymentservice.domain.dto.PaymentEvent;
 import com.bit.paymentservice.domain.entity.Payment;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -14,7 +15,17 @@ public class PaymentEventProducer {
     }
 
     public void publishPaymentCompleted(Payment payment) {
-        kafkaTemplate.send("payment.completed", String.valueOf(payment.getTargetId()));
+        PaymentEvent event = new PaymentEvent(
+                payment.getUserId(),
+                payment.getOrderId(),
+                payment.getDomain(),
+                payment.getTargetId(),
+                payment.getAmount(),
+                payment.getAgencyId(),
+                payment.deserializeReservationIds(),
+                null);
+
+        kafkaTemplate.send("payment.completed", event.toJson());
     }
 
     public void publishPaymentFailed(int targetId) {

@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Table(
         name = "group_subscriptions",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"user_id", "group_id"})
+                @UniqueConstraint(columnNames = {"user_id", "group_id", "ststus"})
         },
         indexes = {
                 @Index(name = "idx_gsub_user_id", columnList = "user_id"),

@@ -39,6 +39,34 @@ public class ReservationController {
         }
     }
 
+    @PostMapping("/bulk")
+    public java.util.List<Integer> reserveBulk(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestBody RequestReservation requestReservation
+    ) {
+        if (requestReservation.getSeatIds() == null || requestReservation.getSeatIds().isEmpty()) {
+            throw new ReservationException("seatIds가 비어 있습니다.");
+        }
+
+        log.info("예약 bulk API 호출: userId={}, concertId={}, seatIds={}, price={}",
+                userId,
+                requestReservation.getConcertId(),
+                requestReservation.getSeatIds(),
+                requestReservation.getPrice());
+
+        try {
+            java.util.List<Integer> ids = reservationService.reserveMany(
+                    userId,
+                    requestReservation.getConcertId(),
+                    requestReservation.getSeatIds(),
+                    requestReservation.getPrice());
+            log.info("예약 서비스 bulk 반환 ids={}", ids);
+            return ids;
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            throw new ReservationException(e.getMessage());
+        }
+    }
+
     // 예약 취소 (본인 취소)
     @GetMapping("/{reservationId}")
     public void cancelReservation(
