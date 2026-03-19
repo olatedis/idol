@@ -83,15 +83,49 @@ const MyPage: React.FC = () => {
 
     useEffect(() => {
         const initialTab = location.state?.initialTab;
+        const queryTab = new URLSearchParams(location.search).get("tab");
 
         if (initialTab === "notification") {
             setActiveTab("notification");
+            return;
         }
 
         if (initialTab === "notificationHistory") {
             setActiveTab("notificationHistory");
+            return;
         }
-    }, [location.state]);
+
+        // 추가: 쿼리스트링 기반 탭 이동 처리
+        if (queryTab === "subscription") {
+            setActiveTab("subscription");
+            return;
+        }
+
+        if (queryTab === "payment") {
+            setActiveTab("payment");
+            return;
+        }
+
+        if (queryTab === "bans") {
+            setActiveTab("bans");
+            return;
+        }
+
+        if (queryTab === "notification") {
+            setActiveTab("notification");
+            return;
+        }
+
+        if (queryTab === "notificationHistory") {
+            setActiveTab("notificationHistory");
+            return;
+        }
+
+        if (queryTab === "profile") {
+            setActiveTab("profile");
+            return;
+        }
+    }, [location.state, location.search]);
 
     if (loading) {
         return (

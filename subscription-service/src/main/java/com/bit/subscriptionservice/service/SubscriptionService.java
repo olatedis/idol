@@ -122,7 +122,7 @@ public class SubscriptionService {
                 .targetType(SubscriptionEvent.TargetType.USER)
                 .targetId(String.valueOf(subscription.getUserId()))
                 .args(args)
-                .redirectUrl("/mypage")
+                .redirectUrl("/mypage?tab=subscription")
                 .occurredAt(LocalDateTime.now())
                 .build();
 
@@ -171,7 +171,7 @@ public class SubscriptionService {
                 .targetType(SubscriptionEvent.TargetType.USER)
                 .targetId(String.valueOf(subscription.getUserId()))
                 .args(args)
-                .redirectUrl("/subscription")
+                .redirectUrl("/mypage?tab=subscription")
                 .occurredAt(LocalDateTime.now())
                 .build();
 
@@ -212,7 +212,7 @@ public class SubscriptionService {
                 .targetType(SubscriptionEvent.TargetType.USER)
                 .targetId(String.valueOf(subscription.getUserId()))
                 .args(args)
-                .redirectUrl("/subscription")
+                .redirectUrl("/mypage?tab=subscription")
                 .occurredAt(LocalDateTime.now())
                 .build();
 
@@ -317,7 +317,7 @@ public class SubscriptionService {
                 .targetType(SubscriptionEvent.TargetType.USER)
                 .targetId(String.valueOf(gs.getUserId()))
                 .args(args)
-                .redirectUrl("/subscription")
+                .redirectUrl("/mypage?tab=subscription")
                 .occurredAt(LocalDateTime.now())
                 .build();
 
@@ -356,7 +356,7 @@ public class SubscriptionService {
                 .targetType(SubscriptionEvent.TargetType.USER)
                 .targetId(String.valueOf(gs.getUserId()))
                 .args(args)
-                .redirectUrl("/subscription")
+                .redirectUrl("/mypage?tab=subscription")
                 .occurredAt(LocalDateTime.now())
                 .build();
 
