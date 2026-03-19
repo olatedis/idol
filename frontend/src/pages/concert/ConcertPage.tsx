@@ -280,33 +280,31 @@ const ConcertPage: React.FC = () => {
 
         // 즉시 좌석 락(예매) 요청 - Reservation API 호출
         try {
-            const reservationIds: number[] = [];
+            const seatIds = chosenSeats.map((seat) => seat.id);
+            const seatPrices = chosenSeats.map((seat) => seat.price);
 
-            for (const seat of chosenSeats) {
-                const res = await api.post(`${API_BASE_URL}/reservations`, {
-                    userId: user.userId,
-                    concertId: selectedConcert.id,
-                    seatId: seat.id,
-                    price: seat.price,
-                }, {
-                    headers: {
-                        'X-User-Id': String(user.userId),
-                    }
-                });
-
-                if (res.status !== 200 && res.status !== 201) {
-                    throw new Error(`예약 실패 (seat=${seat.id})`);
+            const res = await api.post(`${API_BASE_URL}/reservations/bulk`, {
+                userId: user.userId,
+                concertId: selectedConcert.id,
+                seatIds,
+                seatPrices,
+                price: totalPrice,
+            }, {
+                headers: {
+                    'X-User-Id': String(user.userId),
                 }
+            });
 
-                // ReservationController returns int id in body
-                const reservationId = res.data;
-                reservationIds.push(reservationId);
+            if (res.status !== 200 && res.status !== 201) {
+                throw new Error('예약 실패 (bulk)');
             }
+
+            const reservationIds: number[] = res.data;
 
             // 이동: 결제 페이지로 reservationIds 포함하여 전달
             navigate('/payment', {
                 state: {
-                    domain: "concert",
+                    domain: 'CONCERT',
                     concert: selectedConcert,
                     seats: chosenSeats,
                     totalPrice,

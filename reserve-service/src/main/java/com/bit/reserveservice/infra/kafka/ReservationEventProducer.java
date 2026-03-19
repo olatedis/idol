@@ -40,8 +40,13 @@ public class ReservationEventProducer {
         try {
             PaymentEvent event = PaymentEvent.fromJson(message);
 
-            // domain이 CONCERT인 경우만 처리 (콘서트 예약)
-            if (!"CONCERT".equals(event.getDomain())) {
+            // domain이 CONCERT(또는 레거시 RESERVATION/RESERVATE)인 경우만 처리
+            String domain = event.getDomain();
+            if ("RESERVATE".equalsIgnoreCase(domain) || "RESERVATION".equalsIgnoreCase(domain)) {
+                domain = "CONCERT";
+            }
+
+            if (!"CONCERT".equals(domain)) {
                 log.info("미지원 도메인 필터링: domain={}", event.getDomain());
                 return;
             }
@@ -65,7 +70,7 @@ public class ReservationEventProducer {
             PaymentEvent eventWithSeats = new PaymentEvent(
                     event.getUserId(),
                     event.getOrderId(),
-                    event.getDomain(),
+                    domain,
                     event.getTargetId(),
                     event.getAmount(),
                     event.getAgencyId(), // agencyId 전달
@@ -81,8 +86,13 @@ public class ReservationEventProducer {
                                     String.format("예약을 찾을 수 없음: reservationId=%d", reservationId)));
 
                     // 예약 상태 확인
+                    if (reservation.getStatus() == ReservationStatus.COMPLETED) {
+                        log.info("이미 확정된 예약, 재처리 생략: reservationId={}", reservationId);
+                        continue;
+                    }
+
                     if (reservation.getStatus() != ReservationStatus.PENDING) {
-                        log.warn("예약 상태 불일치: reservationId={}, status={}",
+                        log.warn("예약 상태 불일치 (처리 불가): reservationId={}, status={}",
                                 reservationId, reservation.getStatus());
                         continue;
                     }
@@ -118,8 +128,8 @@ public class ReservationEventProducer {
                 }
             }
 
-            if (allProcessed) {
-                reservationRepository.findById(event.getReservationIds().getFirst())
+            if (allProcessed && !event.getReservationIds().isEmpty()) {
+                reservationRepository.findById(event.getReservationIds().get(0))
                         .ifPresent(this::publishReservationCreated);
             }
 
