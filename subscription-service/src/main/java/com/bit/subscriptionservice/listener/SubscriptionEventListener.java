@@ -27,7 +27,7 @@ public class SubscriptionEventListener {
     public void handleSubscriptionEvent(SubscriptionEventWrapper wrapper) {
         log.info("Subscription Event 발행 (After Commit): type={}", wrapper.event().getType());
         try {
-            eventProducer.publish(wrapper.topic(), wrapper.event());
+            eventProducer.publish(wrapper.event());
         } catch (Exception e) {
             log.error("Kafka 이벤트 발행 실패: {}", e.getMessage());
         }
