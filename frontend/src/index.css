@@ -9,6 +9,9 @@
 
     --color-idol-mid: #E86F82;
 
+    /* 추가 참고용 색상 (사용 금지, 주석으로만 보관) */
+    /* #ffb5a7, #fcd5ce, #f8edeb, #f9dcc4, #fec89a */
+
 }
 @layer utilities {
     .scrollbar-hide {
