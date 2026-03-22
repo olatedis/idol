@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   # 인프라 레이어 (기존 인프라를 운영 환경에 맞게 튜닝)
-  idol-db:
+  db:
     container_name: idol-db
     restart: always
     environment:
@@ -12,16 +12,16 @@ services:
     ports:
       - "3306:3306"
 
-  idol-redis:
+  redis:
     container_name: idol-redis
     restart: always
     command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
 
-  idol-mongo:
+  mongo:
     container_name: idol-mongo
     restart: always
 
-  idol-kafka:
+  kafka:
     container_name: idol-kafka
     restart: on-failure
     environment:
