@@ -22,38 +22,45 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-
-    # 1. 빌드 및 이미지 전송 (루트 gradlew 사용)
+    # 1. 빌드 및 이미지 전송 (개별 서비스 디렉토리로 이동하여 빌드)
     - name: Build and Push Discovery Service
       run: |
-        ./gradlew :discovery-service:bootJar
-        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-discovery:latest ./discovery-service
+        cd eureka-server
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-discovery:latest .
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-discovery:latest
 
     - name: Build and Push API Gateway
       run: |
-        ./gradlew :api-gateway:bootJar
-        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-gateway:latest ./api-gateway
+        cd api-gateway
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-gateway:latest .
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-gateway:latest
 
     - name: Build and Push User Service
       run: |
-        ./gradlew :user-service:bootJar
-        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-user:latest ./user-service
+        cd user-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-user:latest .
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-user:latest
 
     - name: Build and Push Auth Service
       run: |
-        ./gradlew :auth-service:bootJar
-        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-auth:latest ./auth-service
+        cd auth-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-auth:latest .
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-auth:latest
 
     - name: Build and Push Chat Service
       run: |
-        ./gradlew :chat-service:bootJar
-        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-chat:latest ./chat-service
+        cd chat-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-chat:latest .
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-chat:latest
 
     # (다른 서비스들도 동일한 패턴으로 추가 가능)
