@@ -55,15 +55,45 @@ jobs:
         docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-auth:latest .
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-auth:latest
 
-    - name: Build and Push Chat Service
+    - name: Build and Push Board Service
       run: |
-        cd chat-service
+        cd board-service
         chmod +x gradlew
         ./gradlew bootJar
-        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-chat:latest .
-        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-chat:latest
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-board:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-board:latest
 
-    # (다른 서비스들도 동일한 패턴으로 추가 가능)
+    - name: Build and Push Vote Service
+      run: |
+        cd vote-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-vote:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-vote:latest
+
+    - name: Build and Push Search Service
+      run: |
+        cd search-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-search:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-search:latest
+
+    - name: Build and Push Ranking Service
+      run: |
+        cd ranking-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-ranking:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-ranking:latest
+
+    - name: Build and Push Notification Service
+      run: |
+        cd notification-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-notification:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-notification:latest
 
     - name: Build and Push Frontend
       run: |
