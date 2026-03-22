@@ -164,6 +164,6 @@ jobs:
         script: |
           cd ~/idol
           git pull origin main
-          docker compose pull
-          docker compose -f docker-compose.yml -f docker-compose-prod.yml up -d --remove-orphans
+          docker compose -f docker-compose-prod.yml pull
+          docker compose -f docker-compose-prod.yml up -d --remove-orphans
           docker image prune -f
