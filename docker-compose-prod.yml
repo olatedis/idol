@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # 인프라 레이어 (기존 인프라를 운영 환경에 맞게 튜닝)
+  idol-db:
+    container_name: idol-db
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-root}
+      - MYSQL_DATABASE=idol
+    ports:
+      - "3306:3306"
+
+  idol-redis:
+    container_name: idol-redis
+    restart: always
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+  idol-mongo:
+    container_name: idol-mongo
+    restart: always
+
+  idol-kafka:
+    container_name: idol-kafka
+    restart: on-failure
+    environment:
+      # AWS_PUBLIC_IP는 EC2의 탄력적 IP(EIP)를 .env 파일에 입력해야 합니다.
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://idol-kafka:29092,EXTERNAL://${AWS_PUBLIC_IP:-localhost}:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+
+  elasticsearch:
+    container_name: idol-elasticsearch
+    restart: always
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+
+  # 백엔드 서비스 (Spring Boot Prod 프로필 적용)
+  discovery-service:
+    image: ${DOCKERHUB_USERNAME}/idol-discovery:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  api-gateway:
+    image: ${DOCKERHUB_USERNAME}/idol-gateway:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    ports:
+      - "80:8080" # 외부 HTTP 포트를 80으로 열어 게이트웨이로 접속
+
+  auth-service:
+    image: ${DOCKERHUB_USERNAME}/idol-auth:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  user-service:
+    image: ${DOCKERHUB_USERNAME}/idol-user:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  chat-service:
+    image: ${DOCKERHUB_USERNAME}/idol-chat:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  board-service:
+    image: ${DOCKERHUB_USERNAME}/idol-board:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  vote-service:
+    image: ${DOCKERHUB_USERNAME}/idol-vote:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  ranking-service:
+    image: ${DOCKERHUB_USERNAME}/idol-ranking:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  search-service:
+    image: ${DOCKERHUB_USERNAME}/idol-search:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  notification-service:
+    image: ${DOCKERHUB_USERNAME}/idol-notification:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  # 프론트엔드 (React Nginx 상시 대기)
+  frontend:
+    image: ${DOCKERHUB_USERNAME}/idol-frontend:latest
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway

@@ -1,0 +1,80 @@
+name: IDOL Platform CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    # 1. 빌드 및 이미지 전송 (개별 서비스별 - 병렬 처리 가능하나 여기선 순차 진행)
+    - name: Build and Push Discovery Service
+      run: |
+        cd discovery-service && ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-discovery:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-discovery:latest
+
+    - name: Build and Push API Gateway
+      run: |
+        cd api-gateway && ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-gateway:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-gateway:latest
+
+    - name: Build and Push User Service
+      run: |
+        cd user-service && ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-user:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-user:latest
+
+    - name: Build and Push Auth Service
+      run: |
+        cd auth-service && ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-auth:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-auth:latest
+
+    - name: Build and Push Chat Service
+      run: |
+        cd chat-service && ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-chat:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-chat:latest
+
+    # (다른 서비스들도 동일한 패턴으로 추가 가능)
+
+    - name: Build and Push Frontend
+      run: |
+        cd frontend
+        npm install
+        npm run build
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-frontend:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-frontend:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd ~/idol
+          docker-compose pull
+          docker-compose -f docker-compose.yml -f docker-compose-prod.yml up -d --remove-orphans
+          docker image prune -f

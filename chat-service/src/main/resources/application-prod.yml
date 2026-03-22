@@ -1,0 +1,20 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  kafka:
+    bootstrap-servers: idol-kafka:29092
+    consumer:
+      group-id: chat-group
+      auto-offset-reset: earliest
+  data:
+    mongodb:
+      uri: mongodb://idol-mongo:27017/idol_chat
+    redis:
+      host: idol-redis
+      port: 6379
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/

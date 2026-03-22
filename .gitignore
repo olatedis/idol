@@ -50,3 +50,4 @@ data/
 ### Environment Variables ###
 .env
 /.idea/
+DolChat-key.pem
