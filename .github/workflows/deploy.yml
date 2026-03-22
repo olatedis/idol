@@ -95,6 +95,54 @@ jobs:
         docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-notification:latest .
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-notification:latest
 
+    - name: Build and Push Chat Service
+      run: |
+        cd chat-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-chat:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-chat:latest
+
+    - name: Build and Push Concert Service
+      run: |
+        cd concert-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-concert:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-concert:latest
+
+    - name: Build and Push Payment Service
+      run: |
+        cd payment-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-payment:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-payment:latest
+
+    - name: Build and Push Reserve Service
+      run: |
+        cd reserve-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-reserve:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-reserve:latest
+
+    - name: Build and Push Subscription Service
+      run: |
+        cd subscription-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-subscription:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-subscription:latest
+
+    - name: Build and Push Fanout Service
+      run: |
+        cd fanout-service
+        chmod +x gradlew
+        ./gradlew bootJar
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-fanout:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/idol-fanout:latest
+
     - name: Build and Push Frontend
       run: |
         cd frontend
