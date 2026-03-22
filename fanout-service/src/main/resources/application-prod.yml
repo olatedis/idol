@@ -2,12 +2,14 @@ spring:
   config:
     activate:
       on-profile: prod
-  datasource:
-    url: jdbc:mysql://idol-db:3306/idol_db?useSSL=false&serverTimezone=UTC
-    username: root
-    password: ${DB_PASSWORD}
   kafka:
     bootstrap-servers: idol-kafka:29092
+
+clients:
+  user-service:
+    url: http://user-service:8080
+  subscription-service:
+    url: http://subscription-service:8080
 
 eureka:
   client:

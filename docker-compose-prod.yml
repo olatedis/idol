@@ -7,7 +7,8 @@ services:
     restart: always
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-root}
-      - MYSQL_DATABASE=idol
+      - MYSQL_DATABASE=idol_db
+      - TZ=UTC
     ports:
       - "3306:3306"
 
@@ -68,18 +69,60 @@ services:
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DEEPL_API_KEY=${DEEPL_API_KEY}
+
+  concert-service:
+    image: ${DOCKERHUB_USERNAME}/idol-concert:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+
+  payment-service:
+    image: ${DOCKERHUB_USERNAME}/idol-payment:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+
+  reserve-service:
+    image: ${DOCKERHUB_USERNAME}/idol-reserve:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+
+  subscription-service:
+    image: ${DOCKERHUB_USERNAME}/idol-subscription:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+
+  fanout-service:
+    image: ${DOCKERHUB_USERNAME}/idol-fanout:latest
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
 
   board-service:
     image: ${DOCKERHUB_USERNAME}/idol-board:latest
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+      - INTERNAL_KEY=${INTERNAL_KEY}
 
   vote-service:
     image: ${DOCKERHUB_USERNAME}/idol-vote:latest
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
 
   ranking-service:
     image: ${DOCKERHUB_USERNAME}/idol-ranking:latest
@@ -98,6 +141,7 @@ services:
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
 
   # 프론트엔드 (React Nginx 상시 대기)
   frontend:
