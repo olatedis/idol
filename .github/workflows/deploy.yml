@@ -89,7 +89,7 @@ jobs:
 
     - name: Build and Push Notification Service
       run: |
-        cd notification-service
+        cd notify-service
         chmod +x gradlew
         ./gradlew bootJar
         docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/idol-notification:latest .
