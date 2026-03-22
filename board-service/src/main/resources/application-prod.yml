@@ -1,0 +1,15 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:mysql://idol-db:3306/idol_board?useSSL=false
+    username: root
+    password: ${DB_PASSWORD}
+  kafka:
+    bootstrap-servers: idol-kafka:29092
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
