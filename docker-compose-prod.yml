@@ -1,8 +1,42 @@
 version: '3.8'
 
 services:
-  # 인프라 레이어 (기존 인프라를 운영 환경에 맞게 튜닝)
+  # --- 인프라 레이어 ---
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: idol-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    restart: always
+    networks:
+      - idol-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: idol-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://${AWS_PUBLIC_IP:-localhost}:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    restart: on-failure
+    networks:
+      - idol-network
+
+  redis:
+    image: redis:latest
+    container_name: idol-redis
+    restart: always
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
+    networks:
+      - idol-network
+
   db:
+    image: mysql:8.0
     container_name: idol-db
     restart: always
     environment:
@@ -11,61 +45,95 @@ services:
       - TZ=UTC
     ports:
       - "3306:3306"
-
-  redis:
-    container_name: idol-redis
-    restart: always
-    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    networks:
+      - idol-network
 
   mongo:
+    image: mongo:latest
     container_name: idol-mongo
     restart: always
-
-  kafka:
-    container_name: idol-kafka
-    restart: on-failure
-    environment:
-      # AWS_PUBLIC_IP는 EC2의 탄력적 IP(EIP)를 .env 파일에 입력해야 합니다.
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://idol-kafka:29092,EXTERNAL://${AWS_PUBLIC_IP:-localhost}:9092
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+    networks:
+      - idol-network
 
   elasticsearch:
     container_name: idol-elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
     restart: always
     environment:
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    networks:
+      - idol-network
 
-  # 백엔드 서비스 (Spring Boot Prod 프로필 적용)
+  # --- 백엔드 서비스 (Spring Boot) ---
   discovery-service:
     image: ${DOCKERHUB_USERNAME}/idol-discovery:latest
+    container_name: discovery-service
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+    networks:
+      - idol-network
 
   api-gateway:
     image: ${DOCKERHUB_USERNAME}/idol-gateway:latest
+    container_name: api-gateway
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - JWT_SECRET=${JWT_SECRET}
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD}
     ports:
-      - "80:8080" # 외부 HTTP 포트를 80으로 열어 게이트웨이로 접속
+      - "80:8080"
+    depends_on:
+      - discovery-service
+      - redis
+    networks:
+      - idol-network
 
   auth-service:
     image: ${DOCKERHUB_USERNAME}/idol-auth:latest
+    container_name: auth-service
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - JWT_SECRET=${JWT_SECRET}
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - discovery-service
+      - redis
+      - kafka
+    networks:
+      - idol-network
 
   user-service:
     image: ${DOCKERHUB_USERNAME}/idol-user:latest
+    container_name: user-service
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+    depends_on:
+      - discovery-service
+      - db
+      - mongo
+    networks:
+      - idol-network
 
   chat-service:
     image: ${DOCKERHUB_USERNAME}/idol-chat:latest
+    container_name: chat-service
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
@@ -74,80 +142,149 @@ services:
       - AWS_SECRET_KEY=${AWS_SECRET_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DEEPL_API_KEY=${DEEPL_API_KEY}
-
-  concert-service:
-    image: ${DOCKERHUB_USERNAME}/idol-concert:latest
-    restart: always
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
-
-  payment-service:
-    image: ${DOCKERHUB_USERNAME}/idol-payment:latest
-    restart: always
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
-
-  reserve-service:
-    image: ${DOCKERHUB_USERNAME}/idol-reserve:latest
-    restart: always
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
-
-  subscription-service:
-    image: ${DOCKERHUB_USERNAME}/idol-subscription:latest
-    restart: always
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
-
-  fanout-service:
-    image: ${DOCKERHUB_USERNAME}/idol-fanout:latest
-    restart: always
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
+    depends_on:
+      - discovery-service
+      - mongo
+      - kafka
+    networks:
+      - idol-network
 
   board-service:
     image: ${DOCKERHUB_USERNAME}/idol-board:latest
+    container_name: board-service
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD}
       - INTERNAL_KEY=${INTERNAL_KEY}
+    depends_on:
+      - discovery-service
+      - db
+    networks:
+      - idol-network
 
   vote-service:
     image: ${DOCKERHUB_USERNAME}/idol-vote:latest
+    container_name: vote-service
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - discovery-service
+      - db
+    networks:
+      - idol-network
 
-  ranking-service:
-    image: ${DOCKERHUB_USERNAME}/idol-ranking:latest
+  concert-service:
+    image: ${DOCKERHUB_USERNAME}/idol-concert:latest
+    container_name: concert-service
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - discovery-service
+      - db
+    networks:
+      - idol-network
 
-  search-service:
-    image: ${DOCKERHUB_USERNAME}/idol-search:latest
+  payment-service:
+    image: ${DOCKERHUB_USERNAME}/idol-payment:latest
+    container_name: payment-service
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - discovery-service
+      - db
+    networks:
+      - idol-network
+
+  reserve-service:
+    image: ${DOCKERHUB_USERNAME}/idol-reserve:latest
+    container_name: reserve-service
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - discovery-service
+      - db
+    networks:
+      - idol-network
+
+  subscription-service:
+    image: ${DOCKERHUB_USERNAME}/idol-subscription:latest
+    container_name: subscription-service
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - discovery-service
+      - db
+    networks:
+      - idol-network
 
   notification-service:
     image: ${DOCKERHUB_USERNAME}/idol-notification:latest
+    container_name: notification-service
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - discovery-service
+      - db
+    networks:
+      - idol-network
 
-  # 프론트엔드 (React Nginx 상시 대기)
+  fanout-service:
+    image: ${DOCKERHUB_USERNAME}/idol-fanout:latest
+    container_name: fanout-service
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    depends_on:
+      - discovery-service
+      - kafka
+    networks:
+      - idol-network
+
+  ranking-service:
+    image: ${DOCKERHUB_USERNAME}/idol-ranking:latest
+    container_name: ranking-service
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    networks:
+      - idol-network
+
+  search-service:
+    image: ${DOCKERHUB_USERNAME}/idol-search:latest
+    container_name: search-service
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    depends_on:
+      - elasticsearch
+    networks:
+      - idol-network
+
+  # --- 프론트엔드 ---
   frontend:
     image: ${DOCKERHUB_USERNAME}/idol-frontend:latest
+    container_name: frontend
     restart: always
     ports:
       - "80:80"
     depends_on:
       - api-gateway
+    networks:
+      - idol-network
+
+networks:
+  idol-network:
+    driver: bridge
