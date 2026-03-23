@@ -3,7 +3,7 @@ import type { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axio
 import { useAuthStore } from '../stores/authStore';
 import Swal from 'sweetalert2';
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // Axios 인스턴스 생성
 export const api = axios.create({
