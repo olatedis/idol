@@ -167,7 +167,19 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           cd ~/idol
-          git pull origin main
+          # 1. 인프라 및 핵심 서비스 (먼저 갱신)
+          docker compose -f docker-compose-prod.yml pull db redis discovery-service api-gateway
+          docker compose -f docker-compose-prod.yml up -d db redis discovery-service api-gateway
+
+          # 2. 주요 어플리케이션 및 프론트엔드
+          docker compose -f docker-compose-prod.yml pull auth-service user-service frontend
+          docker compose -f docker-compose-prod.yml up -d auth-service user-service frontend
+
+          # 3. 리소스 점유가 큰 나머지 서비스들 (단계적 진행)
+          docker compose -f docker-compose-prod.yml pull chat-service board-service search-service elasticsearch
+          docker compose -f docker-compose-prod.yml up -d chat-service board-service search-service elasticsearch
+
+          # 4. 최종 전체 확인 (누락된 서비스 기동)
           docker compose -f docker-compose-prod.yml pull
           docker compose -f docker-compose-prod.yml up -d --remove-orphans
           docker image prune -f
