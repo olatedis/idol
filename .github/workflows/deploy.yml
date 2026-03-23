@@ -165,8 +165,6 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        timeout: 60m
-        script: |
         timeout: 120m
         script: |
           cd ~/idol
