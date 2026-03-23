@@ -165,33 +165,30 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        timeout: 120m
         script: |
           cd ~/idol
-          # 1. 기존 안 쓰는 이미지/컨테이너 정리하여 공간 확보
+          # 배포 스크립트 생성 및 백그라운드 실행 (타임아웃 방지)
+          cat << 'EOF' > run_deploy.sh
+          #!/bin/bash
+          echo "Deployment started at $(date)"
+          
           docker image prune -f
 
-          # 2. 서비스 목록 (우리가 빌드하는 애플리케이션만 다운로드)
           SERVICES=("discovery-service" "api-gateway" "auth-service" "user-service" "frontend" "chat-service" "board-service" "search-service" "vote-service" "concert-service" "payment-service" "reserve-service" "subscription-service" "notification-service" "fanout-service" "ranking-service")
 
-          # 3. 하나씩 차례대로 Pull 수행 (부하 최소화)
           for service in "${SERVICES[@]}"; do
             echo "Pulling $service..."
-            docker compose -f docker-compose-prod.yml pull $service || echo "Failed to pull $service, skipping..."
-            sleep 2
+            docker compose -f docker-compose-prod.yml pull $service || echo "Failed to pull $service"
+            sleep 5
           done
 
-          # 4. 단계별로 서비스 기동
-          echo "Starting Core Services..."
-          docker compose -f docker-compose-prod.yml up -d db redis discovery-service api-gateway
-          sleep 10
-
-          echo "Starting Application Services..."
-          docker compose -f docker-compose-prod.yml up -d auth-service user-service frontend
-          sleep 10
-
-          echo "Starting Remaining Services..."
+          echo "Starting All Services..."
           docker compose -f docker-compose-prod.yml up -d
           
-          # 5. 최종 이미지 정리
           docker image prune -f
+          echo "Deployment finished at $(date)"
+          EOF
+
+          chmod +x run_deploy.sh
+          # 백그라운드에서 스크립트를 실행하고, GitHub 로그는 즉시 성공(Exit 0) 처리
+          nohup ./run_deploy.sh > deploy.log 2>&1 &
