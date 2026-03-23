@@ -208,7 +208,15 @@ jobs:
             sleep 5
           done
 
-          echo "Starting All Services..."
+          echo "Starting Core Services..."
+          docker compose -f docker-compose-prod.yml up -d db redis discovery-service api-gateway
+          sleep 20
+
+          echo "Starting Application Services..."
+          docker compose -f docker-compose-prod.yml up -d auth-service user-service frontend chat-service board-service
+          sleep 20
+
+          echo "Starting Remaining Services..."
           docker compose -f docker-compose-prod.yml up -d
           
           docker image prune -f
