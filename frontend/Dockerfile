@@ -1,14 +1,6 @@
-# 1단계: 빌드
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --legacy-peer-deps
-COPY . .
-RUN npm run build
-
-# 2단계: 서버 (Nginx)
+# GitHub Actions에서 제공된 dist 폴더를 즉시 서빙합니다 (이중 빌드 방지 & 환경 변수 보존)
 FROM nginx:stable-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
