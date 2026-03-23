@@ -3,6 +3,7 @@ name: IDOL Platform CI/CD
 on:
   push:
     branches: [ main ]
+  workflow_dispatch: # 깃허브 웹에서 수동 실행 버튼(Run workflow) 생성 옵션
 
 jobs:
   build-and-push:
