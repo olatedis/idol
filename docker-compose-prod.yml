@@ -8,7 +8,6 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    restart: always
     networks:
       - idol-network
 
@@ -23,14 +22,12 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://${AWS_PUBLIC_IP:-localhost}:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    restart: on-failure
     networks:
       - idol-network
 
   redis:
     image: redis:latest
     container_name: idol-redis
-    restart: always
     command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
     networks:
       - idol-network
@@ -38,7 +35,6 @@ services:
   db:
     image: mysql:8.0
     container_name: idol-db
-    restart: always
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-root}
       - MYSQL_DATABASE=idol_db
@@ -51,14 +47,12 @@ services:
   mongo:
     image: mongo:latest
     container_name: idol-mongo
-    restart: always
     networks:
       - idol-network
 
   elasticsearch:
     container_name: idol-elasticsearch
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
-    restart: always
     environment:
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
