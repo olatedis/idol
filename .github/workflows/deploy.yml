@@ -167,22 +167,33 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         timeout: 60m
         script: |
+        timeout: 120m
+        script: |
           cd ~/idol
-          # 1. 인프라 및 핵심 서비스 (가장 먼저)
-          docker compose -f docker-compose-prod.yml pull db redis discovery-service api-gateway
+          # 1. 기존 안 쓰는 이미지/컨테이너 정리하여 공간 확보
+          docker image prune -f
+
+          # 2. 서비스 목록 (중요도 순)
+          SERVICES=("db" "redis" "discovery-service" "api-gateway" "auth-service" "user-service" "frontend" "chat-service" "board-service" "search-service" "elasticsearch" "vote-service" "concert-service" "payment-service" "reserve-service" "subscription-service" "notification-service" "fanout-service" "ranking-service" "mongo" "kafka" "zookeeper")
+
+          # 3. 하나씩 차례대로 Pull 수행 (부하 최소화)
+          for service in "${SERVICES[@]}"; do
+            echo "Pulling $service..."
+            docker compose -f docker-compose-prod.yml pull $service || echo "Failed to pull $service, skipping..."
+            sleep 2
+          done
+
+          # 4. 단계별로 서비스 기동
+          echo "Starting Core Services..."
           docker compose -f docker-compose-prod.yml up -d db redis discovery-service api-gateway
           sleep 10
 
-          # 2. 주요 어플리케이션 및 프론트엔드
-          docker compose -f docker-compose-prod.yml pull auth-service user-service frontend
+          echo "Starting Application Services..."
           docker compose -f docker-compose-prod.yml up -d auth-service user-service frontend
           sleep 10
 
-          # 3. 나머지를 그룹별로 더 쪼개서 기동
-          docker compose -f docker-compose-prod.yml pull chat-service board-service search-service elasticsearch
-          docker compose -f docker-compose-prod.yml up -d chat-service board-service search-service elasticsearch
-          sleep 10
-
-          # 4. 누락된 서비스 전체 확인 및 정리
-          docker compose -f docker-compose-prod.yml up -d --remove-orphans
+          echo "Starting Remaining Services..."
+          docker compose -f docker-compose-prod.yml up -d
+          
+          # 5. 최종 이미지 정리
           docker image prune -f
