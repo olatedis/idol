@@ -165,21 +165,24 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        timeout: 60m
         script: |
           cd ~/idol
-          # 1. 인프라 및 핵심 서비스 (먼저 갱신)
+          # 1. 인프라 및 핵심 서비스 (가장 먼저)
           docker compose -f docker-compose-prod.yml pull db redis discovery-service api-gateway
           docker compose -f docker-compose-prod.yml up -d db redis discovery-service api-gateway
+          sleep 10
 
           # 2. 주요 어플리케이션 및 프론트엔드
           docker compose -f docker-compose-prod.yml pull auth-service user-service frontend
           docker compose -f docker-compose-prod.yml up -d auth-service user-service frontend
+          sleep 10
 
-          # 3. 리소스 점유가 큰 나머지 서비스들 (단계적 진행)
+          # 3. 나머지를 그룹별로 더 쪼개서 기동
           docker compose -f docker-compose-prod.yml pull chat-service board-service search-service elasticsearch
           docker compose -f docker-compose-prod.yml up -d chat-service board-service search-service elasticsearch
+          sleep 10
 
-          # 4. 최종 전체 확인 (누락된 서비스 기동)
-          docker compose -f docker-compose-prod.yml pull
+          # 4. 누락된 서비스 전체 확인 및 정리
           docker compose -f docker-compose-prod.yml up -d --remove-orphans
           docker image prune -f
