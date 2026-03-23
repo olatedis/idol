@@ -171,8 +171,8 @@ jobs:
           # 1. 기존 안 쓰는 이미지/컨테이너 정리하여 공간 확보
           docker image prune -f
 
-          # 2. 서비스 목록 (중요도 순)
-          SERVICES=("db" "redis" "discovery-service" "api-gateway" "auth-service" "user-service" "frontend" "chat-service" "board-service" "search-service" "elasticsearch" "vote-service" "concert-service" "payment-service" "reserve-service" "subscription-service" "notification-service" "fanout-service" "ranking-service" "mongo" "kafka" "zookeeper")
+          # 2. 서비스 목록 (우리가 빌드하는 애플리케이션만 다운로드)
+          SERVICES=("discovery-service" "api-gateway" "auth-service" "user-service" "frontend" "chat-service" "board-service" "search-service" "vote-service" "concert-service" "payment-service" "reserve-service" "subscription-service" "notification-service" "fanout-service" "ranking-service")
 
           # 3. 하나씩 차례대로 Pull 수행 (부하 최소화)
           for service in "${SERVICES[@]}"; do
