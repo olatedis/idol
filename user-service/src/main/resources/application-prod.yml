@@ -14,6 +14,13 @@ spring:
     redis:
       host: idol-redis
       port: 6379
+    mongodb:
+      host: idol-mongo
+      port: 27017
+      database: idol_user_view
+
+  kafka:
+    bootstrap-servers: kafka:29092
 
 eureka:
   client:
