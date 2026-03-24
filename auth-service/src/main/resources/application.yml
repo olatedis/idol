@@ -49,6 +49,9 @@ spring:
             time-to-live: 900
             time-to-live-unit: seconds
 
+frontend:
+  url: ${FRONTEND_URL:http://localhost:5173}
+
 # 카카오 로그인 설정 (추가됨)
 kakao:
   client-id: ${KAKAO_CLIENT_ID:your-kakao-rest-api-key}

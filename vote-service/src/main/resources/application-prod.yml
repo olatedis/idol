@@ -7,7 +7,7 @@ spring:
     username: root
     password: ${DB_PASSWORD}
   kafka:
-    bootstrap-servers: idol-kafka:29092
+    bootstrap-servers: kafka:29092
 
 eureka:
   client:

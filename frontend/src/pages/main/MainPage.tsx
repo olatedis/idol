@@ -101,7 +101,7 @@ const MainPage: React.FC = () => {
 
     const handleKakaoLogin = () => {
         const REST_API_KEY = import.meta.env.VITE_KAKAO_API_KEY;
-        const REDIRECT_URI = "http://localhost:5173/oauth/kakao";
+        const REDIRECT_URI = `${window.location.origin}/oauth/kakao`;
 
         if (!REST_API_KEY) {
             showAlert("오류", "카카오 API 키가 설정되지 않았습니다.", "error");

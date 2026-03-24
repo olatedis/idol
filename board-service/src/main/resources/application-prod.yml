@@ -7,7 +7,17 @@ spring:
     username: root
     password: ${DB_PASSWORD}
   kafka:
-    bootstrap-servers: idol-kafka:29092
+    bootstrap-servers: kafka:29092
+  data:
+    redis:
+      host: idol-redis
+      port: 6379
+
+clients:
+  user-service:
+    url: http://user-service:8082
+  subscription-service:
+    url: http://subscription-service:8088
 
 eureka:
   client:

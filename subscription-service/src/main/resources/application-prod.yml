@@ -14,7 +14,7 @@ spring:
       host: idol-redis
       port: 6379
   kafka:
-    bootstrap-servers: idol-kafka:29092
+    bootstrap-servers: kafka:29092
 
 eureka:
   client:

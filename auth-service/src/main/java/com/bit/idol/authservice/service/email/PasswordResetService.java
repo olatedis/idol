@@ -25,20 +25,23 @@ public class PasswordResetService {
 
     private static final long RESET_TOKEN_EXPIRATION = 10 * 60 * 1000L; // 10분
 
+    @org.springframework.beans.factory.annotation.Value("${frontend.url}")
+    private String frontendUrl;
+
     // 비밀번호 재설정 요청 (링크 발송)
     public void sendResetLink(String email) {
         // 1. 토큰 생성
         String token = UUID.randomUUID().toString();
-
+ 
         // 2. Redis 저장 (key: token, value: email)
         redisTemplate.opsForValue().set(
                 "reset:token:" + token,
                 email,
                 RESET_TOKEN_EXPIRATION,
                 TimeUnit.MILLISECONDS);
-
+ 
         // 3. 이메일 발송
-        String resetLink = "http://localhost:3000/reset-password?token=" + token; // 프론트엔드 주소
+        String resetLink = frontendUrl + "/reset-password?token=" + token; // 프론트엔드 주소
         String subject = "[DolChat] 비밀번호 재설정 안내";
         String content = String.format(
                 """

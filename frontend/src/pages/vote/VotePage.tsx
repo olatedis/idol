@@ -187,15 +187,15 @@ const VotePage: React.FC = () => {
             if (tab === 'MY') {
                 if (!user) return;
                 const url = groupId 
-                    ? `/api/votes/me?groupId=${groupId}` 
-                    : "/api/votes/me";
+                    ? `/votes/me?groupId=${groupId}` 
+                    : "/votes/me";
                 const { data } = await api.get(url);
                 setMyVotes(data);
             } else {
                 // groupId가 있으면 쿼리스트링에 포함하여 요청
                 const url = groupId
-                    ? `/api/votes?page=${pageNum}&size=10&groupId=${groupId}`
-                    : `/api/votes?page=${pageNum}&size=10`;
+                    ? `/votes?page=${pageNum}&size=10&groupId=${groupId}`
+                    : `/votes?page=${pageNum}&size=10`;
 
                 const { data } = await api.get(url);
 
@@ -230,14 +230,14 @@ const VotePage: React.FC = () => {
             setIsFetchingDetail(true); // 데이터 호출 시작점
             setSelectedCandidate(null);
 
-            const { data } = await api.get(`/api/votes/${voteId}`);
+            const { data } = await api.get(`/votes/${voteId}`);
             if (data.candidates) {
                 data.candidates.sort((a: CandidateDto, b: CandidateDto) => b.voteCount - a.voteCount);
             }
             setSelectedVote(data);
 
             if (user) {
-                const { data: voted } = await api.get(`/api/votes/${voteId}/check`);
+                const { data: voted } = await api.get(`/votes/${voteId}/check`);
                 setHasVoted(voted);
             } else {
                 setHasVoted(false); // 로그인하지 않은 경우 투표 안 한 것으로 간주
@@ -259,7 +259,7 @@ const VotePage: React.FC = () => {
 
         try {
             setIsSubmitting(true);
-            await api.post(`/api/votes/${selectedVote.id}`, {
+            await api.post(`/votes/${selectedVote.id}`, {
                 candidateNumber: selectedCandidate
             });
             showSuccessToast("투표가 완료되었습니다!");
@@ -281,7 +281,7 @@ const VotePage: React.FC = () => {
 
         try {
             setIsSubmitting(true);
-            await api.post(`/api/votes/${selectedVote.id}/cancel`);
+            await api.post(`/votes/${selectedVote.id}/cancel`);
             showSuccessToast("투표가 취소되었습니다.");
             setHasVoted(false);
 
@@ -354,7 +354,7 @@ const VotePage: React.FC = () => {
 
              // 전송될 페이로드 확인용
 
-            await api.post("/api/votes", requestBody);
+            await api.post("/votes", requestBody);
             showSuccessToast("투표가 생성되었습니다.");
             setIsCreateModalOpen(false);
 
