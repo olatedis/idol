@@ -3,7 +3,7 @@ spring:
     activate:
       on-profile: prod
   kafka:
-    bootstrap-servers: idol-kafka:29092
+    bootstrap-servers: kafka:29092
 
 eureka:
   client:

@@ -83,7 +83,8 @@ public class PaymentService {
         if (payment.getDomain() == com.bit.paymentservice.domain.enumtype.PaymentDomain.SUBSCRIPTION) {
             try {
                 // API Gateway를 경유하여 구독 서비스에 요청
-                String url = "http://localhost:8000/subscriptions/" + payment.getTargetId();
+                String baseUrl = System.getenv("GATEWAY_URL") != null ? System.getenv("GATEWAY_URL") : "http://localhost:8000";
+                String url = baseUrl + "/subscriptions/" + payment.getTargetId();
                 new org.springframework.web.client.RestTemplate().delete(url);
                 log.info("연관된 pending 구독 삭제 요청 성공: subscriptionId={}", payment.getTargetId());
             } catch (Exception e) {

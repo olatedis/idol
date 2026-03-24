@@ -3,13 +3,13 @@ spring:
     activate:
       on-profile: prod
   kafka:
-    bootstrap-servers: idol-kafka:29092
+    bootstrap-servers: kafka:29092
 
 clients:
   user-service:
-    url: http://user-service:8080
+    url: http://user-service:8082
   subscription-service:
-    url: http://subscription-service:8080
+    url: http://subscription-service:8088
 
 eureka:
   client:

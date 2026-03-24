@@ -8,17 +8,21 @@
     - `discovery-service`, `api-gateway`, `auth-service`, `user-service`, `chat-service`, `board-service`, `vote-service`, `search-service`, `notification-service`, `ranking-service`
 
 ## 2. 🔑 필수 환경 변수 설정 (.env)
-EC2 서버의 프로젝트 루트 폴더에 `.env` 파일을 생성하고 다음 내용을 입력하세요.
+EC2 서버의 프로젝트 루트 폴더(`~/idol/.env`)에 `.env` 파일을 생성하고 다음 내용을 빈틈없이 입력하셔야 합니다.
 
 ```properties
-AWS_PUBLIC_IP=13.124.XXX.XXX  # EC2 탄력적 IP
-DB_PASSWORD=your_secure_password # MySQL용 루트 비밀번호
+AWS_PUBLIC_IP=13.124.XXX.XXX          # EC2 퍼블릭 IP
+DB_PASSWORD=your_secure_password      # MySQL용 루트 비밀번호
+MAIL_USERNAME=your_gmail_id@gmail.com # (추가) 이메일 발송용 구글 계정
+MAIL_PASSWORD=your_16_char_app_passwd # (추가) 구글 계정 '앱 비밀번호' (일반 비밀번호 아님!)
+JWT_SECRET=your_jwt_secret_key        # 로그인 토큰용 암호화 키
+KAKAO_CLIENT_ID=your_kakao_rest_key   # 카카오 로그인 API 키
 ```
 
 ## 3. 🚀 서버 실행 명령어
 ```bash
 # 로컬 설정을 기본으로 하되 운영 전용 파일로 덮어쓰기 하여 실행
-docker-compose -f docker-compose.yml -f docker-compose-prod.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose-prod.yml up -d --build
 ```
 
 ## 4. ⚠️ 주의 사항
