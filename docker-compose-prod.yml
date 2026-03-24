@@ -75,13 +75,13 @@ services:
     container_name: api-gateway
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - JWT_SECRET=${JWT_SECRET}
-      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
-      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - FRONTEND_URL=${FRONTEND_URL}
+      - JWT_SECRET=${JWT_SECRET:-your-secret}
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI:-http://localhost:5173/oauth/kakao}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - EUREKA_URL=http://discovery-service:8761/eureka/
     ports:
       - "8000:8080"
@@ -96,13 +96,13 @@ services:
     container_name: auth-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - JWT_SECRET=${JWT_SECRET}
-      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
-      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - FRONTEND_URL=${FRONTEND_URL}
+      - JWT_SECRET=${JWT_SECRET:-your-secret}
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI:-http://localhost:5173/oauth/kakao}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
     depends_on:
       - discovery-service
       - redis
@@ -115,9 +115,9 @@ services:
     container_name: user-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
-      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY:-}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY:-}
     depends_on:
       - discovery-service
       - db
@@ -130,9 +130,9 @@ services:
     container_name: chat-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
-      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY:-}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DEEPL_API_KEY=${DEEPL_API_KEY}
     depends_on:
@@ -147,7 +147,7 @@ services:
     container_name: board-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
       - INTERNAL_KEY=${INTERNAL_KEY}
     depends_on:
       - discovery-service
@@ -160,7 +160,7 @@ services:
     container_name: vote-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
     depends_on:
       - discovery-service
       - db
@@ -172,7 +172,7 @@ services:
     container_name: concert-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
     depends_on:
       - discovery-service
       - db
@@ -184,7 +184,7 @@ services:
     container_name: payment-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
       - GATEWAY_URL=http://api-gateway:8080
     depends_on:
       - discovery-service
@@ -197,7 +197,7 @@ services:
     container_name: reserve-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
     depends_on:
       - discovery-service
       - db
@@ -209,7 +209,7 @@ services:
     container_name: subscription-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
     depends_on:
       - discovery-service
       - db
@@ -221,7 +221,7 @@ services:
     container_name: notification-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
     depends_on:
       - discovery-service
       - db

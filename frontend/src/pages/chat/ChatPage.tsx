@@ -632,8 +632,19 @@ const ChatPage: React.FC = () => {
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
                         </button>
                         <div className="flex-1 flex items-center">
-                            <div className="w-10 h-10 rounded-full bg-[var(--color-idol-bg)] flex items-center justify-center font-bold text-[var(--color-idol-dark)] mr-3 border border-[var(--color-idol-point)]/30">
-                                {currentRoom?.stageName?.substring(0, 1) || "I"}
+                            <div className="w-10 h-10 rounded-full bg-[var(--color-idol-bg)] overflow-hidden flex items-center justify-center font-bold text-[var(--color-idol-dark)] mr-3 border border-[var(--color-idol-point)]/30">
+                                {currentRoom?.profileImage ? (
+                                    <img 
+                                        src={currentRoom.profileImage} 
+                                        alt={currentRoom.stageName} 
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentRoom.stageName || "I")}&background=random`;
+                                        }}
+                                    />
+                                ) : (
+                                    currentRoom?.stageName?.substring(0, 1) || "I"
+                                )}
                             </div>
                             <div>
                                 <h3 className="font-bold text-gray-800">
