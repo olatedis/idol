@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/admin/votes")
+@RequestMapping("/admin/votes")
 @RequiredArgsConstructor
 @Slf4j
 public class AdminVoteController {

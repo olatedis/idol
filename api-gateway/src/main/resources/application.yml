@@ -76,7 +76,7 @@ spring:
         - id: voting-service
           uri: lb://VOTING-SERVICE
           predicates:
-            - Path=/api/votes/**, /api/admin/votes/**
+            - Path=/votes/**, /admin/votes/**
           filters:
             - name: RequestRateLimiter
               args:
@@ -87,7 +87,7 @@ spring:
         - id: ranking-service
           uri: lb://RANKING-SERVICE
           predicates:
-            - Path=/ws-ranking/**, /api/rankings/**
+            - Path=/ws-ranking/**, /rankings/**
 
         - id: concert-service
           uri: lb://CONCERT-SERVICE
@@ -143,7 +143,7 @@ jwt:
     - /ws-ranking/**
     - /ws-chat/**
     - /sse/notifications
-    - /api/rankings/**
+    - /rankings/**
     - /search/**
     - /board/posts/**
     - /notices/**
@@ -151,7 +151,7 @@ jwt:
     - /idols/**
     - /groups/**
     - /uploads/**
-    - /api/votes/**
+    - /votes/**
 
 logging:
   level:
