@@ -65,9 +65,24 @@ const IdolPage: React.FC = () => {
                 const { data: managedGroups } = await api.get<GroupDto[]>("/groups/managed");
                 setSubscribedGroups(managedGroups);
             } else {
-                // 일반/아이돌 계정은 구독한 아이돌 목록 조회
-                const { data: subs } = await api.get<SubscriptionDto[]>("/subscriptions/me");
-                setSubscribedIdols(subs);
+                // 일반/아이돌 계정은 구독한 아이돌과 그룹 목록 조회
+                const [idolRes, groupRes] = await Promise.all([
+                    api.get<SubscriptionDto[]>("/subscriptions/me"),
+                    api.get<any[]>("/subscriptions/groups/me"),
+                ]);
+
+                setSubscribedIdols(idolRes.data);
+
+                // 그룹 데이터 변환
+                const groupResults: GroupDto[] = (groupRes.data ?? []).map(sub => ({
+                    groupId: sub.groupId,
+                    name: sub.groupName,
+                    groupImage: sub.groupImage,
+                    agencyId: 0,
+                    agencyName: ""
+                }));
+
+                setSubscribedGroups(groupResults);
             }
         } catch (error) {
         }
@@ -206,7 +221,7 @@ const IdolPage: React.FC = () => {
                 {/* 구독중인 그룹/아이돌 */}
                 <section className="my-8 relative">
                     <div className="bg-idol rounded-lg py-3 text-center text-white font-semibold mb-8">
-                        {user?.role === "AGENCY" ? "관리중인 그룹" : "구독중인 아이돌"}
+                        {user?.role === "AGENCY" ? "관리중인 그룹" : "구독중인 그룹과 아이돌"}
                     </div>
 
                     {isLoggedIn ? (
@@ -246,13 +261,18 @@ const IdolPage: React.FC = () => {
                                         </div>
                                     )
                                 ) : (
-                                    subscribedIdols.length > 0 ? (
-                                        subscribedIdols.map(idol => (
-                                            <IdolCard key={idol.subscriptionId} idol={idol} />
-                                        ))
+                                    subscribedGroups.length > 0 || subscribedIdols.length > 0 ? (
+                                        <>
+                                            {subscribedGroups.map(group => (
+                                                <GroupCard key={`group-${group.groupId}`} group={group} />
+                                            ))}
+                                            {subscribedIdols.map(idol => (
+                                                <IdolCard key={`idol-${idol.subscriptionId}`} idol={idol} />
+                                            ))}
+                                        </>
                                     ) : (
                                         <div className="w-full text-center py-10 text-gray-500">
-                                            구독 중인 아이돌이 없습니다.
+                                            구독 중인 그룹과 아이돌이 없습니다.
                                         </div>
                                     )
                                 )}
