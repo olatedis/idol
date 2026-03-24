@@ -348,12 +348,18 @@ const MainPage: React.FC = () => {
                     >
                         {/* 배경 장식 약하게 */}
                         <div className="absolute inset-0 overflow-hidden">
+
+                            <div className="absolute left-12 top-32 h-20 w-20 rounded-full border-4 border-[#7D8ABC]/50" />
+                            <div className="absolute right-16 top-36 h-14 w-14 rounded-2xl bg-[#ffe96a]/70 rotate-12" />
+                            <div className="absolute left-24 bottom-40 h-12 w-12 rounded-full bg-[#77e296]/70" />
+                            <div className="absolute right-24 bottom-44 h-10 w-10 rounded-full border-4 border-[#ff9292]/50" />
+
                             <div className="absolute left-10 top-20 h-28 w-28 rounded-full bg-white/10" />
                             <div className="absolute right-20 top-28 h-20 w-20 rounded-full bg-[#7D8ABC]/10" />
                             <div className="absolute left-1/3 top-32 h-10 w-10 rounded-full bg-[#ff9292]/15" />
                         </div>
 
-                        <div className="relative z-10 mx-auto flex h-full max-w-6xl flex-col justify-center px-8 md:px-16">
+                        <div className="relative z-10 mx-auto flex h-full max-w-6xl flex-col justify-center px-8 md:px-16 ">
                             {/* 타이틀 */}
                             <motion.div {...fadeUp} className="mb-12 text-center">
                                 <p className="text-3xl font-black text-[#7D4CDB] md:text-5xl">
@@ -362,7 +368,7 @@ const MainPage: React.FC = () => {
                             </motion.div>
 
                             {/* 좌우 2단 */}
-                            <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-14 md:grid-cols-2">
+                            <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-14 md:grid-cols-2 bg-white p-5 rounded-2xl">
                                 {/* 왼쪽 로그인 */}
                                 <motion.div {...fadeUp} className="mx-auto w-full max-w-[260px]">
                                     <p className="mb-4 text-lg font-black text-[#222]">Write Us</p>
@@ -388,7 +394,7 @@ const MainPage: React.FC = () => {
 
                                         <button
                                             type="submit"
-                                            className="mb-3 w-[110px] bg-[#8f86e8] px-4 py-2 text-sm font-semibold text-white transition hover:cursor-pointer hover:brightness-105"
+                                            className="mb-1 w-full bg-[#8f86e8] px-4 py-2 text-sm font-semibold text-white transition hover:cursor-pointer hover:brightness-105"
                                         >
                                             로그인
                                         </button>
@@ -396,7 +402,7 @@ const MainPage: React.FC = () => {
                                         <button
                                             type="button"
                                             onClick={() => setIsSignupOpen(true)}
-                                            className="mb-3 w-[110px] bg-[#ff9292] px-4 py-2 text-sm font-semibold text-white transition hover:cursor-pointer hover:brightness-105"
+                                            className="mb-1 w-full bg-[#ff9292] px-4 py-2 text-sm font-semibold text-white transition hover:cursor-pointer hover:brightness-105"
                                         >
                                             가입하기
                                         </button>
@@ -404,7 +410,7 @@ const MainPage: React.FC = () => {
                                         <button
                                             type="button"
                                             onClick={handleKakaoLogin}
-                                            className="w-[180px] bg-yellow-300 px-4 py-2 text-sm font-semibold text-black transition hover:cursor-pointer hover:brightness-105"
+                                            className="mb-1 w-full bg-yellow-300 px-4 py-2 text-sm font-semibold text-black transition hover:cursor-pointer hover:brightness-105"
                                         >
                                             카카오 로그인
                                         </button>
