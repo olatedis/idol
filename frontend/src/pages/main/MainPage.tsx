@@ -139,7 +139,7 @@ const MainPage: React.FC = () => {
                             {...fadeUp}
                             className="flex w-full flex-col items-center justify-center text-center"
                         >
-                            <h1 className="text-[88px] font-black tracking-[-0.08em] text-white md:text-[180px]">
+                            <h1 className="text-[120px] md:text-[260px] font-black tracking-[-0.08em] text-white">
                                 dolchat
                             </h1>
 
@@ -257,8 +257,12 @@ const MainPage: React.FC = () => {
                 {/* Slide 3 : Service Cards */}
                 {/* ========================= */}
                 <section className="relative h-screen snap-start overflow-hidden bg-[#77e296]">
-                    <div className="absolute inset-0 overflow-hidden opacity-70">
-                        <div className="absolute inset-0 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,233,106,0.55)_0,rgba(255,233,106,0.55)_8px,transparent_8px),radial-gradient(circle_at_80%_30%,rgba(125,138,188,0.28)_0,rgba(125,138,188,0.28)_10px,transparent_10px),radial-gradient(circle_at_30%_80%,rgba(255,255,255,0.35)_0,rgba(255,255,255,0.35)_7px,transparent_7px)]" />
+                    {/* 수정: 배경 패턴 + 큰 원 장식 추가 */}
+                    <div className="absolute inset-0 overflow-hidden">
+                        <div className="absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,233,106,0.55)_0,rgba(255,233,106,0.55)_8px,transparent_8px),radial-gradient(circle_at_80%_30%,rgba(125,138,188,0.28)_0,rgba(125,138,188,0.28)_10px,transparent_10px),radial-gradient(circle_at_30%_80%,rgba(255,255,255,0.35)_0,rgba(255,255,255,0.35)_7px,transparent_7px)]" />
+                        <div className="absolute -left-28 top-16 h-[320px] w-[320px] rounded-full bg-white/10" />
+                        <div className="absolute right-[-60px] top-20 h-[260px] w-[260px] rounded-full bg-[#fff8db]/20" />
+                        <div className="absolute left-1/2 bottom-10 h-[220px] w-[220px] -translate-x-1/2 rounded-full bg-[#7D8ABC]/10" />
                     </div>
 
                     <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col items-center justify-center px-8 py-16 md:px-16">
@@ -266,47 +270,64 @@ const MainPage: React.FC = () => {
                             <p className="mb-3 text-4xl font-black tracking-tight text-[#7D4CDB] md:text-6xl">
                                 Service
                             </p>
-                            {/* 수정: 설명 문구 제거 */}
                         </motion.div>
 
-                        {/* 수정: 카드 간격 더 넓게 / 세로 길이 더 길게 */}
-                        <div className="grid w-full max-w-6xl grid-cols-1 gap-10 md:grid-cols-3 md:gap-12">
+                        {/* 수정: 카드 간격 넓힘 / 카드 스타일을 더 슬림하게 변경 */}
+                        <div className="grid w-full max-w-6xl grid-cols-1 gap-12 md:grid-cols-3 md:gap-16">
+                            {/* 콘서트 카드 */}
                             <motion.div
                                 {...cardUp(0)}
-                                className="rounded-[28px] border-[3px] border-[#23314f] bg-white p-6 shadow-[8px_8px_0px_#23314f]"
+                                className="rounded-2xl bg-white p-5 shadow-xl transition hover:-translate-y-2 hover:shadow-2xl"
                             >
-                                <div className="mb-5 flex h-44 items-center justify-center rounded-[22px] bg-[#fff1c7]">
+                                {/* 상단 아이콘 영역 */}
+                                <div className="mb-5 flex h-52 items-center justify-center rounded-xl bg-[#fff1c7]">
                                     <span className="text-6xl">🎫</span>
                                 </div>
+
+                                {/* 카드 제목 */}
                                 <h3 className="mb-3 text-2xl font-black text-[#23314f]">콘서트</h3>
+
+                                {/* 카드 설명 */}
                                 <p className="text-sm leading-7 text-gray-600">
                                     공연 일정과 예매 오픈 시점을 확인하고,
                                     관심 있는 콘서트를 빠르게 찾아볼 수 있습니다.
                                 </p>
                             </motion.div>
 
+                            {/* 채팅 카드 */}
                             <motion.div
                                 {...cardUp(0.1)}
-                                className="rounded-[28px] border-[3px] border-[#23314f] bg-white p-6 shadow-[8px_8px_0px_#23314f]"
+                                className="rounded-2xl bg-white p-5 shadow-xl transition hover:-translate-y-2 hover:shadow-2xl"
                             >
-                                <div className="mb-5 flex h-44 items-center justify-center rounded-[22px] bg-[#ffd8f2]">
+                                {/* 상단 아이콘 영역 */}
+                                <div className="mb-5 flex h-52 items-center justify-center rounded-xl bg-[#ffd8f2]">
                                     <span className="text-6xl">💬</span>
                                 </div>
+
+                                {/* 카드 제목 */}
                                 <h3 className="mb-3 text-2xl font-black text-[#23314f]">채팅</h3>
+
+                                {/* 카드 설명 */}
                                 <p className="text-sm leading-7 text-gray-600">
                                     아이돌과 더 가깝게 소통하고,
                                     새 메시지는 알림으로 바로 받아볼 수 있습니다.
                                 </p>
                             </motion.div>
 
+                            {/* 투표 카드 */}
                             <motion.div
                                 {...cardUp(0.2)}
-                                className="rounded-[28px] border-[3px] border-[#23314f] bg-white p-6 shadow-[8px_8px_0px_#23314f]"
+                                className="rounded-2xl bg-white p-5 shadow-xl transition hover:-translate-y-2 hover:shadow-2xl"
                             >
-                                <div className="mb-5 flex h-44 items-center justify-center rounded-[22px] bg-[#dce4ff]">
+                                {/* 상단 아이콘 영역 */}
+                                <div className="mb-5 flex h-52 items-center justify-center rounded-xl bg-[#dce4ff]">
                                     <span className="text-6xl">🗳️</span>
                                 </div>
+
+                                {/* 카드 제목 */}
                                 <h3 className="mb-3 text-2xl font-black text-[#23314f]">투표</h3>
+
+                                {/* 카드 설명 */}
                                 <p className="text-sm leading-7 text-gray-600">
                                     진행 중인 투표를 확인하고,
                                     좋아하는 아이돌에게 직접 응원의 마음을 전할 수 있습니다.
@@ -315,6 +336,7 @@ const MainPage: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* 하단 물결 */}
                     <div className="absolute bottom-0 left-0 w-full">
                         <svg
                             viewBox="0 0 1440 180"
@@ -323,7 +345,7 @@ const MainPage: React.FC = () => {
                         >
                             <path
                                 d="M0,160L34.3,149.3C68.6,139,137,117,206,106.7C274.3,96,343,96,411,106.7C480,117,549,139,617,138.7C685.7,139,754,117,823,101.3C891.4,85,960,75,1029,85.3C1097.1,96,1166,128,1234,133.3C1302.9,139,1371,117,1406,106.7L1440,96L1440,181L1405.7,181C1371.4,181,1303,181,1234,181C1165.7,181,1097,181,1029,181C960,181,891,181,823,181C754.3,181,686,181,617,181C548.6,181,480,181,411,181C342.9,181,274,181,206,181C137.1,181,69,181,34,181L0,181Z"
-                                fill="#fff8db"
+                                fill="#f3e66b"
                             />
                         </svg>
                     </div>
@@ -335,84 +357,111 @@ const MainPage: React.FC = () => {
                 {!user && (
                     <section
                         id="login-section"
-                        className="relative h-screen snap-start overflow-hidden bg-idol-bg"
+                        className="relative h-screen snap-start overflow-hidden bg-[#f3e66b]"
                     >
-                        {/* 수정: 배경 장식 조금 추가 */}
+                        {/* 수정: 배경은 단순하게, 하단 물결 중심으로 정리 */}
                         <div className="absolute inset-0 overflow-hidden">
-                            <motion.div
-                                initial={{ opacity: 0, x: -120, rotate: -12 }}
-                                whileInView={{ opacity: 1, x: 0, rotate: -12 }}
-                                transition={{ duration: 0.7 }}
-                                viewport={{ once: true }}
-                                className="absolute -left-10 top-20 h-8 w-[110%] bg-idol-point/90"
-                            />
-                            <motion.div
-                                initial={{ opacity: 0, x: 120, rotate: -18 }}
-                                whileInView={{ opacity: 1, x: 0, rotate: -18 }}
-                                transition={{ duration: 0.7 }}
-                                viewport={{ once: true }}
-                                className="absolute -right-10 bottom-28 h-8 w-[110%] bg-idol-point/90"
-                            />
-                            <div className="absolute left-12 top-32 h-20 w-20 rounded-full border-4 border-[#7D8ABC]/50" />
-                            <div className="absolute right-16 top-36 h-14 w-14 rounded-2xl bg-[#ffe96a]/70 rotate-12" />
-                            <div className="absolute left-24 bottom-40 h-12 w-12 rounded-full bg-[#77e296]/70" />
-                            <div className="absolute right-24 bottom-44 h-10 w-10 rounded-full border-4 border-[#ff9292]/50" />
+                            <div className="absolute left-10 top-20 h-28 w-28 rounded-full bg-white/15" />
+                            <div className="absolute right-20 top-28 h-20 w-20 rounded-full bg-[#7D8ABC]/15" />
+                            <div className="absolute left-1/3 top-32 h-10 w-10 rounded-full bg-[#ff9292]/25" />
                         </div>
 
-                        <div className="relative z-10 mx-auto flex h-full max-w-6xl items-center justify-center px-8">
-                            <motion.div
-                                {...fadeUp}
-                                className="w-full max-w-2xl rounded-[48px] border border-white/60 bg-white/80 p-8 shadow-[0_30px_80px_rgba(125,138,188,0.25)] backdrop-blur-sm md:p-12"
-                            >
-                                {/* 수정: 글씨 크기 줄이고 조금 위 느낌 */}
-                                <p className="mb-6 text-center text-2xl font-black text-[#23314f] md:mb-7 md:text-4xl">
-                                    지금 바로 시작해보세요.
+                        {/* 수정: contact 스타일처럼 위에 타이틀 */}
+                        <div className="relative z-10 mx-auto flex h-full max-w-6xl flex-col justify-center px-8 md:px-16">
+                            {/* 상단 타이틀 */}
+                            <motion.div {...fadeUp} className="mb-12 text-center">
+                                <p className="text-3xl font-black text-[#7D4CDB] md:text-5xl">
+                                    Start
                                 </p>
-
-                                {/* 수정: input/button 가로 길이 원래 느낌으로 축소 */}
-                                <form onSubmit={handleLogin} className="mx-auto flex max-w-[250px] flex-col items-center">
-                                    <input
-                                        type="text"
-                                        id="username"
-                                        name="username"
-                                        placeholder="아이디를 입력하세요."
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        className="mb-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-idol focus:border-transparent"
-                                    />
-
-                                    <input
-                                        type="password"
-                                        id="password"
-                                        name="password"
-                                        placeholder="비밀번호를 입력하세요."
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="mb-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-idol focus:border-transparent"
-                                    />
-
-                                    <button
-                                        type="submit"
-                                        className="mb-3 w-full rounded-xl bg-idol px-6 py-3 font-semibold text-white transition hover:cursor-pointer hover:brightness-105"
-                                    >
-                                        로그인
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsSignupOpen(true)}
-                                        className="mb-3 w-full rounded-xl bg-idol px-6 py-3 font-semibold text-white transition hover:cursor-pointer hover:brightness-105"
-                                    >
-                                        가입하기
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={handleKakaoLogin}
-                                        className="w-full rounded-xl bg-yellow-300 px-6 py-3 font-semibold text-black transition hover:cursor-pointer hover:brightness-105"
-                                    >
-                                        👁️‍🗨️ 카카오 계정으로 로그인
-                                    </button>
-                                </form>
                             </motion.div>
+
+                            {/* 수정: 좌우 2단 레이아웃 */}
+                            <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-14 md:grid-cols-2">
+                                {/* 왼쪽: 로그인 폼 */}
+                                <motion.div {...fadeUp} className="mx-auto w-full max-w-[260px]">
+                                    <p className="mb-4 text-lg font-black text-[#222]">Login</p>
+
+                                    <form onSubmit={handleLogin} className="flex flex-col">
+                                        {/* 아이디 입력 */}
+                                        <input
+                                            type="text"
+                                            id="username"
+                                            name="username"
+                                            placeholder="아이디를 입력하세요."
+                                            onChange={(e) => setUsername(e.target.value)}
+                                            className="mb-3 w-full border border-black/30 bg-transparent px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none"
+                                        />
+
+                                        {/* 비밀번호 입력 */}
+                                        <input
+                                            type="password"
+                                            id="password"
+                                            name="password"
+                                            placeholder="비밀번호를 입력하세요."
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="mb-4 w-full border border-black/30 bg-transparent px-3 py-2 text-sm text-black placeholder-gray-500 focus:outline-none"
+                                        />
+
+                                        {/* 로그인 버튼 */}
+                                        <button
+                                            type="submit"
+                                            className="mb-3 w-[110px] bg-[#8f86e8] px-4 py-2 text-sm font-semibold text-white transition hover:cursor-pointer hover:brightness-105"
+                                        >
+                                            로그인
+                                        </button>
+
+                                        {/* 가입 버튼 */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsSignupOpen(true)}
+                                            className="mb-3 w-[110px] bg-[#ff9292] px-4 py-2 text-sm font-semibold text-white transition hover:cursor-pointer hover:brightness-105"
+                                        >
+                                            가입하기
+                                        </button>
+
+                                        {/* 카카오 버튼 */}
+                                        <button
+                                            type="button"
+                                            onClick={handleKakaoLogin}
+                                            className="w-[180px] bg-yellow-300 px-4 py-2 text-sm font-semibold text-black transition hover:cursor-pointer hover:brightness-105"
+                                        >
+                                            카카오 로그인
+                                        </button>
+                                    </form>
+                                </motion.div>
+
+                                {/* 오른쪽: 서비스 요약 */}
+                                <motion.div {...fadeUp} className="mx-auto w-full max-w-[280px]">
+                                    <p className="mb-4 text-lg font-black text-[#222]">About dolchat</p>
+
+                                    <div className="space-y-3 text-sm leading-7 text-black/80">
+                                        <p>실시간 채팅으로 아이돌과 더 가까이 소통하세요.</p>
+                                        <p>공식 게시판에서 새로운 소식을 빠르게 확인하세요.</p>
+                                        <p>콘서트와 투표를 한 곳에서 편하게 즐기세요.</p>
+                                    </div>
+
+                                    {/* 추가: 아래 작은 아이콘 느낌 */}
+                                    <div className="mt-8 flex items-center gap-4 text-xl text-black">
+                                        <span>💬</span>
+                                        <span>🎫</span>
+                                        <span>🗳️</span>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        </div>
+
+                        {/* 수정: 하단 물결 단색 */}
+                        <div className="absolute bottom-0 left-0 w-full">
+                            <svg
+                                viewBox="0 0 1440 170"
+                                className="h-[110px] w-full md:h-[130px]"
+                                preserveAspectRatio="none"
+                            >
+                                <path
+                                    d="M0,96L48,101.3C96,107,192,117,288,117.3C384,117,480,107,576,96C672,85,768,75,864,80C960,85,1056,107,1152,112C1248,117,1344,107,1392,101.3L1440,96L1440,181L1392,181C1344,181,1248,181,1152,181C1056,181,960,181,864,181C768,181,672,181,576,181C480,181,384,181,288,181C192,181,96,181,48,181L0,181Z"
+                                    fill="#8f86e8"
+                                />
+                            </svg>
                         </div>
                     </section>
                 )}
