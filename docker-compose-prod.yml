@@ -75,7 +75,7 @@ services:
     container_name: api-gateway
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - JWT_SECRET=${JWT_SECRET:-your-secret}
+      - JWT_SECRET=${JWT_SECRET:-your-very-long-and-secure-random-string-idol-link-project}
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-}
       - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI:-http://localhost:5173/oauth/kakao}
       - MAIL_USERNAME=${MAIL_USERNAME:-}
@@ -96,7 +96,7 @@ services:
     container_name: auth-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - JWT_SECRET=${JWT_SECRET:-your-secret}
+      - JWT_SECRET=${JWT_SECRET:-your-very-long-and-secure-random-string-idol-link-project}
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-}
       - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI:-http://localhost:5173/oauth/kakao}
       - MAIL_USERNAME=${MAIL_USERNAME:-}
