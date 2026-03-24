@@ -127,8 +127,14 @@ const VotePage: React.FC = () => {
     }, [selectedVote?.id, selectedVote?.status]);
 
     const connectWebSocket = (voteId: number) => {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-        const wsUrl = baseUrl.replace(/^http/, "ws") + "/ws-ranking";
+        let wsUrl = "";
+        const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
+        if (envBaseUrl && envBaseUrl.startsWith('http')) {
+            wsUrl = envBaseUrl.replace(/^http/, "ws") + "/ws-ranking";
+        } else {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${protocol}//${window.location.host}/api/ws-ranking`;
+        }
 
         const client = new Client({
             brokerURL: wsUrl,
