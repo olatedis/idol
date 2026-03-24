@@ -36,6 +36,7 @@ public class ChatMessage {
     private String content; // 메시지 내용
     private String type; // TALK, IMAGE, SYSTEM, DELETED 등
     private String thumbnailUrl; // 이미지 썸네일 URL
+    private String senderProfileImage; // 발신자 프로필 이미지 추가
 
     // 답장 기능 (원본 메시지 ID)
     private String parentId;

@@ -82,8 +82,8 @@ public class PaymentService {
         // 추가: SUBSCRIPTION 도메인의 경우 연관된 PENDING 구독도 삭제
         if (payment.getDomain() == com.bit.paymentservice.domain.enumtype.PaymentDomain.SUBSCRIPTION) {
             try {
-                // API Gateway를 경유하여 구독 서비스에 요청
-                String baseUrl = System.getenv("GATEWAY_URL") != null ? System.getenv("GATEWAY_URL") : "http://localhost:8000";
+                // API Gateway를 경유하여 구독 서비스에 요청 (운영 환경에서는 서비스명 도메인 권장)
+                String baseUrl = System.getenv("GATEWAY_URL") != null ? System.getenv("GATEWAY_URL") : "http://api-gateway:8080";
                 String url = baseUrl + "/subscriptions/" + payment.getTargetId();
                 new org.springframework.web.client.RestTemplate().delete(url);
                 log.info("연관된 pending 구독 삭제 요청 성공: subscriptionId={}", payment.getTargetId());

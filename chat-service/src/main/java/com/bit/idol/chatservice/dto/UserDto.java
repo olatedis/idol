@@ -17,4 +17,5 @@ public class UserDto implements Serializable {
     private String username;
     private String nickname;
     private String role; // USER or IDOL
+    private String imgUrl; // 프로필 이미지 URL 추가
 }

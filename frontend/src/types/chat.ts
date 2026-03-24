@@ -18,6 +18,7 @@ export interface ChatMessage {
     content: string;
     type: string;
     thumbnailUrl?: string;
+    senderProfileImage?: string; // 추가: 발신자 프로필 이미지
     parentId?: string | null;
     createdAt?: string;
     me?: boolean;
