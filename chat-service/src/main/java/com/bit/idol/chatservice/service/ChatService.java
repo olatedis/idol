@@ -270,9 +270,16 @@ public class ChatService {
 
         // 3. Redis 캐싱 (TTL 적용)
         String cacheKey = "chat:room:" + messageDto.getIdolId();
-        redisTemplate.opsForList().leftPush(cacheKey, messageDto);
-        redisTemplate.opsForList().trim(cacheKey, 0, CACHE_SIZE - 1);
-        redisTemplate.expire(cacheKey, Duration.ofDays(3)); // 3일 TTL
+        try {
+            redisTemplate.opsForList().leftPush(cacheKey, messageDto);
+            redisTemplate.opsForList().trim(cacheKey, 0, CACHE_SIZE - 1);
+            redisTemplate.expire(cacheKey, Duration.ofDays(3));
+        } catch (Exception e) {
+            log.warn("Redis 리스트 캐싱 실패 (타입 불일치 의심). 초기화 시도: {}", e.getMessage());
+            redisTemplate.delete(cacheKey);
+            redisTemplate.opsForList().leftPush(cacheKey, messageDto);
+            redisTemplate.expire(cacheKey, Duration.ofDays(3));
+        }
 
         // 3-1. Redis 미리보기 캐싱 (TTL 적용)
         String previewKey = "chat:preview:" + messageDto.getIdolId();
@@ -281,14 +288,26 @@ public class ChatService {
         previewData.put("sender", messageDto.getSenderNickname());
         previewData.put("time", LocalDateTime.now().toString());
         previewData.put("type", messageDto.getType());
-        redisTemplate.opsForValue().set(previewKey, previewData, Duration.ofDays(7)); // 7일 TTL
+        try {
+            redisTemplate.opsForValue().set(previewKey, previewData, Duration.ofDays(7));
+        } catch (Exception e) {
+            log.warn("미리보기 캐싱 실패: {}", e.getMessage());
+        }
 
         // --- 3-2. 총 메시지 수 증가 (읽음 처리용) ---
         // 아이돌이 발송한 공지성 메시지만 글로벌 카운트를 증가시킵니다. (버블 스타일: 팬들의 메시지는 무시)
         if ("IDOL".equals(messageDto.getSenderRole())) {
             String totalCountKey = "chat:room:" + messageDto.getIdolId() + ":total_count";
-            redisTemplate.opsForValue().increment(totalCountKey);
-            redisTemplate.expire(totalCountKey, Duration.ofDays(30)); // 30일 TTL
+            log.debug("아이돌 메시지 카운트 증가 시도: key={}", totalCountKey);
+            try {
+                redisTemplate.opsForValue().increment(totalCountKey);
+                redisTemplate.expire(totalCountKey, Duration.ofDays(30));
+            } catch (Exception e) {
+                log.warn("카운트 증가 실패 (데이터 타입 불일치 의심). 초기화 시도: {}", e.getMessage());
+                // 타입 불일치(WRONGTYPE) 또는 값 오류 시 삭제 후 0부터 다시 시작
+                redisTemplate.delete(totalCountKey);
+                redisTemplate.opsForValue().increment(totalCountKey);
+            }
         }
 
         // 내가 보낸 메시지는 바로 읽음 처리 (안 읽은 메시지 버그 방지)

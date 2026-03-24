@@ -262,16 +262,16 @@ public class ChatController {
 
     // --- 예외 처리 핸들러 (프론트엔드 에러 브로드캐스팅용) ---
     @MessageExceptionHandler
-    public void handleException(RuntimeException ex, SimpMessageHeaderAccessor accessor) {
+    public void handleException(Exception ex, SimpMessageHeaderAccessor accessor) {
         Integer userId = (Integer) accessor.getSessionAttributes().get("userId");
         if (userId != null) {
-            log.warn("STOMP 메시지 처리 중 예외 발생: userId={}, msg={}", userId, ex.getMessage());
+            log.warn("STOMP 메시지 처리 중 예외 발생: userId={}, msg={}", userId, ex.getMessage(), ex);
             Map<String, String> errorPayload = new HashMap<>();
             errorPayload.put("type", "ERROR");
             errorPayload.put("message", ex.getMessage());
             messagingTemplate.convertAndSend("/queue/errors/" + userId, errorPayload);
         } else {
-            log.warn("STOMP 메시지 처리 중 예외 발생 (userId 없음): msg={}", ex.getMessage());
+            log.warn("STOMP 메시지 처리 중 예외 발생 (userId 없음): msg={}", ex.getMessage(), ex);
         }
     }
 }
