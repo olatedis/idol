@@ -285,7 +285,7 @@ const IdolSubscribe: React.FC = () => {
                                                     `https://api.dicebear.com/7.x/identicon/svg?seed=${group.groupId}`
                                                 }
                                                 alt={group.name}
-                                                className="w-full h-32 object-cover rounded-lg"
+                                                className="w-full h-32 object-cover rounded-full"
                                             />
 
                                             <div className="mt-2 text-center font-medium">

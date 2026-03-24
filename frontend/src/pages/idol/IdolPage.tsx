@@ -6,8 +6,6 @@ import { useAuthStore } from "../../stores/authStore";
 import SignupModal from "../../components/auth/SignupModal";
 import SafeImage from "../../components/common/SafeImage";
 
-const CARD_WIDTH = 176;
-
 interface GroupDto {
     groupId: number;
     name: string;
@@ -15,6 +13,18 @@ interface GroupDto {
     agencyId: number;
     agencyName: string;
     members?: any[];
+}
+
+interface SubscriptionDto {
+    subscriptionId: number;
+    userId: number;
+    idolId: number;
+    idolStageName: string;
+    idolImage?: string;
+    status: string;
+    startedAt: string;
+    expiredAt: string;
+    autoRenew: boolean;
 }
 
 const IdolPage: React.FC = () => {
@@ -27,8 +37,11 @@ const IdolPage: React.FC = () => {
 
     const [allGroups, setAllGroups] = useState<GroupDto[]>([]);
     const [subscribedGroups, setSubscribedGroups] = useState<GroupDto[]>([]);
+    const [subscribedIdols, setSubscribedIdols] = useState<SubscriptionDto[]>([]);
     const [showLeft, setShowLeft] = useState(false);
     const [showRight, setShowRight] = useState(false);
+    const [cardsPerView, setCardsPerView] = useState(4);
+    const [cardWidth, setCardWidth] = useState(0);
 
     // 모달 상태
     const [isSignupOpen, setIsSignupOpen] = useState(false);
@@ -52,19 +65,9 @@ const IdolPage: React.FC = () => {
                 const { data: managedGroups } = await api.get<GroupDto[]>("/groups/managed");
                 setSubscribedGroups(managedGroups);
             } else {
-                // 일반/아이돌 계정은 구독한 그룹 목록 조회
-                const { data: subs } = await api.get<any[]>("/subscriptions/groups/me");
-
-                // GroupSubscriptionDto를 GroupDto 형식으로 변환 (이름 매핑 등)
-                const groupResults: GroupDto[] = subs.map(sub => ({
-                    groupId: sub.groupId,
-                    name: sub.groupName, // groupName -> name 매핑
-                    groupImage: sub.groupImage,
-                    agencyId: 0, // 상세 정보에 없으므로 기본값 (필요 시 백엔드 보완 가능)
-                    agencyName: ""
-                }));
-
-                setSubscribedGroups(groupResults);
+                // 일반/아이돌 계정은 구독한 아이돌 목록 조회
+                const { data: subs } = await api.get<SubscriptionDto[]>("/subscriptions/me");
+                setSubscribedIdols(subs);
             }
         } catch (error) {
         }
@@ -75,25 +78,79 @@ const IdolPage: React.FC = () => {
         fetchGroupSubscriptions();
     }, [isLoggedIn]);
 
+    useEffect(() => {
+        // 데이터 로드 후 또는 cardWidth 변경 후 오버플로우 체크
+        setTimeout(() => {
+            checkOverflow();
+        }, 100);
+    }, [subscribedGroups.length, subscribedIdols.length, cardWidth]);
+
     // 캐러셀 버튼 제어
+    const calculateCardsPerView = () => {
+        const width = window.innerWidth;
+        if (width < 640) return 2;      // sm 이하: 2개
+        if (width < 768) return 3;      // sm-md: 3개
+        if (width < 1024) return 4;     // md-lg: 4개
+        if (width < 1280) return 5;     // lg-xl: 5개
+        return 6;                        // xl 이상: 6개
+    };
+
+    useEffect(() => {
+        const handleResize = () => {
+            const newCardsPerView = calculateCardsPerView();
+            setCardsPerView(newCardsPerView);
+            
+            if (scrollRef.current) {
+                const containerWidth = scrollRef.current.clientWidth;
+                const calculatedCardWidth = (containerWidth - (newCardsPerView - 1) * 32) / newCardsPerView; // gap-8 = 32px
+                setCardWidth(calculatedCardWidth);
+            }
+        };
+
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
     const checkOverflow = () => {
         const el = scrollRef.current;
         if (!el) return;
 
         setShowLeft(el.scrollLeft > 0);
-        setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth);
+        setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 10);
     };
 
     const scrollLeft = () => {
-        scrollRef.current?.scrollBy({ left: -CARD_WIDTH, behavior: "smooth" });
+        if (scrollRef.current && cardWidth > 0) {
+            scrollRef.current.scrollBy({ 
+                left: -(cardWidth + 32), // gap-8 = 32px
+                behavior: "smooth" 
+            });
+        }
     };
 
     const scrollRight = () => {
-        scrollRef.current?.scrollBy({ left: CARD_WIDTH, behavior: "smooth" });
+        if (scrollRef.current && cardWidth > 0) {
+            scrollRef.current.scrollBy({ 
+                left: cardWidth + 32, // gap-8 = 32px
+                behavior: "smooth" 
+            });
+        }
     };
 
     const handleClick = (group: GroupDto) => {
         navigate(`/group/${group.groupId}`);
+    };
+
+    const handleIdolCardClick = async (idol: SubscriptionDto) => {
+        try {
+            const { data: idolInfo } = await api.get(`/idols/${idol.idolId}`);
+            if (idolInfo.groupId) {
+                navigate(`/group/${idolInfo.groupId}`);
+            }
+        } catch (error) {
+            console.error("아이돌 정보 조회 실패:", error);
+        }
     };
 
     const GroupCard = ({ group }: { group: GroupDto }) => {
@@ -101,14 +158,33 @@ const IdolPage: React.FC = () => {
             <div
                 onClick={() => handleClick(group)}
                 className="flex-shrink-0 flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
+                style={{ width: cardWidth > 0 ? `${cardWidth}px` : 'auto' }}
             >
                 <SafeImage
                     src={group.groupImage}
                     alt={group.name}
-                    className="w-40 h-40 rounded-full border-2 border-idol-point object-cover shadow-md"
+                    className="w-32 h-32 rounded-full border border-idol-point object-cover shadow-md"
                     text={group.name}
                 />
-                <p className="mt-4 text-sm font-medium text-gray-800">{group.name}</p>
+                <p className="mt-4 text-sm font-medium text-gray-800 text-center line-clamp-2">{group.name}</p>
+            </div>
+        );
+    };
+
+    const IdolCard = ({ idol }: { idol: SubscriptionDto }) => {
+        return (
+            <div
+                onClick={() => handleIdolCardClick(idol)}
+                className="flex-shrink-0 flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
+                style={{ width: cardWidth > 0 ? `${cardWidth}px` : 'auto' }}
+            >
+                <SafeImage
+                    src={idol.idolImage || ''}
+                    alt={idol.idolStageName}
+                    className="w-32 h-32 rounded-full border border-idol-point object-cover shadow-md"
+                    text={idol.idolStageName}
+                />
+                <p className="mt-4 text-sm font-medium text-gray-800 text-center line-clamp-2">{idol.idolStageName}</p>
             </div>
         );
     };
@@ -127,10 +203,10 @@ const IdolPage: React.FC = () => {
                     >아이돌 구독하기</button>
                 </div>
 
-                {/* 구독중인 그룹 */}
+                {/* 구독중인 그룹/아이돌 */}
                 <section className="my-8 relative">
                     <div className="bg-idol rounded-lg py-3 text-center text-white font-semibold mb-8">
-                        {user?.role === "AGENCY" ? "관리중인 그룹" : "구독중인 그룹"}
+                        {user?.role === "AGENCY" ? "관리중인 그룹" : "구독중인 아이돌"}
                     </div>
 
                     {isLoggedIn ? (
@@ -156,23 +232,36 @@ const IdolPage: React.FC = () => {
                             <div
                                 ref={scrollRef}
                                 onScroll={checkOverflow}
-                                className="flex gap-8 overflow-hidden py-4"
+                                onLoad={checkOverflow}
+                                className="flex gap-8 overflow-x-auto overflow-y-hidden py-4 scroll-smooth"
                             >
-                                {subscribedGroups.length > 0 ? (
-                                    subscribedGroups.map(group => (
-                                        <GroupCard key={group.groupId} group={group} />
-                                    ))
+                                {user?.role === "AGENCY" ? (
+                                    subscribedGroups.length > 0 ? (
+                                        subscribedGroups.map(group => (
+                                            <GroupCard key={group.groupId} group={group} />
+                                        ))
+                                    ) : (
+                                        <div className="w-full text-center py-10 text-gray-500">
+                                            관리 중인 그룹이 없습니다.
+                                        </div>
+                                    )
                                 ) : (
-                                    <div className="w-full text-center py-10 text-gray-500">
-                                        {user?.role === "AGENCY" ? "관리 중인 그룹이 없습니다." : "구독 중인 그룹이 없습니다."}
-                                    </div>
+                                    subscribedIdols.length > 0 ? (
+                                        subscribedIdols.map(idol => (
+                                            <IdolCard key={idol.subscriptionId} idol={idol} />
+                                        ))
+                                    ) : (
+                                        <div className="w-full text-center py-10 text-gray-500">
+                                            구독 중인 아이돌이 없습니다.
+                                        </div>
+                                    )
                                 )}
                             </div>
                         </div>
                     ) : (
                         // 로그인/회원가입 유도 UI
                         <div className="flex flex-col items-center justify-center py-12 bg-white/50 rounded-lg border border-idol-point/20">
-                            <p className="text-gray-600 mb-6 font-medium">로그인하고 내가 구독한 그룹을 확인해보세요!</p>
+                            <p className="text-gray-600 mb-6 font-medium">로그인하고 내가 구독한 아이돌을 확인해보세요!</p>
                             <div className="flex gap-4">
                                 <button
                                     onClick={() => navigate('/', { state: { scrollToLogin: true } })}

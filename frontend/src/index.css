@@ -2,12 +2,12 @@
 
 @theme{
 
-    --color-idol: #FF9292;
-    --color-idol-point: #7D8ABC;
-    --color-idol-dark: #D14D72;
-    --color-idol-bg: #FFF8DB;
+    --color-idol: #FF6776;
+    --color-idol-point: #ffd967;
+    --color-idol-dark: #9c3f48;
+    --color-idol-bg: #FFF;
 
-    --color-idol-mid: #E86F82;
+    --color-idol-mid: #d85864;
 
     /* 추가 참고용 색상 (사용 금지, 주석으로만 보관) */
     /* #ffb5a7, #fcd5ce, #f8edeb, #f9dcc4, #fec89a */

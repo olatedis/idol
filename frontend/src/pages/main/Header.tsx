@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { motion, AnimatePresence } from "framer-motion";
+import dolchatText from "../../assets/dolchatText.png";
+import dolchatLogo from "../../assets/dolchatLogo.png"
 import {
     getIdolMessageStacks,
     getNotificationList,
@@ -580,13 +582,21 @@ const Header: React.FC = () => {
                             </svg>
                         </button>
 
+                        <div className="flex items-center">
                         {/* 로고 */}
-                        <div
+                        <img
+                            src={dolchatLogo}
+                            alt="dolchat"
+                            className="h-8 hover:cursor-pointer transition"
                             onClick={() => navigate("/")}
-                            className="text-xl font-bold text-idol hover:text-idol-dark hover:cursor-pointer"
-                        >
-                            dolchat
-                        </div>
+                        />
+                        <img
+                            src={dolchatText}
+                            alt="dolchat"
+                            className="h-8 hover:cursor-pointer transition"
+                            onClick={() => navigate("/")}
+                        />
+                    </div>
                     </div>
 
                     <div className="flex gap-6 text-sm items-center relative">
@@ -838,13 +848,13 @@ const Header: React.FC = () => {
                             </>
                         ) : (
                             <>
-                                <div className="rounded-md bg-idol hover:bg-idol-dark transition">
-                                    <button onClick={handleLogin} className="p-2 text-white w-[64px]">
+                                <div className="rounded-md bg-idol hover:bg-idol-point transition">
+                                    <button onClick={handleLogin} className="p-2 hover:cursor-pointer text-white w-[64px]">
                                         login
                                     </button>
                                 </div>
-                                <div className="rounded-md bg-idol hover:bg-idol-dark transition">
-                                    <button onClick={handleLogin} className="p-2 text-white w-[64px]">
+                                <div className="rounded-md bg-idol hover:bg-idol-point transition">
+                                    <button onClick={handleLogin} className="p-2 hover:cursor-pointer text-white w-[64px]">
                                         register
                                     </button>
                                 </div>
@@ -954,7 +964,7 @@ const Header: React.FC = () => {
                                 <div className="space-y-3">
                                     <button
                                         onClick={handleLogin}
-                                        className="w-full p-3 bg-idol text-white rounded-xl hover:bg-idol-dark transition shadow-md font-medium"
+                                        className="w-full p-3 bg-idol text-white rounded-xl hover:bg-idol-point transition shadow-md font-medium"
                                     >
                                         로그인
                                     </button>
