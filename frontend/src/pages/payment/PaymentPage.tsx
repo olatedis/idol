@@ -165,7 +165,7 @@ const PaymentPage: React.FC = () => {
             <main className="pt-[80px] px-6">
                 <div className="max-w-2xl mx-auto">
                     <h2 className="text-3xl font-extrabold mb-4 text-slate-800">결제</h2>
-                    <div className="bg-white rounded p-6 shadow">
+                    <div className="bg-white rounded-2xl p-6 border-idol-mid border-2">
                         <div className="space-y-4">
                             {domain === 'CONCERT' ? (
                                 <>
@@ -209,9 +209,9 @@ const PaymentPage: React.FC = () => {
                             )}
                         </div>
                         <div className="border-t pt-4 mt-4">
-                            <div className="mt-6">
-                                <button onClick={handlePay} disabled={loading} className="w-full py-3 px-4 rounded-xl bg-[var(--color-idol-point)] text-white font-bold shadow-lg hover:shadow-xl transition-all duration-200">
-                                    {loading ? '로딩 중...' : '토스로 결제하기'}
+                            <div className="mt-6 flex text-center">
+                                <button onClick={handlePay} disabled={loading} className="hover:cursor-pointer w-full py-3 px-4 rounded-xl bg-[var(--color-idol)] hover:bg-idol-point text-white font-bold shadow-lg hover:shadow-xl transition-all duration-200">
+                                    {loading ? '로딩 중...' : '결제하기'}
                                 </button>
                                 <button onClick={async () => {
                                     // 취소: domain 따라 대기중 데이터 제거 후 뒤로
@@ -244,7 +244,7 @@ const PaymentPage: React.FC = () => {
                                     } catch (e) {
                                     }
                                     navigate(-1);
-                                }} className="ml-3 py-3 px-4 rounded border">취소</button>
+                                }} className="ml-3 py-3 px-4 rounded-xl border w-40 hover:cursor-pointer ">결제 취소</button>
                             </div>
                         </div>
                     </div>
