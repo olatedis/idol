@@ -4,6 +4,8 @@ spring:
       on-profile: prod
   elasticsearch:
     uris: http://elasticsearch:9200
+    connection-timeout: 30s
+    socket-timeout: 60s
   kafka:
     bootstrap-servers: idol-kafka:29092
 
