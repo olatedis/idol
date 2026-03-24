@@ -170,7 +170,7 @@ public class ChatService {
                 } else {
                     // Redis 캐시 만료 시 DB에서 아이돌이 보낸 총 메시지만카운트하여 복구
                     total = (int) chatRepository.countByIdolIdAndSenderRole(idolId, "IDOL");
-                    redisTemplate.opsForValue().set(totalCountKey, String.valueOf(total), Duration.ofDays(30));
+                    redisTemplate.opsForValue().set(totalCountKey, total, Duration.ofDays(30));
                 }
 
                 int read;
@@ -179,7 +179,7 @@ public class ChatService {
                 } else {
                     // 신규 구독자이거나 읽음 캐시가 만료된 경우 (과거 메시지 안읽음 폭탄 방지)
                     read = total;
-                    redisTemplate.opsForValue().set(readCountKey, String.valueOf(read), Duration.ofDays(30));
+                    redisTemplate.opsForValue().set(readCountKey, read, Duration.ofDays(30));
                 }
 
                 unreadCount = Math.max(0, total - read);
@@ -219,7 +219,7 @@ public class ChatService {
         int total = totalObj != null ? Integer.parseInt(totalObj.toString()) : 0;
 
         // 30일 TTL 적용하여 현재 totalCount 값을 last_read_count에 동기화
-        redisTemplate.opsForValue().set(readCountKey, String.valueOf(total), Duration.ofDays(30));
+        redisTemplate.opsForValue().set(readCountKey, total, Duration.ofDays(30));
     }
 
     public void processMessage(ChatMessageDto messageDto) {
