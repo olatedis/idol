@@ -1,18 +1,13 @@
 import { Editor } from "@toast-ui/react-editor";
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "../../../stores/authStore";
+// import { useAuthStore } from "../../../stores/authStore";
+import { api } from "../../../api/axios";
 import Header from "../Header";
 
-type NoticeDetail = {
-    postId: number;
-    title: string;
-    content: string;
-    createdAt: string;
-    updatedAt: string;
-};
+// type NoticeDetail = { ... } (미사용)
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const NoticeEditPage: React.FC = () => {
     const { postId } = useParams();
@@ -26,8 +21,8 @@ const NoticeEditPage: React.FC = () => {
     const [error, setError] = useState("");
 
     // TODO: 로그인 구조 확정되면 교체
-    const { user, accessToken } = useAuthStore();
-    const isAdmin = user?.role === "ADMIN";
+    // const { user } = useAuthStore();
+    // const isAdmin = user?.role === "ADMIN";
 
     useEffect(() => {
         if (!postId) return;
@@ -39,21 +34,16 @@ const NoticeEditPage: React.FC = () => {
             setError("");
 
             try {
-                if (!API_BASE_URL) throw new Error("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
-
-                const res = await fetch(`${API_BASE_URL}/notices/${postId}`, {
-                    method: "GET",
+                const res = await api.get(`/notices/${postId}`, {
                     signal: controller.signal,
                 });
 
-                if (!res.ok) throw new Error("공지 불러오기 실패");
-
-                const json = (await res.json()) as NoticeDetail;
-                setTitle(json.title);
+                const data = res.data;
+                setTitle(data.title);
 
                 // 에디터에 기존 내용 세팅
                 setTimeout(() => {
-                    editorRef.current?.getInstance().setHTML(json.content);
+                    editorRef.current?.getInstance().setHTML(data.content);
                 }, 0);
             } catch (e: any) {
                 if (e?.name === "AbortError") return;
@@ -65,24 +55,9 @@ const NoticeEditPage: React.FC = () => {
 
         run();
         return () => controller.abort();
-    }, [API_BASE_URL, postId]);
+    }, [postId]);
 
     const handleUpdate = async () => {
-        if (!API_BASE_URL) {
-            setError("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
-            return;
-        }
-
-        if (!accessToken) {
-            setError("로그인이 필요합니다.");
-            return;
-        }
-
-        if (!isAdmin) {
-            setError("관리자 권한이 필요합니다.");
-            return;
-        }
-
         const instance = editorRef.current?.getInstance();
         const md = instance?.getMarkdown().trim() ?? "";
         const html = instance?.getHTML() ?? "";
@@ -101,21 +76,10 @@ const NoticeEditPage: React.FC = () => {
         setError("");
 
         try {
-            const res = await fetch(`${API_BASE_URL}/admin/notices/${postId}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify({
-                    title: title.trim(),
-                    content: html,
-                }),
+            await api.put(`/admin/notices/${postId}`, {
+                title: title.trim(),
+                content: html,
             });
-
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다. (ADMIN 전용)");
-            if (!res.ok) throw new Error("공지 수정 실패");
 
             navigate(`/notices/${postId}`);
         } catch (e: any) {

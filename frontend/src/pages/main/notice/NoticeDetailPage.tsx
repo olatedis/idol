@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore";
+import { api } from "../../../api/axios";
 import Header from "../Header";
 import { showConfirm, showErrorToast, showSuccessToast } from "../../../utils/alert";
 
@@ -16,7 +17,7 @@ type NoticeDetail = {
     dislikeCount: number;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // 날짜 문자열을 KST 기준으로 표시하기 위한 헬퍼 함수
 const formatDateToKST = (dateString: string) => {
@@ -45,7 +46,7 @@ const NoticeDetailPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    const { user, accessToken } = useAuthStore();
+    const { user } = useAuthStore();
     const isAdmin = user?.role === "ADMIN";
 
     useEffect(() => {
@@ -57,17 +58,12 @@ const NoticeDetailPage: React.FC = () => {
 
             try {
                 if (!postId) throw new Error("postId가 없습니다.");
-                if (!API_BASE_URL) throw new Error("VITE_API_BASE_URL이 설정되지 않았습니다.");
-
-                const res = await fetch(`${API_BASE_URL}/notices/${postId}`, {
-                    method: "GET",
+                
+                const res = await api.get(`/notices/${postId}`, {
                     signal: controller.signal,
                 });
 
-                if (!res.ok) throw new Error("공지 상세 조회 실패");
-
-                const json = (await res.json()) as NoticeDetail;
-                setData(json);
+                setData(res.data);
             } catch (e: any) {
                 if (e?.name === "AbortError") return;
                 setError(e?.message || "공지 상세 조회 실패");
@@ -82,50 +78,16 @@ const NoticeDetailPage: React.FC = () => {
     }, [postId]);
 
     const handleDelete = async () => {
-        if (!API_BASE_URL) {
-            // alert("VITE_API_BASE_URL이 설정되지 않았습니다.");
-            showErrorToast("VITE_API_BASE_URL이 설정되지 않았습니다.");
-            return;
-        }
-
-        if (!accessToken) {
-            // alert("로그인이 필요합니다.");
-            showErrorToast("로그인이 필요합니다.");
-            return;
-        }
-
-        // if (!window.confirm("정말 삭제하시겠습니까?")) return;
         const ok = await showConfirm("공지 삭제", "정말 삭제하시겠습니까? 삭제된 공지는 복구할 수 없습니다.", "삭제");
         if (!ok) return;
 
         try {
-            const res = await fetch(`${API_BASE_URL}/admin/notices/${postId}`, {
-                method: "DELETE",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
+            await api.delete(`/admin/notices/${postId}`);
 
-            if (res.status === 401) {
-                // alert("로그인이 필요합니다.");
-                showErrorToast("로그인이 필요합니다.");
-                return;
-            }
-
-            if (res.status === 403) {
-                // alert("권한이 없습니다. (ADMIN 전용)");
-                showErrorToast("권한이 없습니다. (ADMIN 전용)");
-                return;
-            }
-
-            if (!res.ok) throw new Error("삭제 실패");
-
-            // alert("삭제되었습니다.");
             showSuccessToast("공지가 성공적으로 삭제되었습니다.");
             navigate("/notices");
         } catch (e: any) {
-            // alert(e?.message || "삭제 실패");
-            showErrorToast(e?.message || "삭제 실패");
+            showErrorToast(e?.response?.data?.message || e?.message || "삭제 실패");
         }
     };
 

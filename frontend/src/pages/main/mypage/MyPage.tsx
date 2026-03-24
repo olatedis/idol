@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore";
+import { api } from "../../../api/axios";
 import Swal from "sweetalert2";
 import Header from "../Header";
 import ProfileTab from "./ProfileTab";
@@ -25,7 +26,7 @@ type UserMyPageDto = {
     agencyId?: number;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const MyPage: React.FC = () => {
     const navigate = useNavigate();
@@ -41,27 +42,8 @@ const MyPage: React.FC = () => {
 
     const fetchMyInfo = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/users/me`, {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
-
-            if (res.status === 401) {
-                Swal.fire({
-                    icon: "warning",
-                    title: "인증 만료",
-                    text: "인증이 만료되었습니다. 다시 로그인해주세요.",
-                });
-                useAuthStore.getState().logout();
-                navigate("/");
-                return;
-            }
-
-            if (!res.ok) throw new Error("사용자 정보를 불러올 수 없습니다.");
-
-            const data = await res.json();
-            setUserInfo(data);
+            const res = await api.get("/users/me");
+            setUserInfo(res.data);
         } catch (e) {
             Swal.fire({
                 icon: "error",

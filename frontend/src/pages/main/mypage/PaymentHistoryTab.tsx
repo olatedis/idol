@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuthStore } from "../../../stores/authStore";
+import { api } from "../../../api/axios";
 
 type PaymentDto = {
     paymentId: number;
@@ -22,7 +23,7 @@ const formatKstDateTime = (dateString?: string) => {
     return kstDate.toISOString().replace('T', ' ').substring(0, 16);
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const PaymentHistoryTab: React.FC = () => {
     const { accessToken } = useAuthStore();
@@ -34,19 +35,9 @@ const PaymentHistoryTab: React.FC = () => {
         const fetchPayments = async () => {
             try {
                 // 백엔드 API 명세에 따라 '/payments/me' (혹은 유사한 endpoint)가 존재한다고 가정합니다.
-                // 만약 없다면 User 권한으로 조회 가능한 API로 수정이 필요합니다.
-                const res = await fetch(`${API_BASE_URL}/payments/me`, {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                });
+                const res = await api.get("/payments/me");
 
-                if (res.status === 404) {
-                    throw new Error("결제 내역 조회 API가 존재하지 않거나 준비 중입니다.");
-                }
-                if (!res.ok) throw new Error("결제 내역을 불러오는데 실패했습니다.");
-
-                const data = await res.json();
+                const data = res.data;
 
                 // 최신 결제순으로 정렬
                 const sortedData = data.sort((a: PaymentDto, b: PaymentDto) =>

@@ -96,7 +96,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - EUREKA_URL=http://discovery-service:8761/eureka/
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
     ports:
       - "8000:8080"
     depends_on:
@@ -117,7 +117,7 @@ services:
       - MAIL_PASSWORD=${MAIL_PASSWORD:-}
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - discovery-service
@@ -135,7 +135,7 @@ services:
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY:-}
       - AWS_SECRET_KEY=${AWS_SECRET_KEY:-}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
       - discovery-service
       - db
@@ -155,7 +155,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - DEEPL_API_KEY=${DEEPL_API_KEY:-}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - discovery-service
@@ -173,7 +173,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - INTERNAL_KEY=${INTERNAL_KEY:-}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
       - discovery-service
       - db
@@ -188,7 +188,7 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - discovery-service
@@ -205,7 +205,7 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
       - discovery-service
       - db
@@ -221,7 +221,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - GATEWAY_URL=${GATEWAY_URL:-http://api-gateway:8080}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
       - discovery-service
       - db
@@ -236,7 +236,7 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
       - discovery-service
       - db
@@ -251,7 +251,7 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
       - discovery-service
       - db
@@ -266,7 +266,7 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - discovery-service
@@ -293,7 +293,7 @@ services:
     container_name: ranking-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - redis

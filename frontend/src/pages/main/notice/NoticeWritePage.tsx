@@ -1,7 +1,7 @@
 import { Editor } from "@toast-ui/react-editor";
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../../../stores/authStore";
+import { api } from "../../../api/axios";
 import Header from "../Header";
 
 type NoticeWriteRequest = {
@@ -32,7 +32,7 @@ type NoticeWriteRequest = {
     comments: any[];
 };*/
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const NoticeWritePage: React.FC = () => {
     const navigate = useNavigate();
@@ -60,18 +60,6 @@ const NoticeWritePage: React.FC = () => {
             return;
         }
 
-        if (!API_BASE_URL) {
-            setError("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
-            return;
-        }
-
-        // TODO: 로그인 연동되면
-        const { accessToken } = useAuthStore.getState();
-        if (!accessToken) {
-            setError("로그인이 필요합니다. (accessToken 없음)");
-            return;
-        }
-
         const req: NoticeWriteRequest = {
             boardType: "ADMIN_NOTICE",
             idolId: null,
@@ -84,21 +72,9 @@ const NoticeWritePage: React.FC = () => {
 
         try {
             // /board/admin/** -> board-service /admin/**
-            const res = await fetch(`${API_BASE_URL}/admin/notices`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify(req),
-            });
+            const res = await api.post("/admin/notices", req);
 
-            if (res.status === 401) throw new Error("로그인이 필요합니다.");
-            if (res.status === 403) throw new Error("권한이 없습니다. (ADMIN 전용)");
-            if (!res.ok) throw new Error("공지 작성 실패");
-
-            const json = (await res.json()) as any;
-            const newPostId = json?.postId;
+            const newPostId = res.data?.postId;
 
             if (typeof newPostId === "number") {
                 navigate(`/notices/${newPostId}`);

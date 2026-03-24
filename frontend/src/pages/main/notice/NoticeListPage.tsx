@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../../stores/authStore";
+import { api } from "../../../api/axios";
 import Header from "../Header";
 
 type NoticeListItem = {
@@ -21,7 +22,7 @@ type PageResponse<T> = {
     last: boolean;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 20;
 
 // 날짜 문자열을 KST 기준으로 표시하기 위한 헬퍼 함수
@@ -64,24 +65,18 @@ const NoticeListPage: React.FC = () => {
             setError("");
 
             try {
-                if (!API_BASE_URL) {
-                    throw new Error("VITE_API_BASE_URL이 설정되어 있지 않습니다.");
-                }
+                const params = {
+                    page,
+                    size: PAGE_SIZE,
+                    sort: "createdAt,desc"
+                };
 
-                const params = new URLSearchParams();
-                params.set("page", String(page));
-                params.set("size", String(PAGE_SIZE));
-                params.set("sort", "createdAt,desc");
-
-                const res = await fetch(`${API_BASE_URL}/notices?${params.toString()}`, {
-                    method: "GET",
+                const res = await api.get("/notices", {
+                    params,
                     signal: controller.signal,
                 });
 
-                if (!res.ok) throw new Error("공지 목록 조회 실패");
-
-                const json = (await res.json()) as PageResponse<NoticeListItem>;
-                setData(json);
+                setData(res.data);
             } catch (e: any) {
                 if (e?.name === "AbortError") return;
                 setError(e?.message || "공지 목록 조회 실패");
