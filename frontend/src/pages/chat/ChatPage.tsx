@@ -14,8 +14,15 @@ import SearchDrawer from "../../components/chat/SearchDrawer";
 import PinnedMessage from "../../components/chat/PinnedMessage";
 import TypingIndicator from "../../components/chat/TypingIndicator";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-const WS_URL = API_BASE_URL.replace("http", "ws") + "/ws-chat";
+const getWsUrl = (endpoint: string) => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
+    if (baseUrl && baseUrl.startsWith('http')) {
+        return baseUrl.replace(/^http/, 'ws') + endpoint;
+    }
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}/api${endpoint}`;
+};
+const WS_URL = getWsUrl('/ws-chat');
 
 const ChatPage: React.FC = () => {
     const { groupId } = useParams<{ groupId?: string }>();
