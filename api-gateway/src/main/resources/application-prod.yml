@@ -5,41 +5,7 @@ spring:
   config:
     activate:
       on-profile: prod
-  cloud:
-    gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-      routes:
-        - id: user-service
-          uri: lb://USER-SERVICE
-          predicates:
-            - Path=/users/**, /groups/**, /idols/**
-        - id: auth-service
-          uri: lb://AUTH-SERVICE
-          predicates:
-            - Path=/auth/**
-        - id: chat-service
-          uri: lb://CHAT-SERVICE
-          predicates:
-            - Path=/chat/**, /ws/**
-        - id: board-service
-          uri: lb://BOARD-SERVICE
-          predicates:
-            - Path=/board/**
-        - id: vote-service
-          uri: lb://VOTE-SERVICE
-          predicates:
-            - Path=/vote/**
-        - id: ranking-service
-          uri: lb://RANKING-SERVICE
-          predicates:
-            - Path=/ranking/**
-        - id: search-service
-          uri: lb://SEARCH-SERVICE
-          predicates:
-            - Path=/search/**
+
 
 eureka:
   client:
