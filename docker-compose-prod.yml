@@ -10,6 +10,9 @@ services:
       ZOOKEEPER_TICK_TIME: 6000
     networks:
       - idol-network
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -50,6 +53,8 @@ services:
     container_name: idol-mongo
     networks:
       - idol-network
+    volumes:
+      - mongo_data:/data/db
 
   elasticsearch:
     container_name: idol-elasticsearch
@@ -83,6 +88,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - EUREKA_URL=http://discovery-service:8761/eureka/
+      - SPRING_DATA_REDIS_HOST=redis
     ports:
       - "8000:8080"
     depends_on:
@@ -103,6 +109,8 @@ services:
       - MAIL_PASSWORD=${MAIL_PASSWORD:-}
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - discovery-service
       - redis
@@ -118,10 +126,13 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY:-}
       - AWS_SECRET_KEY=${AWS_SECRET_KEY:-}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SPRING_DATA_REDIS_HOST=redis
     depends_on:
       - discovery-service
       - db
       - mongo
+      - redis
     networks:
       - idol-network
 
@@ -133,12 +144,16 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY:-}
       - AWS_SECRET_KEY=${AWS_SECRET_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - DEEPL_API_KEY=${DEEPL_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DEEPL_API_KEY=${DEEPL_API_KEY:-}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - discovery-service
       - mongo
       - kafka
+      - redis
     networks:
       - idol-network
 
@@ -148,10 +163,13 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
-      - INTERNAL_KEY=${INTERNAL_KEY}
+      - INTERNAL_KEY=${INTERNAL_KEY:-}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SPRING_DATA_REDIS_HOST=redis
     depends_on:
       - discovery-service
       - db
+      - redis
     networks:
       - idol-network
 
@@ -161,9 +179,14 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - discovery-service
       - db
+      - redis
+      - kafka
     networks:
       - idol-network
 
@@ -173,9 +196,12 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SPRING_DATA_REDIS_HOST=redis
     depends_on:
       - discovery-service
       - db
+      - redis
     networks:
       - idol-network
 
@@ -185,10 +211,13 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
-      - GATEWAY_URL=http://api-gateway:8080
+      - GATEWAY_URL=${GATEWAY_URL:-http://api-gateway:8080}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SPRING_DATA_REDIS_HOST=redis
     depends_on:
       - discovery-service
       - db
+      - redis
     networks:
       - idol-network
 
@@ -198,9 +227,12 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SPRING_DATA_REDIS_HOST=redis
     depends_on:
       - discovery-service
       - db
+      - redis
     networks:
       - idol-network
 
@@ -210,9 +242,12 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SPRING_DATA_REDIS_HOST=redis
     depends_on:
       - discovery-service
       - db
+      - redis
     networks:
       - idol-network
 
@@ -222,9 +257,14 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_PASSWORD=${DB_PASSWORD:-root}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - discovery-service
       - db
+      - redis
+      - kafka
     networks:
       - idol-network
 
@@ -233,6 +273,7 @@ services:
     container_name: fanout-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - discovery-service
       - kafka
@@ -244,6 +285,11 @@ services:
     container_name: ranking-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      - redis
+      - kafka
     networks:
       - idol-network
 
@@ -252,6 +298,7 @@ services:
     container_name: search-service
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
     depends_on:
       - elasticsearch
     networks:
@@ -271,3 +318,12 @@ services:
 networks:
   idol-network:
     driver: bridge
+
+volumes:
+  mysql_data:
+  mongo_data:
+  redis_data:
+  es_data:
+  kafka_data:
+  zookeeper_data:
+  zookeeper_log:
