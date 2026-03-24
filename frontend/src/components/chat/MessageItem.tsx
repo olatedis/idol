@@ -57,12 +57,23 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
     const displayContent = isTranslated && translatedText ? translatedText : message.content;
 
+    const getDisplayProfileImage = () => {
+        // 1. 메시지에 포함된 발신자 프사가 있으면 최우선 (팬/아이돌 공통)
+        if (message.senderProfileImage) return message.senderProfileImage;
+        // 2. 메시지에 없으면 props로 내려온 profileImage (기존 아이돌 프사 등)
+        if (profileImage) return profileImage;
+        // 3. 둘 다 없으면 undefined (기본 아이콘 노출)
+        return undefined;
+    };
+
+    const displayImg = getDisplayProfileImage();
+
     return (
         <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} shrink-0 transform transition-all`}>
             {!isMine && (
                 <div className="w-8 h-8 rounded-full bg-gray-200 mr-2 overflow-hidden shrink-0 border border-[var(--color-idol)]/20">
-                    {profileImage ? (
-                        <img src={profileImage} alt="profile" className="w-full h-full object-cover" />
+                    {displayImg ? (
+                        <img src={displayImg} alt="profile" className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center bg-[var(--color-idol-point)] text-white font-bold text-xs">
                             {stageName?.substring(0, 1) || "I"}

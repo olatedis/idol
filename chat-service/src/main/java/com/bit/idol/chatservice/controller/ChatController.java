@@ -74,6 +74,10 @@ public class ChatController {
         messageDto.setSenderRole(role);
         messageDto.setSenderNickname(nickname);
 
+        // [추가] 세션에서 프사 꺼내서 본문에 삽입
+        String profileImage = (String) accessor.getSessionAttributes().get("profileImage");
+        messageDto.setSenderProfileImage(profileImage);
+
         log.info("메시지 수신: room={}, sender={}", messageDto.getIdolId(), nickname);
 
         // 알림 로직은 ChatService로 이동됨
@@ -93,6 +97,11 @@ public class ChatController {
 
         messageDto.setSenderRole(role);
         messageDto.setSenderId((Integer) accessor.getSessionAttributes().get("userId"));
+        
+        // [추가] 타이핑 중에도 프사 노출을 위해 설정
+        String profileImage = (String) accessor.getSessionAttributes().get("profileImage");
+        messageDto.setSenderProfileImage(profileImage);
+
         messageDto.setType("TYPING");
         redisTemplate.convertAndSend("/sub/idol/" + messageDto.getIdolId(), messageDto);
 

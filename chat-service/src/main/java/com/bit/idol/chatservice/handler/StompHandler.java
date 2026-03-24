@@ -100,6 +100,17 @@ public class StompHandler implements ChannelInterceptor {
         accessor.getSessionAttributes().put("role", user.getRole());
         accessor.getSessionAttributes().put("nickname", user.getNickname());
 
+        // [추가] 프로필 이미지 정보 세션 보관 (JWT 대신 Feign 1회 호출로 최신화)
+        try {
+            UserDto fullUser = userFeignClient.getUserInfoById(user.getUserId());
+            if (fullUser != null && fullUser.getImgUrl() != null) {
+                accessor.getSessionAttributes().put("profileImage", fullUser.getImgUrl());
+                log.info("유저 프로필 이미지 세션 저장 완료: userId={}, imgUrl={}", user.getUserId(), fullUser.getImgUrl());
+            }
+        } catch (Exception e) {
+            log.warn("유저 프로필 이미지 조회 실패 (기본값 사용): {}", e.getMessage());
+        }
+
         log.info("웹소켓 연결 최종 승인: sessionId={}", accessor.getSessionId());
     }
 

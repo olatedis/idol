@@ -257,6 +257,7 @@ public class ChatService {
                 .content(messageDto.getContent())
                 .type(messageDto.getType())
                 .thumbnailUrl(messageDto.getThumbnailUrl()) // 썸네일 URL 매핑 추가
+                .senderProfileImage(messageDto.getSenderProfileImage()) // [추가] 발신자 프사 저장
                 .parentId(messageDto.getParentId())
                 .createdAt(LocalDateTime.now())
                 .status("PENDING") // Outbox Pattern
@@ -838,6 +839,7 @@ public class ChatService {
                 .senderRole(entity.getSenderRole())
                 .content(entity.getContent())
                 .type(entity.getType())
+                .senderProfileImage(entity.getSenderProfileImage()) // [추가] DTO 변환 시 포함
                 .parentId(entity.getParentId())
                 .reactions(entity.getReactions())
                 .createdAt(entity.getCreatedAt())

@@ -21,6 +21,7 @@ public class ChatMessageDto {
     private String content;
     private String type; // TEXT, IMAGE, VIDEO, VOICE, TYPING, PIN, UNPIN, DELETE, REACTION
     private String thumbnailUrl; // 이미지 전용 썸네일 URL
+    private String senderProfileImage; // 발신자 프로필 이미지 추가
     private String parentId; // 답장할 메시지 ID
     private Map<String, Integer> reactions; // 반응 (좋아요 등)
     private String deleteReason; // 삭제 사유 (AI_FILTERED 등)
