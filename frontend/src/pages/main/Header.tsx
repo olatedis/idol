@@ -168,6 +168,24 @@ const Header: React.FC = () => {
         }).format(date);
     };
 
+    // 추가: 로그인 알림 전용 UTC -> KST 변환
+    const formatLoginNotificationTimeToKST = (value?: string | null) => {
+        if (!value) return "";
+
+        const utcDate = new Date(`${value}Z`);
+
+        if (Number.isNaN(utcDate.getTime())) return value;
+
+        return new Intl.DateTimeFormat("ko-KR", {
+            timeZone: "Asia/Seoul",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+        }).format(utcDate);
+    };
+
     const parseIdolId = (notification: NotificationItem) => {
         const idolIdFromArgs = notification.args?.idolId;
         if (idolIdFromArgs) return Number(idolIdFromArgs);
@@ -796,9 +814,10 @@ const Header: React.FC = () => {
                                                                                     {getNotificationLabel(notification)}
                                                                                 </span>
                                                                                 <span className="text-[11px] text-gray-400 shrink-0">
-                                                                                    {formatNotificationTimeToKST(
-                                                                                        notification.occurredAt
-                                                                                    )}
+                                                                                    {notification.type === "LOGIN_NEW_DEVICE" ||
+                                                                                    notification.type === "LOGIN_FAIL_LOCKED"
+                                                                                    ? formatLoginNotificationTimeToKST(notification.occurredAt)
+                                                                                    : formatNotificationTimeToKST(notification.occurredAt)}
                                                                                 </span>
                                                                             </div>
 
