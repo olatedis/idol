@@ -91,7 +91,7 @@ const ConcertPage: React.FC = () => {
             params.set("sort", "concertDate,desc");
             if (groupId) params.set("groupId", groupId);
 
-            let url = `${API_BASE_URL}/concerts`;
+            let url = `/concerts`;
             const qs = params.toString();
             if (qs) url += `?${qs}`;
 
@@ -130,7 +130,7 @@ const ConcertPage: React.FC = () => {
         }
         try {
             setSeatsLoading(true);
-            const url = `${API_BASE_URL}/concerts/${concertId}/seats`;
+            const url = `/concerts/${concertId}/seats`;
             const res = await api.get(url);
 
             if (res.status !== 200) {
@@ -180,7 +180,7 @@ const ConcertPage: React.FC = () => {
 
         const openFromGlobal = async () => {
             try {
-                const res = await api.get(`${API_BASE_URL}/concerts/${state.openConcertId}`);
+                const res = await api.get(`/concerts/${state.openConcertId}`);
                 if (res.status === 200) {
                     await onOpenDetail(res.data as ConcertDto);
                 }
@@ -283,7 +283,7 @@ const ConcertPage: React.FC = () => {
             const seatIds = chosenSeats.map((seat) => seat.id);
             const seatPrices = chosenSeats.map((seat) => seat.price);
 
-            const res = await api.post(`${API_BASE_URL}/reservations/bulk`, {
+            const res = await api.post(`/reservations/bulk`, {
                 userId: user.userId,
                 concertId: selectedConcert.id,
                 seatIds,

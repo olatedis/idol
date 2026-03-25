@@ -605,7 +605,7 @@ const VotePage: React.FC = () => {
                                                 whileHover={!hasVoted ? { scale: 1.05, y: -5 } : {}}
                                                 whileTap={!hasVoted ? { scale: 0.95 } : {}}
                                                 key={candidate.number}
-                                                onClick={() => !hasVoted && setSelectedCandidate(candidate.number)}
+                                                onClick={() => !hasVoted && selectedVote.status === 'OPEN' && setSelectedCandidate(candidate.number)}
                                                 className={`relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300
                                                     ${isSelected ? 'ring-4 ring-[var(--color-idol)] shadow-xl shadow-[var(--color-idol)]/30 transform -translate-y-2' : 'border-2 border-[var(--color-idol-bg)] hover:border-[var(--color-idol-point)]'}
                                                     ${hasVoted && !isSelected ? 'opacity-50 grayscale select-none cursor-default' : ''}
@@ -672,32 +672,34 @@ const VotePage: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="p-4 sm:p-6 bg-white/80 border-t flex justify-end gap-3 sm:gap-4 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] relative z-20">
-                                {hasVoted ? (
-                                    <button
-                                        onClick={handleCancelVote}
-                                        disabled={isSubmitting || isFetchingDetail}
-                                        className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-white text-red-500 border-2 border-red-100 rounded-xl hover:bg-red-50 hover:border-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold text-base sm:text-lg shadow-sm"
-                                    >
-                                        {isSubmitting ? '진행 중...' : '✋ 투표 물리기'}
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={handleVote}
-                                        disabled={selectedCandidate === null || selectedVote.status !== 'OPEN' || isSubmitting || isFetchingDetail}
-                                        className="w-full sm:w-auto px-6 sm:px-10 py-3 bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] text-white rounded-xl hover:shadow-lg hover:shadow-[var(--color-idol-dark)]/40 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 disabled:translate-y-0 font-black text-base sm:text-lg letter-spacing-wide flex items-center justify-center gap-2"
-                                    >
-                                        {selectedVote.status === 'CLOSED' ? '종료된 투표' : selectedVote.status === 'UPCOMING' ? '투표 예정' : isSubmitting ? (
-                                            <>
-                                                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg> 투표 전송 중...
-                                            </>
-                                        ) : '✨ 확정하기'}
-                                    </button>
-                                )}
-                            </div>
+                            {selectedVote.status !== 'UPCOMING' && (
+                                <div className="p-4 sm:p-6 bg-white/80 border-t flex justify-end gap-3 sm:gap-4 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] relative z-20">
+                                    {hasVoted ? (
+                                        <button
+                                            onClick={handleCancelVote}
+                                            disabled={isSubmitting || isFetchingDetail}
+                                            className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-white text-red-500 border-2 border-red-100 rounded-xl hover:bg-red-50 hover:border-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold text-base sm:text-lg shadow-sm"
+                                        >
+                                            {isSubmitting ? '진행 중...' : '✋ 투표 물리기'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={handleVote}
+                                            disabled={selectedCandidate === null || selectedVote.status !== 'OPEN' || isSubmitting || isFetchingDetail}
+                                            className="w-full sm:w-auto px-6 sm:px-10 py-3 bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] text-white rounded-xl hover:shadow-lg hover:shadow-[var(--color-idol-dark)]/40 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 disabled:translate-y-0 font-black text-base sm:text-lg letter-spacing-wide flex items-center justify-center gap-2"
+                                        >
+                                            {selectedVote.status === 'CLOSED' ? '종료된 투표' : isSubmitting ? (
+                                                <>
+                                                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg> 투표 전송 중...
+                                                </>
+                                            ) : '✨ 확정하기'}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </motion.div>
                     </div>
                 )}
