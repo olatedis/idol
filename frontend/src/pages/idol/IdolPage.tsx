@@ -85,14 +85,14 @@ const IdolPage: React.FC = () => {
             } else {
                 // 일반/아이돌 계정은 구독한 아이돌과 그룹 목록 조회
                 const [idolRes, groupRes] = await Promise.all([
-                    api.get<SubscriptionDto[]>("/subscriptions/me"),
-                    api.get<any[]>("/subscriptions/groups/me"),
+                    api.get("/subscriptions/me"),
+                    api.get("/subscriptions/groups/me"),
                 ]);
 
                 // 그룹 데이터 변환
                 const groupResults: GroupDto[] = (groupRes.data ?? []).map(sub => ({
                     groupId: sub.groupId,
-                    name: sub.groupName,
+                    name: sub.name,
                     groupImage: sub.groupImage,
                     agencyId: 0,
                     agencyName: ""
