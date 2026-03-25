@@ -152,7 +152,12 @@ const PaymentPage: React.FC = () => {
                     });
                 }
             }
-        } catch (e) {
+        } catch (e: any) {
+            // 사용자가 직접 취소한 경우는 정상 흐름 (콘솔 에러 없이 조용히 종료)
+            if (e?.code === 'USER_CANCEL' || e?.message === '취소되었습니다.') {
+                setLoading(false);
+                return;
+            }
             showErrorToast('결제 준비 중 오류가 발생했습니다.');
             setLoading(false);
         }

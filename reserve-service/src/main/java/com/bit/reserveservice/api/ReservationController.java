@@ -68,7 +68,7 @@ public class ReservationController {
     }
 
     // 예약 취소 (본인 취소)
-    @GetMapping("/{reservationId}")
+    @DeleteMapping("/{reservationId}")
     public void cancelReservation(
             @RequestHeader("X-User-Id") int userId,
             @PathVariable int reservationId
