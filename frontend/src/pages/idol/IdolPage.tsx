@@ -90,7 +90,7 @@ const IdolPage: React.FC = () => {
                 ]);
 
                 // 그룹 데이터 변환
-                const groupResults: GroupDto[] = (groupRes.data ?? []).map(sub => ({
+                const groupResults: GroupDto[] = (groupRes.data ?? []).map((sub: { groupId: number; name: string; groupImage: string; }) => ({
                     groupId: sub.groupId,
                     name: sub.name,
                     groupImage: sub.groupImage,
@@ -101,7 +101,7 @@ const IdolPage: React.FC = () => {
                 setSubscribedGroups(groupResults);
 
                 // 각 아이돌의 상세 정보 조회
-                const idolDetailsPromises = (idolRes.data ?? []).map(sub =>
+                const idolDetailsPromises = (idolRes.data ?? []).map((sub: { idolId: number }) =>
                     api.get(`/idols/${sub.idolId}`).then(res => res.data)
                 );
 
