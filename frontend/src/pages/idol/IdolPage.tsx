@@ -27,6 +27,20 @@ interface SubscriptionDto {
     autoRenew: boolean;
 }
 
+interface IdolDto {
+    idolId: number;
+    stageName: string;
+    profileImage: string;
+    groupId: number | null;
+    groupName: string | null;
+}
+
+interface CarouselItem {
+    type: 'group' | 'idol';
+    group?: GroupDto;
+    idol?: IdolDto;
+}
+
 const IdolPage: React.FC = () => {
     const navigate = useNavigate();
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -37,7 +51,8 @@ const IdolPage: React.FC = () => {
 
     const [allGroups, setAllGroups] = useState<GroupDto[]>([]);
     const [subscribedGroups, setSubscribedGroups] = useState<GroupDto[]>([]);
-    const [subscribedIdols, setSubscribedIdols] = useState<SubscriptionDto[]>([]);
+    const [subscribedIdols, setSubscribedIdols] = useState<IdolDto[]>([]);
+    const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
     const [showLeft, setShowLeft] = useState(false);
     const [showRight, setShowRight] = useState(false);
     const [cardsPerView, setCardsPerView] = useState(4);
@@ -64,14 +79,15 @@ const IdolPage: React.FC = () => {
                 // 에이전시 계정은 관리 중인 그룹 목록을 서버에서 직접 조회
                 const { data: managedGroups } = await api.get<GroupDto[]>("/groups/managed");
                 setSubscribedGroups(managedGroups);
+                setCarouselItems(
+                    subscribedGroups.map(group => ({ type: 'group' as const, group }))
+                );
             } else {
                 // 일반/아이돌 계정은 구독한 아이돌과 그룹 목록 조회
                 const [idolRes, groupRes] = await Promise.all([
                     api.get<SubscriptionDto[]>("/subscriptions/me"),
                     api.get<any[]>("/subscriptions/groups/me"),
                 ]);
-
-                setSubscribedIdols(idolRes.data);
 
                 // 그룹 데이터 변환
                 const groupResults: GroupDto[] = (groupRes.data ?? []).map(sub => ({
@@ -83,8 +99,45 @@ const IdolPage: React.FC = () => {
                 }));
 
                 setSubscribedGroups(groupResults);
+
+                // 각 아이돌의 상세 정보 조회
+                const idolDetailsPromises = (idolRes.data ?? []).map(sub =>
+                    api.get<IdolDto>(`/idols/${sub.idolId}`).then(res => res.data)
+                );
+
+                const idolDetails = await Promise.all(idolDetailsPromises);
+                setSubscribedIdols(idolDetails);
+
+                // 그룹별로 정렬: 그룹1, 그룹1의 아이돌들, 그룹2, 그룹2의 아이돌들, ...
+                const sortedItems: CarouselItem[] = [];
+                const addedGroupIds = new Set<number | null>();
+
+                // 먼저 구독한 그룹들 순서대로 처리
+                for (const group of subscribedGroups) {
+                    sortedItems.push({ type: 'group', group });
+                    addedGroupIds.add(group.groupId);
+
+                    // 해당 그룹에 속한 아이돌들 추가
+                    const groupIdols = subscribedIdols.filter(
+                        idol => idol.groupId === group.groupId
+                    );
+                    groupIdols.forEach(idol => {
+                        sortedItems.push({ type: 'idol', idol });
+                    });
+                }
+
+                // 그룹에 속하지 않은 아이돌들 추가
+                const ungroupedIdols = subscribedIdols.filter(
+                    idol => idol.groupId === null || !addedGroupIds.has(idol.groupId)
+                );
+                ungroupedIdols.forEach(idol => {
+                    sortedItems.push({ type: 'idol', idol });
+                });
+
+                setCarouselItems(sortedItems);
             }
         } catch (error) {
+            console.error("구독 목록 조회 실패:", error);
         }
     };
 
@@ -98,7 +151,7 @@ const IdolPage: React.FC = () => {
         setTimeout(() => {
             checkOverflow();
         }, 100);
-    }, [subscribedGroups.length, subscribedIdols.length, cardWidth]);
+    }, [carouselItems.length, cardWidth]);
 
     // 캐러셀 버튼 제어
     const calculateCardsPerView = () => {
@@ -157,23 +210,18 @@ const IdolPage: React.FC = () => {
         navigate(`/group/${group.groupId}`);
     };
 
-    const handleIdolCardClick = async (idol: SubscriptionDto) => {
-        try {
-            const { data: idolInfo } = await api.get(`/idols/${idol.idolId}`);
-            if (idolInfo.groupId) {
-                navigate(`/group/${idolInfo.groupId}`);
-            }
-        } catch (error) {
-            console.error("아이돌 정보 조회 실패:", error);
+    const handleIdolCardClick = async (idol: IdolDto) => {
+        if (idol.groupId) {
+            navigate(`/group/${idol.groupId}`);
         }
     };
 
-    const GroupCard = ({ group }: { group: GroupDto }) => {
+    const GroupCard = ({ group, isCarousel = false }: { group: GroupDto; isCarousel?: boolean }) => {
         return (
             <div
                 onClick={() => handleClick(group)}
-                className="flex-shrink-0 flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
-                style={{ width: cardWidth > 0 ? `${cardWidth}px` : 'auto' }}
+                className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
+                style={isCarousel ? { width: cardWidth > 0 ? `${cardWidth}px` : 'auto', flexShrink: 0 } : undefined}
             >
                 <SafeImage
                     src={group.groupImage}
@@ -186,20 +234,20 @@ const IdolPage: React.FC = () => {
         );
     };
 
-    const IdolCard = ({ idol }: { idol: SubscriptionDto }) => {
+    const IdolCard = ({ idol, isCarousel = false }: { idol: IdolDto; isCarousel?: boolean }) => {
         return (
             <div
                 onClick={() => handleIdolCardClick(idol)}
-                className="flex-shrink-0 flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
-                style={{ width: cardWidth > 0 ? `${cardWidth}px` : 'auto' }}
+                className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
+                style={isCarousel ? { width: cardWidth > 0 ? `${cardWidth}px` : 'auto', flexShrink: 0 } : undefined}
             >
                 <SafeImage
-                    src={idol.idolImage || ''}
-                    alt={idol.idolStageName}
+                    src={idol.profileImage || ''}
+                    alt={idol.stageName}
                     className="w-32 h-32 rounded-full border border-idol-point object-cover shadow-md"
-                    text={idol.idolStageName}
+                    text={idol.stageName}
                 />
-                <p className="mt-4 text-sm font-medium text-gray-800 text-center line-clamp-2">{idol.idolStageName}</p>
+                <p className="mt-4 text-sm font-medium text-gray-800 text-center line-clamp-2">{idol.stageName}</p>
             </div>
         );
     };
@@ -248,12 +296,14 @@ const IdolPage: React.FC = () => {
                                 ref={scrollRef}
                                 onScroll={checkOverflow}
                                 onLoad={checkOverflow}
-                                className="flex gap-8 overflow-x-auto overflow-y-hidden py-4 scroll-smooth"
+                                className="flex gap-8 overflow-hidden py-4 scroll-smooth"
                             >
                                 {user?.role === "AGENCY" ? (
-                                    subscribedGroups.length > 0 ? (
-                                        subscribedGroups.map(group => (
-                                            <GroupCard key={group.groupId} group={group} />
+                                    carouselItems.length > 0 ? (
+                                        carouselItems.map((item, idx) => (
+                                            item.type === 'group' && item.group ? (
+                                                <GroupCard key={`carousel-${idx}`} group={item.group} isCarousel={true} />
+                                            ) : null
                                         ))
                                     ) : (
                                         <div className="w-full text-center py-10 text-gray-500">
@@ -261,15 +311,14 @@ const IdolPage: React.FC = () => {
                                         </div>
                                     )
                                 ) : (
-                                    subscribedGroups.length > 0 || subscribedIdols.length > 0 ? (
-                                        <>
-                                            {subscribedGroups.map(group => (
-                                                <GroupCard key={`group-${group.groupId}`} group={group} />
-                                            ))}
-                                            {subscribedIdols.map(idol => (
-                                                <IdolCard key={`idol-${idol.subscriptionId}`} idol={idol} />
-                                            ))}
-                                        </>
+                                    carouselItems.length > 0 ? (
+                                        carouselItems.map((item, idx) =>
+                                            item.type === 'group' && item.group ? (
+                                                <GroupCard key={`carousel-${idx}`} group={item.group} isCarousel={true} />
+                                            ) : item.type === 'idol' && item.idol ? (
+                                                <IdolCard key={`carousel-${idx}`} idol={item.idol} isCarousel={true} />
+                                            ) : null
+                                        )
                                     ) : (
                                         <div className="w-full text-center py-10 text-gray-500">
                                             구독 중인 그룹과 아이돌이 없습니다.
@@ -306,15 +355,7 @@ const IdolPage: React.FC = () => {
                         전체 그룹
                     </div>
 
-                    <div className="
-                        grid
-                        grid-cols-2
-                        sm:grid-cols-3
-                        md:grid-cols-4
-                        lg:grid-cols-5
-                        xl:grid-cols-6
-                        gap-y-12 gap-x-8
-                    ">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-y-12 gap-x-8">
                         {allGroups.map(group => (
                             <GroupCard key={group.groupId} group={group} />
                         ))}
