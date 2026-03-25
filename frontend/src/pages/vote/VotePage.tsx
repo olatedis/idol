@@ -672,7 +672,16 @@ const VotePage: React.FC = () => {
                                 </div>
                             </div>
 
-                            {selectedVote.status !== 'UPCOMING' && (
+                            {selectedVote.status === 'UPCOMING' ? (
+                                <div className="p-4 sm:p-6 bg-white/80 border-t flex justify-end gap-3 sm:gap-4 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] relative z-20">
+                                    <button
+                                        disabled
+                                        className="w-full sm:w-auto px-6 sm:px-10 py-3 bg-gray-200 text-gray-400 rounded-xl cursor-not-allowed font-black text-base sm:text-lg"
+                                    >
+                                        ⏳ 투표 예정
+                                    </button>
+                                </div>
+                            ) : (
                                 <div className="p-4 sm:p-6 bg-white/80 border-t flex justify-end gap-3 sm:gap-4 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] relative z-20">
                                     {hasVoted ? (
                                         <button
