@@ -15,17 +15,17 @@ interface GroupDto {
     members?: any[];
 }
 
-interface SubscriptionDto {
-    subscriptionId: number;
-    userId: number;
-    idolId: number;
-    idolStageName: string;
-    idolImage?: string;
-    status: string;
-    startedAt: string;
-    expiredAt: string;
-    autoRenew: boolean;
-}
+// interface SubscriptionDto {
+//     subscriptionId: number;
+//     userId: number;
+//     idolId: number;
+//     idolStageName: string;
+//     idolImage?: string;
+//     status: string;
+//     startedAt: string;
+//     expiredAt: string;
+//     autoRenew: boolean;
+// }
 
 interface IdolDto {
     idolId: number;
@@ -64,7 +64,7 @@ const IdolPage: React.FC = () => {
     // 전체 그룹 조회
     const fetchAllGroups = async () => {
         try {
-            const { data } = await api.get<GroupDto[]>("/groups");
+            const { data } = await api.get("/groups");
             setAllGroups(data);
         } catch (error) {
         }
@@ -77,7 +77,7 @@ const IdolPage: React.FC = () => {
         try {
             if (user?.role === "AGENCY") {
                 // 에이전시 계정은 관리 중인 그룹 목록을 서버에서 직접 조회
-                const { data: managedGroups } = await api.get<GroupDto[]>("/groups/managed");
+                const { data: managedGroups } = await api.get("/groups/managed");
                 setSubscribedGroups(managedGroups);
                 setCarouselItems(
                     subscribedGroups.map(group => ({ type: 'group' as const, group }))
@@ -85,14 +85,14 @@ const IdolPage: React.FC = () => {
             } else {
                 // 일반/아이돌 계정은 구독한 아이돌과 그룹 목록 조회
                 const [idolRes, groupRes] = await Promise.all([
-                    api.get<SubscriptionDto[]>("/subscriptions/me"),
-                    api.get<any[]>("/subscriptions/groups/me"),
+                    api.get("/subscriptions/me"),
+                    api.get("/subscriptions/groups/me"),
                 ]);
 
                 // 그룹 데이터 변환
                 const groupResults: GroupDto[] = (groupRes.data ?? []).map(sub => ({
                     groupId: sub.groupId,
-                    name: sub.groupName,
+                    name: sub.name,
                     groupImage: sub.groupImage,
                     agencyId: 0,
                     agencyName: ""
@@ -102,7 +102,7 @@ const IdolPage: React.FC = () => {
 
                 // 각 아이돌의 상세 정보 조회
                 const idolDetailsPromises = (idolRes.data ?? []).map(sub =>
-                    api.get<IdolDto>(`/idols/${sub.idolId}`).then(res => res.data)
+                    api.get(`/idols/${sub.idolId}`).then(res => res.data)
                 );
 
                 const idolDetails = await Promise.all(idolDetailsPromises);
