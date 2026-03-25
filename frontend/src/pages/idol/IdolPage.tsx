@@ -15,17 +15,17 @@ interface GroupDto {
     members?: any[];
 }
 
-interface SubscriptionDto {
-    subscriptionId: number;
-    userId: number;
-    idolId: number;
-    idolStageName: string;
-    idolImage?: string;
-    status: string;
-    startedAt: string;
-    expiredAt: string;
-    autoRenew: boolean;
-}
+// interface SubscriptionDto {
+//     subscriptionId: number;
+//     userId: number;
+//     idolId: number;
+//     idolStageName: string;
+//     idolImage?: string;
+//     status: string;
+//     startedAt: string;
+//     expiredAt: string;
+//     autoRenew: boolean;
+// }
 
 interface IdolDto {
     idolId: number;
