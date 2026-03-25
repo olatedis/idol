@@ -222,19 +222,19 @@ jobs:
 
           echo "Starting Infrastructure (Part 1 - DB & Cache)..."
           docker compose -f docker-compose-prod.yml up -d zookeeper redis db mongo
-          sleep 40
+          sleep 10
 
           echo "Starting Infrastructure (Part 2 - Heavy DBs)..."
           docker compose -f docker-compose-prod.yml up -d kafka elasticsearch
-          sleep 90
+          sleep 30
 
           echo "Starting Core Discovery & Gateway..."
           docker compose -f docker-compose-prod.yml up -d discovery-service api-gateway
-          sleep 120
+          sleep 30
 
           echo "Starting Application Services (Part 1)..."
           docker compose -f docker-compose-prod.yml up -d auth-service user-service frontend chat-service board-service
-          sleep 120
+          sleep 30
 
           echo "Starting Remaining Services..."
           docker compose -f docker-compose-prod.yml up -d
