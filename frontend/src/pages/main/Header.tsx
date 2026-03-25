@@ -169,7 +169,7 @@ const Header: React.FC = () => {
     };
 
     // 추가: 로그인 알림 전용 UTC -> KST 변환
-    const formatLoginNotificationTimeToKST = (value?: string | null) => {
+    const formatNewLoginNotificationTimeToKST = (value?: string | null) => {
         if (!value) return "";
 
         const utcDate = new Date(`${value}Z`);
@@ -816,7 +816,7 @@ const Header: React.FC = () => {
                                                                                 <span className="text-[11px] text-gray-400 shrink-0">
                                                                                     {notification.type === "LOGIN_NEW_DEVICE" ||
                                                                                     notification.type === "LOGIN_FAIL_LOCKED"
-                                                                                    ? formatLoginNotificationTimeToKST(notification.occurredAt)
+                                                                                    ? formatNewLoginNotificationTimeToKST(notification.occurredAt)
                                                                                     : formatNotificationTimeToKST(notification.occurredAt)}
                                                                                 </span>
                                                                             </div>
