@@ -257,12 +257,13 @@ const IdolPage: React.FC = () => {
             <main className="pt-[80px] px-6 pb-12">
 
                 {/* 아이돌 구독 페이지로 이동 */}
+                {user?.role==="USER" ?
                 <div className="mb-6 text-right">
                     <button
                         onClick={() => navigate('/idol/subscribe')}
                         className="px-4 py-2 rounded-full bg-idol-point text-white hover:opacity-90 transition"
                     >아이돌 구독하기</button>
-                </div>
+                </div> : <div></div>}
 
                 {/* 구독중인 그룹/아이돌 */}
                 <section className="my-8 relative">
@@ -276,7 +277,7 @@ const IdolPage: React.FC = () => {
                                 <button
                                     onClick={scrollLeft}
                                     className="absolute left-0 top-1/2 -translate-y-1/2 z-10
-                                               bg-white shadow-md rounded-full w-10 h-10">
+                                               bg-idol-point shadow-md rounded-full w-10 h-10">
                                     ◀
                                 </button>
                             )}
@@ -285,7 +286,7 @@ const IdolPage: React.FC = () => {
                                 <button
                                     onClick={scrollRight}
                                     className="absolute right-0 top-1/2 -translate-y-1/2 z-10
-                                               bg-white shadow-md rounded-full w-10 h-10">
+                                               shadow-md rounded-full w-10 h-10 bg-idol-point">
                                     ▶
                                 </button>
                             )}
