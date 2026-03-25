@@ -7,7 +7,12 @@ services:
     container_name: idol-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 6000
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: echo srvr | nc localhost 2181 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - idol-network
     volumes:
@@ -18,7 +23,13 @@ services:
     image: confluentinc/cp-kafka:7.5.0
     container_name: idol-kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: nc -z localhost 9092 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -39,6 +50,11 @@ services:
       - idol-network
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db:
     image: mysql:8.0
@@ -53,6 +69,11 @@ services:
       - idol-network
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mongo:
     image: mongo:latest
@@ -61,6 +82,11 @@ services:
       - idol-network
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   elasticsearch:
     container_name: idol-elasticsearch
@@ -73,6 +99,19 @@ services:
       - idol-network
     volumes:
       - es_data:/usr/share/elasticsearch/data
+    # 플러그인 설치 후 실행
+    command: >
+      /bin/sh -c "
+        if [ ! -d plugins/analysis-nori ]; then
+          ./bin/elasticsearch-plugin install --batch analysis-nori;
+        fi;
+        /usr/local/bin/docker-entrypoint.sh elasticsearch
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qv '\"status\":\"red\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
 
   # --- 백엔드 서비스 (Spring Boot) ---
   discovery-service:
@@ -82,6 +121,12 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
     networks:
       - idol-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   api-gateway:
     image: ${DOCKERHUB_USERNAME}/idol-gateway:latest
@@ -100,8 +145,10 @@ services:
     ports:
       - "8000:8080"
     depends_on:
-      - discovery-service
-      - redis
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -120,9 +167,12 @@ services:
       - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
-      - discovery-service
-      - redis
-      - kafka
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -137,10 +187,14 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
-      - discovery-service
-      - db
-      - mongo
-      - redis
+      discovery-service:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -158,10 +212,14 @@ services:
       - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
-      - discovery-service
-      - mongo
-      - kafka
-      - redis
+      discovery-service:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -175,9 +233,12 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
-      - discovery-service
-      - db
-      - redis
+      discovery-service:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -191,10 +252,14 @@ services:
       - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
-      - discovery-service
-      - db
-      - redis
-      - kafka
+      discovery-service:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -207,9 +272,12 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
-      - discovery-service
-      - db
-      - redis
+      discovery-service:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -223,9 +291,12 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
-      - discovery-service
-      - db
-      - redis
+      discovery-service:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -238,9 +309,12 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
-      - discovery-service
-      - db
-      - redis
+      discovery-service:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -253,9 +327,12 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
     depends_on:
-      - discovery-service
-      - db
-      - redis
+      discovery-service:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -269,10 +346,14 @@ services:
       - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
-      - discovery-service
-      - db
-      - redis
-      - kafka
+      discovery-service:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -283,8 +364,10 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
-      - discovery-service
-      - kafka
+      discovery-service:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -296,8 +379,10 @@ services:
       - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
-      - redis
-      - kafka
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - idol-network
 
@@ -308,7 +393,14 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8090/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - idol-network
 
@@ -319,7 +411,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_started
     networks:
       - idol-network
 
