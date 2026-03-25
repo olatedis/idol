@@ -31,9 +31,19 @@ public class PaymentEvent {
 
     public static PaymentEvent fromJson(String json) {
         try {
-            return new ObjectMapper().readValue(json, PaymentEvent.class);
+            ObjectMapper mapper = new ObjectMapper();
+            // 직접 역직렬화 시도
+            return mapper.readValue(json, PaymentEvent.class);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            try {
+                // Kafka StringSerializer가 문자열을 한 번 더 감싼 경우 (이중 직렬화) 처리
+                // ex) "\"{ ... }\"" → "{ ... }" → PaymentEvent
+                ObjectMapper mapper = new ObjectMapper();
+                String unwrapped = mapper.readValue(json, String.class);
+                return mapper.readValue(unwrapped, PaymentEvent.class);
+            } catch (Exception e2) {
+                throw new RuntimeException("PaymentEvent 역직렬화 실패: " + e2.getMessage(), e2);
+            }
         }
     }
 }
