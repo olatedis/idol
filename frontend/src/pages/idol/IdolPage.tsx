@@ -15,17 +15,17 @@ interface GroupDto {
     members?: any[];
 }
 
-// interface SubscriptionDto {
-//     subscriptionId: number;
-//     userId: number;
-//     idolId: number;
-//     idolStageName: string;
-//     idolImage?: string;
-//     status: string;
-//     startedAt: string;
-//     expiredAt: string;
-//     autoRenew: boolean;
-// }
+interface SubscriptionDto {
+    subscriptionId: number;
+    userId: number;
+    idolId: number;
+    idolStageName: string;
+    idolImage?: string;
+    status: string;
+    startedAt: string;
+    expiredAt: string;
+    autoRenew: boolean;
+}
 
 interface IdolDto {
     idolId: number;
@@ -50,8 +50,6 @@ const IdolPage: React.FC = () => {
     const isLoggedIn = !!user || !!accessToken;
 
     const [allGroups, setAllGroups] = useState<GroupDto[]>([]);
-    const [subscribedGroups, setSubscribedGroups] = useState<GroupDto[]>([]);
-    const [subscribedIdols, setSubscribedIdols] = useState<IdolDto[]>([]);
     const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
     const [showLeft, setShowLeft] = useState(false);
     const [showRight, setShowRight] = useState(false);
@@ -77,10 +75,9 @@ const IdolPage: React.FC = () => {
         try {
             if (user?.role === "AGENCY") {
                 // 에이전시 계정은 관리 중인 그룹 목록을 서버에서 직접 조회
-                const { data: managedGroups } = await api.get("/groups/managed");
-                setSubscribedGroups(managedGroups);
+                const { data: managedGroups } = await api.get<GroupDto[]>("/groups/managed");
                 setCarouselItems(
-                    subscribedGroups.map(group => ({ type: 'group' as const, group }))
+                    managedGroups.map(group => ({ type: 'group' as const, group }))
                 );
             } else {
                 // 일반/아이돌 계정은 구독한 아이돌과 그룹 목록 조회
@@ -90,35 +87,36 @@ const IdolPage: React.FC = () => {
                 ]);
 
                 // 그룹 데이터 변환
-                const groupResults: GroupDto[] = (groupRes.data ?? []).map((sub: { groupId: number; name: string; groupImage: string; }) => ({
+                const groupResults: GroupDto[] = (groupRes.data ?? []).map((sub: any) => ({
                     groupId: sub.groupId,
-                    name: sub.name,
+                    name: sub.groupName || sub.name,
                     groupImage: sub.groupImage,
                     agencyId: 0,
                     agencyName: ""
                 }));
 
-                setSubscribedGroups(groupResults);
-
                 // 각 아이돌의 상세 정보 조회
-                const idolDetailsPromises = (idolRes.data ?? []).map((sub: { idolId: number }) =>
-                    api.get(`/idols/${sub.idolId}`).then(res => res.data)
+                const idolDetailsPromises = (idolRes.data ?? []).map((sub: SubscriptionDto) =>
+                    api.get(`/idols/${sub.idolId}`).then(res => res.data).catch(err => {
+                        console.error(`아이돌 ${sub.idolId} 조회 실패:`, err);
+                        return null;
+                    })
                 );
 
-                const idolDetails = await Promise.all(idolDetailsPromises);
-                setSubscribedIdols(idolDetails);
+                const idolDetailsRaw = await Promise.all(idolDetailsPromises);
+                const idolDetails = idolDetailsRaw.filter(idol => idol !== null);
 
                 // 그룹별로 정렬: 그룹1, 그룹1의 아이돌들, 그룹2, 그룹2의 아이돌들, ...
                 const sortedItems: CarouselItem[] = [];
                 const addedGroupIds = new Set<number | null>();
 
                 // 먼저 구독한 그룹들 순서대로 처리
-                for (const group of subscribedGroups) {
+                for (const group of groupResults) {
                     sortedItems.push({ type: 'group', group });
                     addedGroupIds.add(group.groupId);
 
                     // 해당 그룹에 속한 아이돌들 추가
-                    const groupIdols = subscribedIdols.filter(
+                    const groupIdols = idolDetails.filter(
                         idol => idol.groupId === group.groupId
                     );
                     groupIdols.forEach(idol => {
@@ -127,7 +125,7 @@ const IdolPage: React.FC = () => {
                 }
 
                 // 그룹에 속하지 않은 아이돌들 추가
-                const ungroupedIdols = subscribedIdols.filter(
+                const ungroupedIdols = idolDetails.filter(
                     idol => idol.groupId === null || !addedGroupIds.has(idol.groupId)
                 );
                 ungroupedIdols.forEach(idol => {
