@@ -251,7 +251,7 @@ const VotePage: React.FC = () => {
 
     // 투표하기
     const handleVote = async () => {
-        if (!selectedVote || selectedCandidate === null || isSubmitting) return;
+        if (!selectedVote || selectedCandidate === null || isSubmitting || selectedVote.status !== 'OPEN') return;
         if (!user || !accessToken) {
             showErrorToast("로그인이 필요합니다.");
             return;
@@ -684,10 +684,10 @@ const VotePage: React.FC = () => {
                                 ) : (
                                     <button
                                         onClick={handleVote}
-                                        disabled={selectedCandidate === null || selectedVote.status === 'CLOSED' || isSubmitting || isFetchingDetail}
+                                        disabled={selectedCandidate === null || selectedVote.status !== 'OPEN' || isSubmitting || isFetchingDetail}
                                         className="w-full sm:w-auto px-6 sm:px-10 py-3 bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] text-white rounded-xl hover:shadow-lg hover:shadow-[var(--color-idol-dark)]/40 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 disabled:translate-y-0 font-black text-base sm:text-lg letter-spacing-wide flex items-center justify-center gap-2"
                                     >
-                                        {selectedVote.status === 'CLOSED' ? '종료된 투표' : isSubmitting ? (
+                                        {selectedVote.status === 'CLOSED' ? '종료된 투표' : selectedVote.status === 'UPCOMING' ? '투표 예정' : isSubmitting ? (
                                             <>
                                                 <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
