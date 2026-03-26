@@ -1,4 +1,4 @@
-package com.bit.paymentservice.domain.enumtype;
+package com.bit.subscriptionservice.enumtype;
 
 public enum PaymentDomain {
     CONCERT,

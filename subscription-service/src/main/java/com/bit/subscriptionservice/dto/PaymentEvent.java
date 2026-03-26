@@ -1,5 +1,6 @@
 package com.bit.subscriptionservice.dto;
 
+import com.bit.subscriptionservice.enumtype.PaymentDomain;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -13,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class PaymentEvent {
     private int userId;
     private String orderId;
-    private String domain;
+    private PaymentDomain domain;
     private int targetId;
     private int amount;
     private int agencyId;

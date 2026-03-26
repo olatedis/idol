@@ -70,7 +70,11 @@ const PaymentPage: React.FC = () => {
         setLoading(true);
         try {
             await loadTossPaymentsScript();
-// TossPayments 인스턴스 생성 제거 - v2에서는 글로벌 함수 사용
+            const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+            const TossPayments = (window as any).TossPayments;
+            if (!TossPayments) throw new Error('TossPayments not available');
+
+            const toss = TossPayments(clientKey);
             const userId = Number(localStorage.getItem('userId'));
 
             if (domain === 'CONCERT') {
@@ -88,7 +92,7 @@ const PaymentPage: React.FC = () => {
                 });
                 setReadyOrderId(ready.orderId);
 
-                ;(window as any).requestPayment('카드', {
+                toss.requestPayment('카드', {
                     amount: ready.amount,
                     orderId: ready.orderId,
                     orderName: `${concert.title} 예매`,
@@ -107,11 +111,26 @@ const PaymentPage: React.FC = () => {
 
                 if (plan === 'MONTHLY') {
                     // 월간 구독은 빌링키 발급으로 처리 (정기결제)
-                    ;(window as any).requestBillingAuth('카드', {
-                        customerKey,
-                        successUrl: `${window.location.origin}/payment/complete?type=billing`,
-                        failUrl: `${window.location.origin}/payment/complete?type=billing&fail=true`
-                    });
+                    const billingFunc = toss.requestBillingAuth;
+                    if (typeof billingFunc === 'function') {
+                        await billingFunc('카드', {
+                            customerKey,
+                            successUrl: `${window.location.origin}/payment/complete?type=billing`,
+                            failUrl: `${window.location.origin}/payment/complete?type=billing&fail=true`
+                        });
+                    } else {
+                        // fallback to global function if instance method missing
+                        const globalFunc = (window as any).requestBillingAuth;
+                        if (typeof globalFunc === 'function') {
+                            await globalFunc(clientKey, '카드', {
+                                customerKey,
+                                successUrl: `${window.location.origin}/payment/complete?type=billing`,
+                                failUrl: `${window.location.origin}/payment/complete?type=billing&fail=true`
+                            });
+                        } else {
+                            throw new Error('Billing auth method unavailable');
+                        }
+                    }
                 } else {
                     // 연간 구독은 일시불 처리
                     const amount = 89100;
@@ -124,7 +143,7 @@ const PaymentPage: React.FC = () => {
                     });
                     setReadyOrderId(ready.orderId);
 
-                    ;(window as any).requestPayment('카드', {
+                    toss.requestPayment('카드', {
                         amount: ready.amount,
                         orderId: ready.orderId,
                         orderName: `${idol?.stageName || '아이돌'} 구독`,

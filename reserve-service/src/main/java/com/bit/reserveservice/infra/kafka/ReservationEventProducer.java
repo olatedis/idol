@@ -40,13 +40,8 @@ public class ReservationEventProducer {
         try {
             PaymentEvent event = PaymentEvent.fromJson(message);
 
-            // domain이 CONCERT(또는 레거시 RESERVATION/RESERVATE)인 경우만 처리
-            String domain = event.getDomain();
-            if ("RESERVATE".equalsIgnoreCase(domain) || "RESERVATION".equalsIgnoreCase(domain)) {
-                domain = "CONCERT";
-            }
-
-            if (!"CONCERT".equals(domain)) {
+            // domain이 CONCERT인 경우만 처리 (레거시 RESERVATION/RESERVATE는 이미 enum으로 변환됨)
+            if (event.getDomain() != com.bit.reserveservice.domain.enumtype.PaymentDomain.CONCERT) {
                 log.info("미지원 도메인 필터링: domain={}", event.getDomain());
                 return;
             }
@@ -70,7 +65,7 @@ public class ReservationEventProducer {
             PaymentEvent eventWithSeats = new PaymentEvent(
                     event.getUserId(),
                     event.getOrderId(),
-                    domain,
+                    event.getDomain(),
                     event.getTargetId(),
                     event.getAmount(),
                     event.getAgencyId(), // agencyId 전달
