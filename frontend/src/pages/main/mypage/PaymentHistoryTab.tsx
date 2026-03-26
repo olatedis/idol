@@ -3,7 +3,7 @@ import { useAuthStore } from "../../../stores/authStore";
 import { api } from "../../../api/axios";
 
 type PaymentDto = {
-    paymentId: number;
+    id: number;
     userId: number;
     amount: number;
     pointAmount: number;
@@ -11,8 +11,7 @@ type PaymentDto = {
     paymentMethod: string;
     orderId: string;
     paymentKey: string;
-    paymentDate: string;
-    cancelReason?: string;
+    completedAt: string;
 };
 
 const formatKstDateTime = (dateString?: string) => {
@@ -41,7 +40,7 @@ const PaymentHistoryTab: React.FC = () => {
 
                 // 최신 결제순으로 정렬
                 const sortedData = data.sort((a: PaymentDto, b: PaymentDto) =>
-                    new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()
+                    new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
                 );
 
                 setPayments(sortedData);
@@ -114,7 +113,7 @@ const PaymentHistoryTab: React.FC = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {payments.map((payment) => (
-                            <tr key={payment.paymentId} className="hover:bg-gray-50 transition-colors">
+                            <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                                     {payment.orderId.substring(0, 13)}...
                                 </td>
@@ -130,7 +129,7 @@ const PaymentHistoryTab: React.FC = () => {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {formatKstDateTime(payment.paymentDate)}
+                                    {formatKstDateTime(payment.completedAt)}
                                 </td>
                             </tr>
                         ))}

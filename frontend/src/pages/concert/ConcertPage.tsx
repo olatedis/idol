@@ -8,7 +8,6 @@ import { api } from '../../api/axios';
 import type { ConcertDto, SeatDto, SeatGrade } from "../../types/concert";
 import { ConcertDetailModal } from "../../components/concert/ConcertDetailModal";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 10;
 
 const ConcertPage: React.FC = () => {
@@ -79,7 +78,6 @@ const ConcertPage: React.FC = () => {
 
 
     const fetchPage = async (nextPage: number) => {
-        if (!API_BASE_URL) return;
         if (fetchingRef.current) return;
 
         fetchingRef.current = true;
@@ -125,9 +123,6 @@ const ConcertPage: React.FC = () => {
     };
 
     const fetchConcertSeats = async (concertId: number) => {
-        if (!API_BASE_URL) {
-            return;
-        }
         try {
             setSeatsLoading(true);
             const url = `/concerts/${concertId}/seats`;
@@ -172,7 +167,7 @@ const ConcertPage: React.FC = () => {
 
         run();
         return () => controller.abort();
-    }, [API_BASE_URL, groupId, activeTab]);
+    }, [groupId, activeTab]);
 
     useEffect(() => {
         const state = (location.state as { openConcertId?: number } | null) ?? null;

@@ -10,10 +10,10 @@ interface Concert {
     groupId?: number;
     title: string;
     description: string;
-    startDate: string;
+    concertDate: string;
     endDate: string;
     img?: string;
-    address: string;
+    venue: string;
     price: number;
     capacity: number;
 }
@@ -132,7 +132,7 @@ const GlobalConcertPage: React.FC = () => {
                                     />
                                     {/* 날짜 뱃지 */}
                                     <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                                        {new Date(concert.startDate).toLocaleDateString()}
+                                        {new Date(concert.concertDate).toLocaleDateString()}
                                     </div>
                                     {/* 오버레이 그라데이션 */}
                                     <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
@@ -149,11 +149,7 @@ const GlobalConcertPage: React.FC = () => {
                                     <div className="space-y-2 text-sm text-gray-600 border-t border-gray-100 pt-4 mt-auto">
                                         <div className="flex items-center gap-2 font-medium">
                                             <svg className="w-4 h-4 text-idol" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                            <span className="truncate">{concert.address}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-gray-800 font-bold">
-                                            <span>&#8361; {concert.price}</span>
-                                            <span className="text-xs text-gray-400 font-normal border border-gray-200 px-2 py-1 rounded-md">{concert.capacity}석</span>
+                                            <span className="truncate">{concert.venue}</span>
                                         </div>
                                     </div>
                                 </div>
