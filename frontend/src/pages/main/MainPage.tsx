@@ -419,22 +419,23 @@ const MainPage: React.FC = () => {
 
                                 {/* 오른쪽 안내 */}
                                 <motion.div {...fadeUp} className="mx-auto w-full max-w-[280px]">
-                                    <p className="mb-4 text-lg font-black text-[#222]">Reach Us</p>
+                                    <p className="mb-4 text-lg font-black text-[#222]">About Us</p>
 
                                     <div className="space-y-2 text-sm leading-7 text-black/80">
                                         <p>Seoul, South Korea</p>
                                         <p>dolchat fan communication platform</p>
 
                                         <p className="pt-2">
-                                            <span className="font-semibold text-black">Phone:</span> +82 10-1234-5678
+                                            <span className="font-semibold text-black">github:</span>
+                                            <a href="https://github.com/olatedis/idol"> https://github.com/olatedis/idol</a>
                                         </p>
-
                                         <p>
-                                            <span className="font-semibold text-black">Email:</span> dolchat@idolchat.com
+                                            <span className="font-semibold text-black">Notion:</span>
+                                            <a href="https://www.notion.so/2e031fe5bfa680ecb6c4eb870f741392?source=copy_link"> https://www.notion.so</a>
                                         </p>
                                     </div>
 
-                                    {/* 흑백 아이콘 느낌 */}
+                                    {/* 흑백 아이콘 */}
                                     <div className="mt-8 flex items-center gap-4 text-xl grayscale">
                                         <span>📞</span>
                                         <span>✉️</span>

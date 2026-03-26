@@ -84,6 +84,10 @@ export const ConcertDetailModal: React.FC<Props> = ({
                         )}
                     </div>
 
+                    <div>
+                        <img src={concert.img} alt={concert.title} />
+                    </div>
+
                     <div className="border-t pt-6 mb-6">
                         <h3 className="font-bold text-gray-900 mb-4">좌석 현황</h3>
                         {seatsLoading ? (
