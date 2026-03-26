@@ -79,7 +79,7 @@ public class SubscriptionService {
         PaymentEvent event = new PaymentEvent(
                 userId,
                 null,
-                "SUBSCRIPTION",
+                com.bit.subscriptionservice.enumtype.PaymentDomain.SUBSCRIPTION,
                 subscription.getId(),
                 request.getPlan().getAmount(),
                 0 // agencyId
@@ -140,7 +140,7 @@ public class SubscriptionService {
 
         PaymentEvent event = PaymentEvent.fromJson(message);
 
-        if (!"SUBSCRIPTION".equals(event.getDomain())) {
+        if (event.getDomain() != com.bit.subscriptionservice.enumtype.PaymentDomain.SUBSCRIPTION) {
             return;
         }
 

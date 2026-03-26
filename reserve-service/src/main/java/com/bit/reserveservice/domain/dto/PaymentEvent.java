@@ -1,5 +1,6 @@
 package com.bit.reserveservice.domain.dto;
 
+import com.bit.reserveservice.domain.enumtype.PaymentDomain;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -13,7 +14,7 @@ import java.util.List;
 public class PaymentEvent {
     private int userId;
     private String orderId;
-    private String domain;
+    private PaymentDomain domain;
     private int targetId;
     private int amount;
     private int agencyId;

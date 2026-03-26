@@ -24,7 +24,7 @@ public class SubscriptionRenewalScheduler {
     private final SubscriptionRepository subscriptionRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final BillingKeyService billingKeyService;
-    private final TossBillingKeyClient tossBillingKeyClient;
+//    private final TossBillingKeyClient tossBillingKeyClient;
 
     /**
      * 만료된 구독 중 자동갱신이 활성화된 구독을 자동으로 갱신합니다.
@@ -97,17 +97,17 @@ public class SubscriptionRenewalScheduler {
                 subscription.getId(), subscription.getPlan());
 
         String orderId = "SUB-" + subscription.getId() + "-" + System.currentTimeMillis();
-        String orderName = subscription.getPlan().name() + " 정기구독 자동결제";
+//        String orderName = subscription.getPlan().name() + " 정기구독 자동결제";
         int amount = subscription.getPlan().getAmount();
 
         try {
-            // Toss 빌링키 결제 API 호출
-            String paymentResult = tossBillingKeyClient.processBillingPayment(
-                    subscription.getUserId(),
-                    subscription.getIdolId(),
-                    amount,
-                    orderId,
-                    orderName);
+//            // Toss 빌링키 결제 API 호출
+//            String paymentResult = tossBillingKeyClient.processBillingPayment(
+//                    subscription.getUserId(),
+//                    subscription.getIdolId(),
+//                    amount,
+//                    orderId,
+//                    orderName);
 
             log.info("빌링키 자동결제 성공: subscriptionId={}, orderId={}, amount={}",
                     subscription.getId(), orderId, amount);
@@ -116,7 +116,7 @@ public class SubscriptionRenewalScheduler {
             PaymentEvent event = new PaymentEvent(
                     subscription.getUserId(),
                     null,
-                    "SUBSCRIPTION_RENEWAL_BILLING_KEY",
+                    com.bit.subscriptionservice.enumtype.PaymentDomain.SUBSCRIPTION_RENEWAL_BILLING_KEY,
                     subscription.getId(),
                     amount,
                     0 // dummy agencyId
@@ -137,7 +137,7 @@ public class SubscriptionRenewalScheduler {
         PaymentEvent event = new PaymentEvent(
                 subscription.getUserId(),
                 null,
-                "SUBSCRIPTION_RENEWAL",
+                com.bit.subscriptionservice.enumtype.PaymentDomain.SUBSCRIPTION_RENEWAL,
                 subscription.getId(),
                 subscription.getPlan().getAmount(),
                 0 // dummy agencyId
