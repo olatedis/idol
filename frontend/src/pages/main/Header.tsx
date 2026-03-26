@@ -576,13 +576,13 @@ const Header: React.FC = () => {
 
     return (
         <>
-            <header className="w-full px-8 py-4 fixed top-0 z-50 bg-white shadow-sm">
+            <header className="w-full px-8 py-4 fixed top-0 z-50 ">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         {/* 햄버거 아이콘 */}
                         <button
                             onClick={toggleMenu}
-                            className="p-2 text-gray-700 hover:text-idol-dark transition focus:outline-none"
+                            className="p-2 text-idol hover:text-idol-point transition focus:outline-none"
                         >
                             <svg
                                 className="w-6 h-6"
