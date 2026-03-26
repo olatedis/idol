@@ -10,7 +10,7 @@ export function loadTossPaymentsScript(): Promise<void> {
         }
 
         const script = document.createElement('script');
-        script.src = 'https://js.tosspayments.com/v1';
+        script.src = 'https://js.tosspayments.com/v2';
         script.async = true;
 
         script.onload = () => {
