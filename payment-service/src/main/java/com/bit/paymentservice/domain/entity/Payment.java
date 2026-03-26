@@ -120,4 +120,8 @@ public class Payment {
     public void fail() {
         this.status = PaymentStatus.FAILED;
     }
+
+    public void cancel() {
+        this.status = PaymentStatus.CANCELED;
+    }
 }

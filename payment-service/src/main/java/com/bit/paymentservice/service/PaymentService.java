@@ -92,8 +92,9 @@ public class PaymentService {
             }
         }
 
-        paymentRepository.delete(payment);
-        log.info("Pending 결제 삭제: orderId={}", orderId);
+        payment.cancel();
+        paymentRepository.save(payment);
+        log.info("결제 취소: orderId={}, status=CANCELED", orderId);
     }
 
     // 트랜잭션 분리: 검증(DB) -> 외부호출(No TX) -> 업데이트(DB)
