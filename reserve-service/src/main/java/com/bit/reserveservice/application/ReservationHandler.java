@@ -11,7 +11,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
+//import java.util.Collections;
 
 @Service
 @AllArgsConstructor
@@ -64,7 +64,7 @@ public class ReservationHandler {
         PaymentEvent event = new PaymentEvent(
                 userId,
                 null,
-                "CONCERT",
+                com.bit.reserveservice.domain.enumtype.PaymentDomain.CONCERT,
                 seatId,
                 price,
                 0, // agencyId
@@ -111,7 +111,7 @@ public class ReservationHandler {
         PaymentEvent event = new PaymentEvent(
                 userId,
                 null,
-                "CONCERT",
+                com.bit.reserveservice.domain.enumtype.PaymentDomain.CONCERT,
                 concertId,
                 totalPrice,
                 0,
