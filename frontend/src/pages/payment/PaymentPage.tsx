@@ -129,7 +129,12 @@ const PaymentPage: React.FC = () => {
                 const amount = createRes.amount;
 
                 // 생성을 저장할 session (customerKey은 월정기결제시 사용)
-                const customerKey = crypto.randomUUID();
+                // crypto.randomUUID()는 HTTPS 환경에서만 작동하므로 폴백 처리
+                const customerKey = (window.crypto && window.crypto.randomUUID) 
+                    ? window.crypto.randomUUID() 
+                    : `user-${userId}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+                
+                console.log('[DEBUG] customerKey 생성 완료:', customerKey);
                 try { sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId, plan, subscriptionId, customerKey })); } catch (e) {}
 
                 if (plan === 'MONTHLY') {
