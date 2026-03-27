@@ -576,13 +576,13 @@ const Header: React.FC = () => {
 
     return (
         <>
-            <header className="w-full px-8 py-4 fixed top-0 z-50 bg-white shadow-sm">
+            <header className="w-full px-4 sm:px-6 md:px-8 py-4 fixed top-0 z-50 ">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         {/* 햄버거 아이콘 */}
                         <button
                             onClick={toggleMenu}
-                            className="p-2 text-gray-700 hover:text-idol-dark transition focus:outline-none"
+                            className="p-2 text-idol hover:text-idol-point transition focus:outline-none"
                         >
                             <svg
                                 className="w-6 h-6"
@@ -605,19 +605,19 @@ const Header: React.FC = () => {
                         <img
                             src={dolchatLogo}
                             alt="dolchat"
-                            className="h-8 hover:cursor-pointer transition"
+                            className="h-6 hover:cursor-pointer transition"
                             onClick={() => navigate("/")}
                         />
                         <img
                             src={dolchatText}
                             alt="dolchat"
-                            className="h-8 hover:cursor-pointer transition"
+                            className="h-6 hidden sm:block md:h-8 hover:cursor-pointer transition"
                             onClick={() => navigate("/")}
                         />
                     </div>
                     </div>
 
-                    <div className="flex gap-6 text-sm items-center relative">
+                    <div className="flex gap-3 sm:gap-4 md:gap-6 text-xs sm:text-sm items-center relative">
                         {isLoggedIn ? (
                             <>
                                 <div className="relative" ref={notificationRef}>
@@ -660,22 +660,22 @@ const Header: React.FC = () => {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: 8 }}
                                                 transition={{ duration: 0.2 }}
-                                                className="absolute right-0 mt-2 w-[360px] rounded-xl border border-gray-200 bg-white shadow-xl z-50 overflow-hidden"
+                                                className="absolute right-0 mt-2 w-[320px] sm:w-[360px] rounded-xl border border-gray-200 bg-white shadow-xl z-50 overflow-hidden"
                                             >
-                                                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                                                    <div className="font-semibold text-gray-800">알림</div>
+                                                <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-100 flex items-center justify-between">
+                                                    <div className="font-semibold text-xs sm:text-sm text-gray-800">알림</div>
 
-                                                    <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-2 sm:gap-3">
                                                         <button
                                                             onClick={goToNotificationHistory}
-                                                            className="text-xs text-gray-600 hover:text-idol transition"
+                                                            className="text-[10px] sm:text-xs text-gray-600 hover:text-idol transition"
                                                         >
                                                             히스토리
                                                         </button>
 
                                                         <button
                                                             onClick={handleReadAllNotifications}
-                                                            className="text-xs text-gray-600 hover:text-idol transition"
+                                                            className="text-[10px] sm:text-xs text-gray-600 hover:text-idol transition"
                                                         >
                                                             전체 읽음
                                                         </button>
@@ -710,15 +710,15 @@ const Header: React.FC = () => {
 
                                                 <div
                                                     ref={notificationListRef}
-                                                    className="max-h-[340px] overflow-y-auto"
+                                                    className="max-h-[300px] sm:max-h-[340px] overflow-y-auto"
                                                 >
                                                     {loadingNotifications ? (
-                                                        <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                                                        <div className="px-3 sm:px-4 py-6 text-xs sm:text-sm text-gray-500 text-center">
                                                             불러오는 중...
                                                         </div>
                                                     ) : visibleNotifications.length === 0 &&
                                                     idolMessageStacks.filter((stack) => stack.unreadCount > 0).length === 0 ? (
-                                                        <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                                                        <div className="px-3 sm:px-4 py-6 text-xs sm:text-sm text-gray-500 text-center">
                                                             알림이 없습니다.
                                                         </div>
                                                     ) : (
@@ -747,10 +747,10 @@ const Header: React.FC = () => {
                                                                         <button
                                                                             key={`stack-${stack.idolId}`}
                                                                             onClick={() => handleIdolStackClick(stack)}
-                                                                            className="w-full px-4 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100"
+                                                                            className="w-full px-3 sm:px-4 py-2 sm:py-3 text-left hover:bg-gray-50 transition border-b border-gray-100"
                                                                         >
-                                                                            <div className="flex items-start gap-3">
-                                                                                <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center text-xs text-gray-400">
+                                                                            <div className="flex items-start gap-2 sm:gap-3">
+                                                                                <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center text-[10px] sm:text-xs text-gray-400">
                                                                                     {idolImageUrl ? (
                                                                                         <img
                                                                                             src={idolImageUrl}
@@ -763,24 +763,24 @@ const Header: React.FC = () => {
                                                                                 </div>
 
                                                                                 <div className="flex-1 min-w-0">
-                                                                                    <div className="flex items-center justify-between gap-2">
-                                                                                    <span className="text-xs font-semibold text-gray-500">
+                                                                                    <div className="flex items-center justify-between gap-1 sm:gap-2">
+                                                                                    <span className="text-[10px] sm:text-xs font-semibold text-gray-500">
                                                                                         아이돌 채팅
                                                                                     </span>
-                                                                                        <span className="text-[11px] text-gray-400 shrink-0">
+                                                                                        <span className="text-[9px] sm:text-[11px] text-gray-400 shrink-0">
                                                                                         {formatNotificationTimeToKST(
                                                                                             stack.lastOccurredAt
                                                                                         )}
                                                                                     </span>
                                                                                     </div>
 
-                                                                                    <div className="mt-1 text-sm font-medium text-gray-800 truncate">
+                                                                                    <div className="mt-1 text-xs sm:text-sm font-medium text-gray-800 truncate">
                                                                                         {groupName} {idolName}
                                                                                     </div>
                                                                                 </div>
 
                                                                                 <div className="shrink-0 self-center">
-                                                                                    <span className="inline-flex min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold items-center justify-center">
+                                                                                    <span className="inline-flex min-w-[20px] sm:min-w-[22px] h-[20px] sm:h-[22px] px-1 sm:px-1.5 rounded-full bg-red-500 text-white text-[9px] sm:text-[11px] font-semibold items-center justify-center">
                                                                                         {stack.unreadCount > 99
                                                                                             ? "99+"
                                                                                             : stack.unreadCount}
@@ -795,7 +795,7 @@ const Header: React.FC = () => {
                                                                 <button
                                                                     key={notification.notificationId}
                                                                     onClick={() => handleNotificationClick(notification)}
-                                                                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100 ${
+                                                                    className={`w-full px-3 sm:px-4 py-2 sm:py-3 text-left hover:bg-gray-50 transition border-b border-gray-100 ${
                                                                         removingIds.includes(notification.notificationId)
                                                                             ? "translate-x-8 opacity-0"
                                                                             : "translate-x-0 opacity-100"
@@ -803,17 +803,17 @@ const Header: React.FC = () => {
                                                                         notification.isRead ? "bg-white" : "bg-idol/5"
                                                                     }`}
                                                                 >
-                                                                    <div className="flex items-start gap-3">
-                                                                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-base">
+                                                                    <div className="flex items-start gap-2 sm:gap-3">
+                                                                        <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm sm:text-base">
                                                                             {getNotificationIcon(notification)}
                                                                         </div>
 
                                                                         <div className="flex-1 min-w-0">
-                                                                            <div className="flex items-center justify-between gap-2">
-                                                                                <span className="text-xs font-semibold text-gray-500">
+                                                                            <div className="flex items-center justify-between gap-1 sm:gap-2">
+                                                                                <span className="text-[10px] sm:text-xs font-semibold text-gray-500">
                                                                                     {getNotificationLabel(notification)}
                                                                                 </span>
-                                                                                <span className="text-[11px] text-gray-400 shrink-0">
+                                                                                <span className="text-[9px] sm:text-[11px] text-gray-400 shrink-0">
                                                                                     {notification.type === "LOGIN_NEW_DEVICE" ||
                                                                                     notification.type === "LOGIN_FAIL_LOCKED"
                                                                                     ? formatNewLoginNotificationTimeToKST(notification.occurredAt)
@@ -821,7 +821,7 @@ const Header: React.FC = () => {
                                                                                 </span>
                                                                             </div>
 
-                                                                            <div className="mt-1 text-sm font-medium text-gray-800 truncate">
+                                                                            <div className="mt-1 text-xs sm:text-sm font-medium text-gray-800 truncate">
                                                                                 {getNotificationTitle(notification)}
                                                                             </div>
 
@@ -852,14 +852,14 @@ const Header: React.FC = () => {
                                     </AnimatePresence>
                                 </div>
 
-                                <span className="font-semibold text-gray-700">
+                                <span className="hidden sm:block font-semibold text-xs md:text-sm text-gray-700">
                                     {user?.nickname || "회원"}님
                                 </span>
 
                                 <div className="rounded-md bg-gray-200 hover:bg-gray-300 transition">
                                     <button
                                         onClick={handleLogout}
-                                        className="p-2 text-gray-700 w-[80px]"
+                                        className="px-2 sm:px-3 md:px-4 py-2 text-gray-700 text-xs sm:text-sm font-medium"
                                     >
                                         logout
                                     </button>
@@ -868,12 +868,12 @@ const Header: React.FC = () => {
                         ) : (
                             <>
                                 <div className="rounded-md bg-idol hover:bg-idol-point transition">
-                                    <button onClick={handleLogin} className="p-2 hover:cursor-pointer text-white w-[64px]">
+                                    <button onClick={handleLogin} className="px-2 sm:px-3 md:px-4 py-2 hover:cursor-pointer text-white text-xs sm:text-sm font-medium">
                                         login
                                     </button>
                                 </div>
                                 <div className="rounded-md bg-idol hover:bg-idol-point transition">
-                                    <button onClick={handleLogin} className="p-2 hover:cursor-pointer text-white w-[64px]">
+                                    <button onClick={handleLogin} className="px-2 sm:px-3 md:px-4 py-2 hover:cursor-pointer text-white text-xs sm:text-sm font-medium">
                                         register
                                     </button>
                                 </div>
@@ -903,10 +903,10 @@ const Header: React.FC = () => {
                         animate={{ x: 0 }}
                         exit={{ x: "-100%" }}
                         transition={{ type: "tween", duration: 0.3 }}
-                        className="fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-50 flex flex-col"
+                        className="fixed top-0 left-0 h-full w-60 sm:w-64 bg-white shadow-2xl z-50 flex flex-col"
                     >
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                            <span className="text-xl font-bold text-idol">Menu</span>
+                        <div className="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <span className="text-lg sm:text-xl font-bold text-idol">Menu</span>
                             <button
                                 onClick={closeMenu}
                                 className="text-gray-400 hover:text-gray-600 focus:outline-none"
@@ -929,12 +929,12 @@ const Header: React.FC = () => {
                         </div>
 
                         <nav className="flex-1 overflow-y-auto py-4">
-                            <ul className="space-y-2 px-4 text-gray-700">
+                            <ul className="space-y-2 px-3 sm:px-4 text-xs sm:text-sm text-gray-700">
                                 <li>
                                     <Link
                                         to="/notices"
                                         onClick={closeMenu}
-                                        className="block p-3 rounded-xl hover:bg-idol/10 hover:text-idol font-medium transition-colors"
+                                        className="block p-2 sm:p-3 rounded-xl hover:bg-idol/10 hover:text-idol font-medium transition-colors text-xs sm:text-sm"
                                     >
                                         공지사항
                                     </Link>
@@ -943,7 +943,7 @@ const Header: React.FC = () => {
                                     <Link
                                         to="/idol"
                                         onClick={closeMenu}
-                                        className="block p-3 rounded-xl hover:bg-idol/10 hover:text-idol font-medium transition-colors"
+                                        className="block p-2 sm:p-3 rounded-xl hover:bg-idol/10 hover:text-idol font-medium transition-colors text-xs sm:text-sm"
                                     >
                                         아이돌 페이지
                                     </Link>
@@ -952,7 +952,7 @@ const Header: React.FC = () => {
                                     <Link
                                         to="/concert"
                                         onClick={closeMenu}
-                                        className="block p-3 rounded-xl hover:bg-idol/10 hover:text-idol font-medium transition-colors"
+                                        className="block p-2 sm:p-3 rounded-xl hover:bg-idol/10 hover:text-idol font-medium transition-colors text-xs sm:text-sm"
                                     >
                                         콘서트 페이지
                                     </Link>
@@ -962,7 +962,7 @@ const Header: React.FC = () => {
                                         <Link
                                             to="/mypage"
                                             onClick={closeMenu}
-                                            className="block p-3 rounded-xl hover:bg-idol/10 hover:text-idol font-medium transition-colors"
+                                            className="block p-2 sm:p-3 rounded-xl hover:bg-idol/10 hover:text-idol font-medium transition-colors text-xs sm:text-sm"
                                         >
                                             마이페이지
                                         </Link>
@@ -971,19 +971,19 @@ const Header: React.FC = () => {
                             </ul>
                         </nav>
 
-                        <div className="p-6 border-t border-gray-100 bg-gray-50 text-sm">
+                        <div className="p-4 sm:p-6 border-t border-gray-100 bg-gray-50 text-xs sm:text-sm">
                             {isLoggedIn ? (
                                 <button
                                     onClick={handleLogout}
-                                    className="w-full p-3 bg-white border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-100 transition shadow-sm font-medium"
+                                    className="w-full p-2 sm:p-3 bg-white border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-100 transition shadow-sm font-medium text-xs sm:text-sm"
                                 >
                                     로그아웃
                                 </button>
                             ) : (
-                                <div className="space-y-3">
+                                <div className="space-y-2 sm:space-y-3">
                                     <button
                                         onClick={handleLogin}
-                                        className="w-full p-3 bg-idol text-white rounded-xl hover:bg-idol-point transition shadow-md font-medium"
+                                        className="w-full p-2 sm:p-3 bg-idol text-white rounded-xl hover:bg-idol-point transition shadow-md font-medium text-xs sm:text-sm"
                                     >
                                         로그인
                                     </button>
