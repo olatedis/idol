@@ -142,6 +142,7 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - EUREKA_URL=http://discovery-service:8761/eureka/
       - SPRING_DATA_REDIS_HOST=idol-redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     ports:
       - "8000:8080"
     depends_on:
@@ -166,6 +167,7 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -186,6 +188,8 @@ services:
       - AWS_SECRET_KEY=${AWS_SECRET_KEY:-}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -211,6 +215,7 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -232,6 +237,8 @@ services:
       - INTERNAL_KEY=${INTERNAL_KEY:-}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -251,6 +258,7 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -271,6 +279,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -290,12 +300,18 @@ services:
       - GATEWAY_URL=${GATEWAY_URL:-http://api-gateway:8080}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - TOSS_SECRET_KEY=${TOSS_SECRET_KEY:-}
+      - TOSS_CLIENT_KEY=${TOSS_CLIENT_KEY:-}
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - idol-network
@@ -308,6 +324,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -326,12 +344,17 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-root}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - TOSS_SECRET_KEY=${TOSS_SECRET_KEY:-}
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - idol-network
@@ -345,6 +368,7 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -363,6 +387,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -378,6 +403,7 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_DATA_REDIS_HOST=idol-redis
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       redis:
         condition: service_healthy
@@ -392,6 +418,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
+      - EUREKA_URL=http://discovery-service:8761/eureka/
     depends_on:
       elasticsearch:
         condition: service_healthy

@@ -22,9 +22,15 @@ public class SubscriptionDto {
     private SubscriptionStatus status;
     private LocalDateTime startedAt;
     private LocalDateTime expiredAt;
+    private String orderId;    // 결제 주문번호 추가
+    private int amount;        // 결제 금액 추가
     private boolean autoRenew;
 
     public static SubscriptionDto fromEntity(Subscription subscription) {
+        return fromEntity(subscription, null, 0);
+    }
+
+    public static SubscriptionDto fromEntity(Subscription subscription, String orderId, int amount) {
         return SubscriptionDto.builder()
                 .subscriptionId(subscription.getId())
                 .userId(subscription.getUserId())
@@ -33,6 +39,8 @@ public class SubscriptionDto {
                 .status(subscription.getStatus())
                 .startedAt(subscription.getStartedAt())
                 .expiredAt(subscription.getExpiredAt())
+                .orderId(orderId)
+                .amount(amount)
                 .autoRenew(subscription.isAutoRenew())
                 .build();
     }
