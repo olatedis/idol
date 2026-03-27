@@ -104,6 +104,8 @@ const PaymentPage: React.FC = () => {
                 // 먼저 백엔드에 pending 구독을 생성
                 const createRes = await createSubscription(user?.userId, { idolId: idolId!, plan: plan!, autoRenew: true });
                 const subscriptionId = createRes.subscriptionId;
+                const orderId = createRes.orderId;
+                const amount = createRes.amount;
 
                 // 생성을 저장할 session (customerKey은 월정기결제시 사용)
                 const customerKey = crypto.randomUUID();
@@ -133,19 +135,15 @@ const PaymentPage: React.FC = () => {
                     }
                 } else {
                     // 연간 구독은 일시불 처리
-                    const amount = 89100;
-                    const ready = await createPaymentReady({
-                        userId,
-                        amount,
-                        domain: 'SUBSCRIPTION',
-                        targetId: subscriptionId,
-                        agencyId: location.state.agencyId,
-                    });
-                    setReadyOrderId(ready.orderId);
+                    if (!orderId || !amount) {
+                        throw new Error('결제 정보가 생성되지 않았습니다.');
+                    }
+                    
+                    setReadyOrderId(orderId);
 
                     toss.requestPayment('카드', {
-                        amount: ready.amount,
-                        orderId: ready.orderId,
+                        amount: amount,
+                        orderId: orderId,
                         orderName: `${idol?.stageName || '아이돌'} 구독`,
                         successUrl: `${window.location.origin}/payment/complete`,
                         failUrl: `${window.location.origin}/payment/complete?fail=true`
