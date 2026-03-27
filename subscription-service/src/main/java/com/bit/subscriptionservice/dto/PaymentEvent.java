@@ -18,6 +18,8 @@ public class PaymentEvent {
     private int targetId;
     private int amount;
     private int agencyId;
+    private java.util.List<Integer> reservationIds;
+    private java.util.List<Integer> seatIds;
 
     public String toJson() {
         try {

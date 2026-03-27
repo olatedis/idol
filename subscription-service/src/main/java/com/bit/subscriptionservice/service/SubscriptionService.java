@@ -84,7 +84,9 @@ public class SubscriptionService {
                 com.bit.subscriptionservice.enumtype.PaymentDomain.SUBSCRIPTION,
                 subscription.getId(),
                 request.getPlan().getAmount(),
-                0 // agencyId
+                0, // agencyId
+                null, // reservationIds
+                null  // seatIds
         );
 
         // 이벤트 발행 (커밋 후 실행됨)
