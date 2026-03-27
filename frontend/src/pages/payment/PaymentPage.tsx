@@ -63,22 +63,34 @@ const PaymentPage: React.FC = () => {
     };
 
     const handlePay = async () => {
+        console.log('[DEBUG] handlePay 시작 - domain:', domain, 'idolId:', idolId, 'plan:', plan);
         if (!user || !user.userId) {
             showErrorToast('로그인이 필요합니다.');
             return;
         }
         setLoading(true);
         try {
+            console.log('[DEBUG] Toss SDK 로드 시도 및 clientKey 확인...');
             await loadTossPaymentsScript();
             const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+            console.log('[DEBUG] clientKey:', clientKey);
+            
             const TossPayments = (window as any).TossPayments;
-            if (!TossPayments) throw new Error('TossPayments not available');
+            if (!TossPayments) {
+                console.error('[DEBUG] TossPayments 객체를 찾을 수 없습니다.');
+                throw new Error('TossPayments not available');
+            }
 
             const toss = TossPayments(clientKey);
             const userId = Number(localStorage.getItem('userId'));
+            console.log('[DEBUG] toss 객체 준비 완료, userId:', userId);
 
             if (domain === 'CONCERT') {
-                if (!concert || seats.length === 0) return;
+                console.log('[DEBUG] CONCERT 결제 로직 진입');
+                if (!concert || seats.length === 0) {
+                    console.warn('[DEBUG] 콘서트 정보 또는 좌석 정보 누락');
+                    return;
+                }
                 // 저장: 결제 완료/실패 시 사용할 대기중 예약 정보
                 try { sessionStorage.setItem('pendingReservations', JSON.stringify({ reservationIds })); } catch (e) { /* ignore */ }
 
@@ -90,8 +102,10 @@ const PaymentPage: React.FC = () => {
                     agencyId: concert.agencyId,
                     reservationIds
                 });
+                console.log('[DEBUG] createPaymentReady 응답:', ready);
                 setReadyOrderId(ready.orderId);
 
+                console.log('[DEBUG] toss.requestPayment 호출 (CONCERT)');
                 toss.requestPayment('카드', {
                     amount: ready.amount,
                     orderId: ready.orderId,
@@ -100,9 +114,16 @@ const PaymentPage: React.FC = () => {
                     failUrl: `${window.location.origin}/payment/complete?fail=true`
                 });
             } else if (domain === 'SUBSCRIPTION') {
-                if (!idolId || !plan) return;
+                console.log('[DEBUG] SUBSCRIPTION 결제 로직 진입');
+                if (!idolId || !plan) {
+                    console.warn('[DEBUG] idolId 또는 plan 정보 누락');
+                    return;
+                }
                 // 먼저 백엔드에 pending 구독을 생성
+                console.log('[DEBUG] createSubscription 요청 보냄...');
                 const createRes = await createSubscription(user?.userId, { idolId: idolId!, plan: plan!, autoRenew: true });
+                console.log('[DEBUG] createSubscription 응답 성공:', createRes);
+                
                 const subscriptionId = createRes.subscriptionId;
                 const orderId = createRes.orderId;
                 const amount = createRes.amount;
@@ -112,7 +133,7 @@ const PaymentPage: React.FC = () => {
                 try { sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId, plan, subscriptionId, customerKey })); } catch (e) {}
 
                 if (plan === 'MONTHLY') {
-                    // 월간 구독은 빌링키 발급으로 처리 (정기결제)
+                    console.log('[DEBUG] MONTHLY(정기결제) - requestBillingAuth 호출 시도...');
                     const billingFunc = toss.requestBillingAuth;
                     if (typeof billingFunc === 'function') {
                         await billingFunc('카드', {
@@ -124,23 +145,27 @@ const PaymentPage: React.FC = () => {
                         // fallback to global function if instance method missing
                         const globalFunc = (window as any).requestBillingAuth;
                         if (typeof globalFunc === 'function') {
+                            console.log('[DEBUG] global requestBillingAuth 호출');
                             await globalFunc(clientKey, '카드', {
                                 customerKey,
                                 successUrl: `${window.location.origin}/payment/complete?type=billing`,
                                 failUrl: `${window.location.origin}/payment/complete?type=billing&fail=true`
                             });
                         } else {
+                            console.error('[DEBUG] 빌링키 발급 함수를 찾을 수 없습니다.');
                             throw new Error('Billing auth method unavailable');
                         }
                     }
                 } else {
-                    // 연간 구독은 일시불 처리
+                    console.log('[DEBUG] ANNUAL(일시불) - requestPayment 호출 시도...');
                     if (!orderId || !amount) {
+                        console.error('[DEBUG] orderId 또는 amount 가 null입니다.');
                         throw new Error('결제 정보가 생성되지 않았습니다.');
                     }
                     
                     setReadyOrderId(orderId);
 
+                    console.log('[DEBUG] toss.requestPayment 최종 호출 파라미터:', { orderId, amount, orderName: `${idol?.stageName || '아이돌'} 구독` });
                     toss.requestPayment('카드', {
                         amount: amount,
                         orderId: orderId,
@@ -148,15 +173,17 @@ const PaymentPage: React.FC = () => {
                         successUrl: `${window.location.origin}/payment/complete`,
                         failUrl: `${window.location.origin}/payment/complete?fail=true`
                     });
+                    console.log('[DEBUG] toss.requestPayment 호출 완료');
                 }
             }
         } catch (e: any) {
+            console.error('[DEBUG] 결제 도중 예외 발생:', e);
             // 사용자가 직접 취소한 경우는 정상 흐름 (콘솔 에러 없이 조용히 종료)
             if (e?.code === 'USER_CANCEL' || e?.message === '취소되었습니다.') {
                 setLoading(false);
                 return;
             }
-            showErrorToast('결제 준비 중 오류가 발생했습니다.');
+            showErrorToast('결제 준비 중 오류가 발생했습니다. (자세한 내용은 콘솔 확인)');
             setLoading(false);
         }
     };
