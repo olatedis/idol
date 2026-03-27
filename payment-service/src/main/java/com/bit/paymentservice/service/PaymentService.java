@@ -53,7 +53,9 @@ public class PaymentService {
             }
         }
 
-        String orderId = UUID.randomUUID().toString();
+        String orderId = (request.getOrderId() != null && !request.getOrderId().isBlank())
+                ? request.getOrderId()
+                : UUID.randomUUID().toString();
 
         Payment payment = Payment.ready(
                 orderId,

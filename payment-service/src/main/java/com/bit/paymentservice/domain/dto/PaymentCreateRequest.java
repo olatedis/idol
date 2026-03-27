@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentCreateRequest {
+    private String orderId; // 외부에서 생성된 주문번호 (옵션)
     private int userId;
     private int amount;
     private PaymentDomain domain; // 결제 요청 서비스

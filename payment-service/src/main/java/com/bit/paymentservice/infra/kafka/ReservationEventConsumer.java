@@ -23,6 +23,7 @@ public class ReservationEventConsumer {
                 PaymentEvent event = PaymentEvent.fromJson(message);
 
                 PaymentCreateRequest payment = new PaymentCreateRequest(
+                                event.getOrderId(),
                                 event.getUserId(),
                                 event.getAmount(),
                                 event.getDomain(),
