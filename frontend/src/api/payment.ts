@@ -60,8 +60,14 @@ export interface SubscriptionCreateRequest {
     autoRenew: boolean;
 }
 
+export interface SubscriptionResponse {
+    subscriptionId: number;
+    orderId?: string;
+    amount?: number;
+}
+
 export const createSubscription = (userId: number | undefined, body: SubscriptionCreateRequest) => {
     const headers: any = { 'Content-Type': 'application/json' };
     if (userId) headers['X-User-Id'] = userId;
-    return api.post('/subscriptions', body, { headers }).then(r => r.data);
+    return api.post<SubscriptionResponse>('/subscriptions', body, { headers }).then(r => r.data);
 };
