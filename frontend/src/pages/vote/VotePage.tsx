@@ -602,13 +602,14 @@ const VotePage: React.FC = () => {
                                             <motion.div
                                                 layout
                                                 layoutId={`candidate-${candidate.number}`}
-                                                whileHover={!hasVoted ? { scale: 1.05, y: -5 } : {}}
-                                                whileTap={!hasVoted ? { scale: 0.95 } : {}}
+                                                whileHover={!hasVoted && selectedVote.status === 'OPEN' ? { scale: 1.05, y: -5 } : {}}
+                                                whileTap={!hasVoted && selectedVote.status === 'OPEN' ? { scale: 0.95 } : {}}
                                                 key={candidate.number}
                                                 onClick={() => !hasVoted && selectedVote.status === 'OPEN' && setSelectedCandidate(candidate.number)}
-                                                className={`relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300
-                                                    ${isSelected ? 'ring-4 ring-[var(--color-idol)] shadow-xl shadow-[var(--color-idol)]/30 transform -translate-y-2' : 'border-2 border-[var(--color-idol-bg)] hover:border-[var(--color-idol-point)]'}
-                                                    ${hasVoted && !isSelected ? 'opacity-50 grayscale select-none cursor-default' : ''}
+                                                className={`relative rounded-2xl overflow-hidden transition-all duration-300
+                                                    ${selectedVote.status === 'OPEN' ? 'cursor-pointer' : 'cursor-default'}
+                                                    ${isSelected ? 'ring-4 ring-[var(--color-idol)] shadow-xl shadow-[var(--color-idol)]/30 transform -translate-y-2' : 'border-2 border-[var(--color-idol-bg)] ' + (selectedVote.status === 'OPEN' ? 'hover:border-[var(--color-idol-point)]' : '')}
+                                                    ${(hasVoted || selectedVote.status !== 'OPEN') && !isSelected ? 'opacity-50 grayscale select-none' : ''}
                                                     ${hasVoted && isSelected ? 'ring-4 ring-[var(--color-idol-dark)] shadow-xl shadow-[var(--color-idol-dark)]/30' : ''}`}
                                             >
                                                 <div className="relative h-48">
