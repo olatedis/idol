@@ -76,9 +76,11 @@ public class SubscriptionService {
 
         redisTemplate.opsForValue().set(redisKey, SubscriptionStatus.PENDING.name(), Duration.ofDays(1)); // PENDING은 짧게 1일
 
+        String orderId = UUID.randomUUID().toString(); // 주문번호 생성
+
         PaymentEvent event = new PaymentEvent(
                 userId,
-                null,
+                orderId, // 생성된 주문번호 전달
                 com.bit.subscriptionservice.enumtype.PaymentDomain.SUBSCRIPTION,
                 subscription.getId(),
                 request.getPlan().getAmount(),
@@ -88,9 +90,9 @@ public class SubscriptionService {
         // 이벤트 발행 (커밋 후 실행됨)
         eventPublisher.publishEvent(new PaymentRequestEvent(event));
 
-        log.info("개인(아이돌) 구독 준비 완료: userId={}, idolId={}, plan={}, amount={}",
-                userId, request.getIdolId(), request.getPlan(), request.getPlan().getAmount());
-        return SubscriptionDto.fromEntity(subscription);
+        log.info("개인(아이돌) 구독 준비 완료: userId={}, idolId={}, plan={}, amount={}, orderId={}",
+                userId, request.getIdolId(), request.getPlan(), request.getPlan().getAmount(), orderId);
+        return SubscriptionDto.fromEntity(subscription, orderId, request.getPlan().getAmount());
     }
 
     /**
