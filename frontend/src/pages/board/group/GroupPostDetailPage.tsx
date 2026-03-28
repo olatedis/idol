@@ -435,8 +435,8 @@ const GroupPostDetailPage: React.FC = () => {
         <div className="space-y-4">
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
                 <div className="px-6 pt-6 pb-4">
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="text-2xl font-semibold text-gray-900">{data.title}</div>
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div className="text-xl sm:text-2xl font-semibold text-gray-900 min-w-0 flex-1">{data.title}</div>
 
                         {/* 수정/삭제 버튼 */}
                         {canEditOrDelete && (

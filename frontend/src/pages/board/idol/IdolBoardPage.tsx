@@ -411,8 +411,8 @@ const IdolBoardPage: React.FC = () => {
                 </div>
             </div>
 
-            <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                <div className="grid grid-cols-[90px_1fr_120px_140px_90px_90px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+            <div className="border border-gray-200 rounded-2xl overflow-x-auto bg-white">
+                <div className="min-w-[680px] grid grid-cols-[70px_1fr_110px_130px_80px_80px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
                     <div>번호</div>
                     <div>제목</div>
                     <div>작성자</div>
@@ -427,7 +427,7 @@ const IdolBoardPage: React.FC = () => {
                             key={p.postId}
                             onClick={() => onClickRow(p)}
                             className="
-                            w-full text-left grid grid-cols-[90px_1fr_120px_140px_90px_90px]
+                            w-full text-left min-w-[680px] grid grid-cols-[70px_1fr_110px_130px_80px_80px]
                             px-4 py-3 border-b border-gray-100 last:border-b-0
                             hover:bg-[var(--color-idol-bg)]/35 active:bg-[var(--color-idol-bg)]/60
                             transition-colors
@@ -446,7 +446,7 @@ const IdolBoardPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="text-sm tabular-nums">{p.authorId}</div>
+                            <div className="text-sm truncate min-w-0">{p.authorNickname || p.authorId}</div>
 
                             <div className="text-sm">
                                 {formatDateToKST(p.createdAt)}
@@ -474,7 +474,7 @@ const IdolBoardPage: React.FC = () => {
                 </div>
             )}
 
-            <div className="fixed right-4 bottom-6 z-40 flex flex-col items-end gap-3">
+            <div className="fixed right-4 bottom-8 z-40 flex flex-col items-end gap-3">
                 <button
                     onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                     className="
