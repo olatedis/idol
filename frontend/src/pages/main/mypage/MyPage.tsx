@@ -126,9 +126,9 @@ const MyPage: React.FC = () => {
             <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-24">
                 <div className="text-2xl font-bold text-gray-800 mb-6">마이페이지</div>
 
-                <div className="flex space-x-2 border-b border-gray-200 mb-8 backdrop-blur-md sticky top-16 z-10 bg-gray-50/90 pt-2">
+                <div className="flex space-x-2 border-b border-gray-200 mb-8 backdrop-blur-md sticky top-16 z-10 bg-gray-50/90 pt-2 overflow-x-auto scrollbar-hide">
                     <button
-                        className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "profile" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                        className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "profile" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                         onClick={() => setActiveTab("profile")}
                     >
                         내 프로필
@@ -139,7 +139,7 @@ const MyPage: React.FC = () => {
 
                     {userInfo?.role !== "AGENCY" && userInfo?.role !== "ADMIN" && (
                         <button
-                            className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "subscription" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                            className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "subscription" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                             onClick={() => setActiveTab("subscription")}
                         >
                             구독 내역
@@ -150,7 +150,7 @@ const MyPage: React.FC = () => {
                     )}
 
                     <button
-                        className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "payment" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                        className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "payment" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                         onClick={() => setActiveTab("payment")}
                     >
                         결제 내역
@@ -160,7 +160,7 @@ const MyPage: React.FC = () => {
                     </button>
 
                     <button
-                        className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "bans" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                        className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "bans" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                         onClick={() => setActiveTab("bans")}
                     >
                         제재 이력
@@ -170,7 +170,7 @@ const MyPage: React.FC = () => {
                     </button>
 
                     <button
-                        className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "notification" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                        className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "notification" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                         onClick={() => setActiveTab("notification")}
                     >
                         알림 설정
@@ -180,7 +180,7 @@ const MyPage: React.FC = () => {
                     </button>
 
                     <button
-                        className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "notificationHistory" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                        className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "notificationHistory" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                         onClick={() => setActiveTab("notificationHistory")}
                     >
                         알림 히스토리
@@ -191,7 +191,7 @@ const MyPage: React.FC = () => {
 
                     {userInfo?.role === "AGENCY" && (
                         <button
-                            className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "agency" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                            className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "agency" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                             onClick={() => setActiveTab("agency")}
                         >
                             소속사 기능
@@ -203,7 +203,7 @@ const MyPage: React.FC = () => {
 
                     {userInfo?.role === "ADMIN" && (
                         <button
-                            className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "admin" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
+                            className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors relative ${activeTab === "admin" ? "text-idol" : "text-gray-500 hover:text-gray-700"}`}
                             onClick={() => setActiveTab("admin")}
                         >
                             관리자 기능

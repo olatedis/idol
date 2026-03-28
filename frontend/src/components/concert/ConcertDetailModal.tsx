@@ -67,12 +67,12 @@ export const ConcertDetailModal: React.FC<Props> = ({
                     </div>
 
                     <div className="space-y-4 mb-6">
-                        <div className="flex justify-between">
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                             <span className="text-gray-600">일시</span>
                             <span className="font-medium">{formatKST(concert.concertDate)}</span>
                         </div>
                         {concert.ticketSaleDate && (
-                            <div className="flex justify-between">
+                            <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                                 <span className="text-gray-600">티켓 예매시작</span>
                                 <span className="font-medium">{formatKST(concert.ticketSaleDate)}</span>
                             </div>
@@ -84,9 +84,15 @@ export const ConcertDetailModal: React.FC<Props> = ({
                         )}
                     </div>
 
-                    <div>
-                        <img src={concert.img} alt={concert.title} />
-                    </div>
+                    {concert.img && (
+                        <div className="my-4">
+                            <img
+                                src={concert.img}
+                                alt={concert.title}
+                                className="w-full max-h-48 sm:max-h-64 object-cover rounded-xl"
+                            />
+                        </div>
+                    )}
 
                     <div className="border-t pt-6 mb-6">
                         <h3 className="font-bold text-gray-900 mb-4">좌석 현황</h3>

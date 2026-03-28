@@ -321,7 +321,7 @@ const ConcertPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-[var(--color-idol-bg)] via-white to-[var(--color-idol-bg)]">
-            <main className="pt-[100px] px-6 pb-12 max-w-7xl mx-auto relative z-10">
+            <main className="px-4 sm:px-6 pb-12 max-w-7xl mx-auto relative z-10">
                 {/* 제목 영역 */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-black text-gray-800">콘서트 예매</h1>
@@ -331,9 +331,9 @@ const ConcertPage: React.FC = () => {
                 </div>
 
                 {/* 배경 장식 */}
-                <div className="absolute top-20 left-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" style={{ backgroundColor: 'var(--color-idol-dark)' }}></div>
-                <div className="absolute top-20 right-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" style={{ backgroundColor: 'var(--color-idol)' }}></div>
-                <div className="absolute -bottom-8 left-40 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000" style={{ backgroundColor: 'var(--color-idol-point)' }}></div>
+                <div className="hidden sm:block absolute top-20 left-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" style={{ backgroundColor: 'var(--color-idol-dark)' }}></div>
+                <div className="hidden sm:block absolute top-20 right-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" style={{ backgroundColor: 'var(--color-idol)' }}></div>
+                <div className="hidden sm:block absolute -bottom-8 left-40 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000" style={{ backgroundColor: 'var(--color-idol-point)' }}></div>
 
                 <div className="space-y-4">
                     <div className="flex justify-between items-center flex-wrap gap-2">
