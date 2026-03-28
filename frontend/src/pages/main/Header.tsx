@@ -576,7 +576,7 @@ const Header: React.FC = () => {
 
     return (
         <>
-            <header className="w-full px-4 sm:px-6 md:px-8 py-4 fixed top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm">
+            <header className="w-full px-4 sm:px-6 md:px-8 py-4 fixed top-0 z-50 bg-white/30 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         {/* 햄버거 아이콘 */}
@@ -660,7 +660,7 @@ const Header: React.FC = () => {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: 8 }}
                                                 transition={{ duration: 0.2 }}
-                                                className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-[360px] rounded-xl border border-gray-200 bg-white shadow-xl z-50 overflow-hidden"
+                                                className="fixed right-4 top-[72px] w-[calc(100vw-2rem)] max-w-[360px] rounded-xl border border-gray-200 bg-white shadow-xl z-50 overflow-hidden"
                                             >
                                                 <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-100 flex items-center justify-between">
                                                     <div className="font-semibold text-xs sm:text-sm text-gray-800">알림</div>

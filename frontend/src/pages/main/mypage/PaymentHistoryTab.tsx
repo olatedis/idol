@@ -106,7 +106,6 @@ const PaymentHistoryTab: React.FC = () => {
                         <tr>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">주문번호</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">결제금액</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">충전 포인트</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">상태</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">결제일시</th>
                         </tr>
@@ -119,9 +118,6 @@ const PaymentHistoryTab: React.FC = () => {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold tabular-nums">
                                     {(payment?.amount || 0).toLocaleString()} <span className="text-gray-500 font-normal">원</span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-idol font-semibold tabular-nums">
-                                    +{(payment?.pointAmount || 0).toLocaleString()} <span className="text-gray-500 font-normal">P</span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                     <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusStyle(payment.status)}`}>
