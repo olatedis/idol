@@ -133,10 +133,17 @@ const GroupPostDetailPage: React.FC = () => {
                 setData(detail);
             } catch (e: any) {
                 const status = e?.response?.status;
-                if (status === 401) setError("로그인이 필요합니다.");
-                else if (status === 403) setError("권한이 없습니다. (구독 필요 또는 접근 불가)");
-                else setError(e?.response?.data?.message || e?.message || "게시글 상세 조회 실패");
+                if (status === 403) {
+                    showErrorToast("구독이 필요한 게시글입니다.");
+                } else if (status === 404) {
+                    showErrorToast("게시글을 찾을 수 없습니다.");
+                } else if (status === 401) {
+                    showErrorToast("로그인이 필요합니다.");
+                } else {
+                    showErrorToast(e?.response?.data?.message || "게시글을 불러오지 못했습니다.");
+                }
                 setData(null);
+                navigate(-1);
             } finally {
                 setLoading(false);
             }
