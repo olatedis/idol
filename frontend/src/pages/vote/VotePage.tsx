@@ -403,7 +403,7 @@ const VotePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-[var(--color-idol-bg)] via-white to-[var(--color-idol-bg)]/50 overflow-x-hidden">
-            <main className="pt-[80px] sm:pt-[100px] px-4 sm:px-6 pb-8 sm:pb-12 max-w-7xl mx-auto relative z-10 w-full overflow-hidden">
+            <main className="px-4 sm:px-6 pb-8 sm:pb-12 max-w-7xl mx-auto relative z-10 w-full overflow-hidden">
                 {/* 탭 제목 영역 (그룹/전체 명시) */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-black text-gray-800">
@@ -426,7 +426,7 @@ const VotePage: React.FC = () => {
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`px-4 sm:px-8 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 whitespace-nowrapflex-1 md:flex-none text-center
+                                className={`px-4 sm:px-8 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 whitespace-nowrap flex-1 md:flex-none text-center
                                     ${activeTab === tab
                                         ? 'bg-[var(--color-idol-dark)] text-white shadow-md transform scale-105'
                                         : 'text-[var(--color-idol-point)] hover:text-[var(--color-idol-dark)] hover:bg-[var(--color-idol-bg)]'}`}

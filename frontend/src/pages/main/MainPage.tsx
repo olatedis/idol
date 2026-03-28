@@ -129,7 +129,7 @@ const MainPage: React.FC = () => {
                 {/* ========================= */}
                 {/* Hero Section */}
                 <section
-                    className="relative w-full h-screen sm:h-[600px] md:h-[700px] bg-idol flex flex-col justify-center items-center text-white overflow-hidden">
+                    className="relative w-full h-[600px] sm:h-[650px] md:h-[700px] bg-idol flex flex-col justify-center items-center text-white overflow-hidden">
                     <img
                         src={main1}
                         alt="Dolchat Hero"
@@ -156,7 +156,7 @@ const MainPage: React.FC = () => {
                         </h2>
                     </div>
 
-                    <div className="max-w-7xl mx-auto grid md:grid-cols-1 lg:grid-cols-3 gap-12 md:gap-12">
+                    <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
                         {/* 채팅 */}
                         <motion.div {...cardUp(0)} className="flex flex-col items-center text-center">
                             <div className="relative isolate">
@@ -221,7 +221,7 @@ const MainPage: React.FC = () => {
                 {!user && (
                     <section
                         id="login-section"
-                        className="relative overflow-hidden h-[770px]"
+                        className="relative overflow-hidden py-16 sm:py-24"
                     >
                         <div
                             className="relative z-10 mx-auto flex h-full max-w-6xl flex-col justify-center px-4 sm:px-8 md:px-16">
