@@ -31,8 +31,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -109,7 +111,7 @@ public class PostService {
     @Transactional
     public PostResponse selectOne(Long postId, Integer userId, Role role) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
 
         // OFFICIAL/FAN 모두 상세보기(content)는 구독자만 (단, IDOL_OFFICIAL은 IDOL/AGENCY 예외)
         requireReadSubscription(post, userId, role);
@@ -224,7 +226,7 @@ public class PostService {
     @Transactional
     public PostResponse update(Long postId, PostUpdateRequest req, Integer userId, Role role) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
 
         requireUpdatePermission(post, userId, role);
 
@@ -244,7 +246,7 @@ public class PostService {
     @Transactional
     public void delete(Long postId, Integer userId, Role role) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
 
         requireDeletePermission(post, userId, role);
 
@@ -460,7 +462,7 @@ public class PostService {
 
             // USER는 구독자만
             boolean ok = subscriptionInternalClient.isActiveIdolSubscriber(post.getIdolId(), userId);
-            if (!ok) throw new RuntimeException("구독이 필요합니다.");
+            if (!ok) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "구독이 필요합니다.");
             return;
         }
 
@@ -475,15 +477,15 @@ public class PostService {
 
             // 구독 확인
             boolean ok = subscriptionInternalClient.isActiveGroupSubscriber(post.getGroupId(), userId);
-            if (!ok) throw new RuntimeException("구독이 필요합니다.");
+            if (!ok) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "구독이 필요합니다.");
         }
     }
 
     // IDOL 본인 판별 유틸
     private boolean isMyIdol(Long targetIdolId, Integer userId) {
-        Idol me = idolRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("아이돌 정보를 찾을 수 없습니다."));
-        return me.getId() != null && targetIdolId != null && me.getId().longValue() == targetIdolId;
+        return idolRepository.findByUserId(userId)
+                .map(me -> me.getId() != null && targetIdolId != null && me.getId().longValue() == targetIdolId)
+                .orElse(false);
     }
 
     // Mapper
@@ -506,11 +508,16 @@ public class PostService {
         }
 
         // comments 포함(최신이 위)
-        List<Comment> comments = commentRepository.findByPost_PostIdOrderByCreatedAtDesc(post.getPostId());
-        List<CommentResponse> commentResponses = comments.stream()
-                .map(this::toCommentResponse)
-                .collect(Collectors.toList());
-        res.setComments(commentResponses);
+        try {
+            List<Comment> comments = commentRepository.findByPost_PostIdOrderByCreatedAtDesc(post.getPostId());
+            List<CommentResponse> commentResponses = comments.stream()
+                    .map(this::toCommentResponse)
+                    .collect(Collectors.toList());
+            res.setComments(commentResponses);
+        } catch (Exception e) {
+            log.warn("댓글 조회 실패: postId={}, err={}", post.getPostId(), e.getMessage());
+            res.setComments(List.of());
+        }
 
         return res;
     }
