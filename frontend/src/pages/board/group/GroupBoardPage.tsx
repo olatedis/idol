@@ -508,9 +508,9 @@ const GroupBoardPage: React.FC = () => {
             {error && <div className="text-sm text-red-600">{error}</div>}
 
             {/* 게시글 리스트 */}
-            <div className="border border-gray-200 rounded-2xl overflow-x-auto bg-white">
-                <div
-                    className="min-w-[680px] grid grid-cols-[70px_1fr_110px_130px_80px_80px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+            <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
+                {/* 데스크탑 헤더 */}
+                <div className="hidden sm:grid grid-cols-[70px_1fr_110px_130px_80px_80px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
                     <div className="text-left">번호</div>
                     <div className="text-left">제목</div>
                     <div className="text-left">작성자</div>
@@ -529,35 +529,47 @@ const GroupBoardPage: React.FC = () => {
                             key={p.postId}
                             type="button"
                             onClick={() => onClickRow(p)}
-                            className="
-                            w-full text-left
-                            min-w-[680px] grid grid-cols-[70px_1fr_110px_130px_80px_80px]
-                            px-4 py-3
-                            border-b border-gray-100 last:border-b-0
-                            hover:bg-[var(--color-idol-bg)]/35 active:bg-[var(--color-idol-bg)]/60
-                            transition-colors
-                        "
+                            className="w-full text-left border-b border-gray-100 last:border-b-0 hover:bg-[var(--color-idol-bg)]/35 active:bg-[var(--color-idol-bg)]/60 transition-colors"
                         >
-                            <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
-
-                            <div className="min-w-0">
-                                <div className="text-sm font-semibold text-gray-900 truncate">
+                            {/* 모바일 카드형 */}
+                            <div className="sm:hidden px-4 py-3 flex flex-col gap-1">
+                                <div className="text-sm font-semibold text-gray-900 line-clamp-2">
                                     {p.title}
                                     {Number((p as any).commentCount) > 0 && (
-                                        <span className="ml-3 text-[var(--color-idol-dark)]/80 text-sm font-normal">
-                                            [ {Number((p as any).commentCount)} ]
+                                        <span className="ml-2 text-[var(--color-idol-dark)]/80 text-sm font-normal">
+                                            [{Number((p as any).commentCount)}]
                                         </span>
                                     )}
                                 </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span className="font-medium text-gray-700">{p.authorNickname || p.authorId}</span>
+                                    <span>·</span>
+                                    <span>{formatDateToKST(p.createdAt)}</span>
+                                    <span>·</span>
+                                    <span>조회 {p.viewCount}</span>
+                                    <span>·</span>
+                                    <span>♥ {p.likeCount}</span>
+                                </div>
                             </div>
 
-                            <div className="text-sm text-gray-700 truncate">{p.authorNickname || p.authorId}</div>
-
-                            <div className="text-sm text-gray-600">{formatDateToKST(p.createdAt)}</div>
-
-                            <div className="text-sm text-gray-700 text-right tabular-nums">{p.viewCount}</div>
-
-                            <div className="text-sm text-gray-700 text-right tabular-nums">{p.likeCount}</div>
+                            {/* 데스크탑 테이블형 */}
+                            <div className="hidden sm:grid grid-cols-[70px_1fr_110px_130px_80px_80px] px-4 py-3">
+                                <div className="text-sm text-gray-900 tabular-nums">{rowNo(idx)}</div>
+                                <div className="min-w-0">
+                                    <div className="text-sm font-semibold text-gray-900 truncate">
+                                        {p.title}
+                                        {Number((p as any).commentCount) > 0 && (
+                                            <span className="ml-3 text-[var(--color-idol-dark)]/80 text-sm font-normal">
+                                                [{Number((p as any).commentCount)}]
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="text-sm text-gray-700 truncate min-w-0">{p.authorNickname || p.authorId}</div>
+                                <div className="text-sm text-gray-600">{formatDateToKST(p.createdAt)}</div>
+                                <div className="text-sm text-gray-700 text-right tabular-nums">{p.viewCount}</div>
+                                <div className="text-sm text-gray-700 text-right tabular-nums">{p.likeCount}</div>
+                            </div>
                         </button>
                     ))}
             </div>

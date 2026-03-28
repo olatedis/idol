@@ -412,7 +412,7 @@ const IdolPostDetailPage: React.FC = () => {
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
-                        <span className="font-medium text-gray-800">{data.authorId}</span>
+                        <span className="font-medium text-gray-800">{data.authorNickname || data.authorId}</span>
                         {/* [수정] 작성일 KST 표시 */}
                         <span>{formatDateToKST(data.createdAt)}</span>
                         <span>조회 {data.viewCount}</span>
