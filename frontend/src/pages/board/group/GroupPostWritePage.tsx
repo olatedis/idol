@@ -137,7 +137,7 @@ const GroupPostWritePage: React.FC = () => {
     return (
         <div className="space-y-4">
             <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
                     <div className="text-lg font-semibold text-gray-900">글쓰기</div>
                     <div className="flex gap-2">
                         <button
@@ -175,14 +175,16 @@ const GroupPostWritePage: React.FC = () => {
 
                     <div>
                         <div className="text-sm font-semibold text-gray-700 mb-2">내용</div>
-                        <Editor
-                            ref={editorRef}
-                            initialValue=""
-                            initialEditType="wysiwyg"
-                            previewStyle="vertical"
-                            height="360px"
-                            useCommandShortcut={true}
-                        />
+                        <div className="overflow-x-hidden">
+                            <Editor
+                                ref={editorRef}
+                                initialValue=""
+                                initialEditType="wysiwyg"
+                                previewStyle="vertical"
+                                height="360px"
+                                useCommandShortcut={true}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
