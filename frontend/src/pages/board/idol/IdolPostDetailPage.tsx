@@ -21,6 +21,7 @@ type PostResponse = {
     groupId: number | null;
 
     authorId: number;
+    authorNickname: string | null;
     title: string;
     content: string;
 
