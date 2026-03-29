@@ -109,6 +109,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
             // 4. Store 저장 및 모달 닫기
             login(userRes.data, accessToken, refreshToken);
             onClose();
+            window.scrollTo(0, 0);
             // alert('회원가입을 환영합니다! 🎉');
             Swal.fire({
                 icon: 'success',
