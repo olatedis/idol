@@ -1,4 +1,4 @@
-# 🌟 IDOL (Global Idol Interaction Platform)
+# IDOL — Global Idol Interaction Platform
 
 > **"대규모 트래픽을 고려한 고가용성 마이크로서비스(MSA) 팬덤 플랫폼"**
 >
@@ -7,104 +7,216 @@
 
 <br/>
 
-## 🏗 System Architecture & Tech Stack
+## 기술 스택
 
-### 🛠 Tech Stack
-- **Backend**: Java 21, Spring Boot 3.4
-- **MSA Infra**: Spring Cloud (Gateway, Eureka, OpenFeign, Resilience4j)
-- **Database / Cache**: MySQL, Spring Data JPA / MongoDB / Redis (PubSub, ZSet, Lua)
-- **Messaging / Search**: Apache Kafka / Elasticsearch (Nori 분석기)
-- **Frontend**: React 18, TypeScript, Zustand, STOMP.js
-
-<br/>
-
-## 🚀 Core Technical Challenges & Deep Dive
-
-이 프로젝트는 수만 명의 팬이 동시다발적으로 상호작용할 때 발생하는 **데이터 정합성 보장**과 **트래픽 병목 해결**에 포커스를 맞추었습니다.
-
----
-
-### 1. 💬 Chat Service: 실시간 채팅 시스템 (트래픽 폭주 대비 및 비동기 파이프라인)
-
-수만 명의 팬과 아이돌이 상주하는 채팅방의 특성상 트래픽 폭주와 로딩 병목 현상을 해결하기 위해 설계했습니다.
-
-- **동작 흐름 및 아키텍처**
-  1. **WebSocket 연결 및 인증**: 클라이언트가 HandShake를 요청하면 Spring `ChannelInterceptor`가 JWT 토큰을 검증해 세션에 유저 정보를 저장합니다.
-  2. **메시지 전송 및 전처리**: Redis를 활용해 초당 전송 횟수를 제한(도배 방지)하고, 비속어를 필터링합니다.
-  3. **저장 및 이벤트 발행 (Outbox Pattern)**: 메시지는 MongoDB에 `PENDING` 상태로 저장되고, Kafka Producer가 `chat-message-topic`으로 메시지를 수신합니다. (`idolId`를 Partition Key로 사용하여 메시지 순서 완벽 보장)
-  4. **실시간 브로드캐스팅**: Kafka Consumer가 메시지를 읽고 **Redis Pub/Sub** 채널로 발행하여 다중 서버 환경의 구독자들에게 안정적으로 전파합니다.
-  5. **AI 비동기 텍스트 검열**: "자살/폭탄" 등의 의심 단어가 감지되면 비동기로 별도 토픽에 이벤트를 발행, 외부 AI API 검수를 진행하여 채팅 전송 성능에 영향을 주지 않도록 설계했습니다.
-
-- **Troubleshooting & Q&A**
-  - **Q. 채팅방에 사람이 몰리면 서버가 터지지 않나요?**
-    A. Kafka를 버퍼로 사용하여 트래픽 폭주를 흡수하고, Redis Pub/Sub을 통해 다중 서버(Scale-out) 환경에서도 메시지를 안정적으로 브로드캐스트합니다.
-  - **Q. 채팅 내역이 너무 많아지면 조회가 느려지지 않나요?**
-    A. 가장 많이 조회되는 최신 메시지 50건은 **Redis List**에 캐싱(Latency 1ms 이내)하고, 누적 데이터는 **MongoDB** 샤딩으로 처리하며, 키워드 검색은 **Elasticsearch**로 위임했습니다.
-  - **Q. AI 검열 호출 시 지연 시간 발생과 비용 문제는?**
-    A. 1차 정규식/Aho-Corasick 필터링 후 의심 메시지만 '비동기'로 통신망을 타도록 설계하여 비용과 속도를 동시에 확보했습니다.
-
----
-
-### 2. 🗳 Vote Service (투표 시스템): 트래픽 폭주 대비 및 동시성 완벽 제어
-
-연말 시상식 등 특정 이벤트 기간에 폭발적으로 몰리는(Spiky Traffic) 트래픽의 병목과 데드락(Deadlock) 한계를 극복했습니다.
-
-- **Redis Lua Script 원자적 연산 (Atomic Operation)**: 투표 중복 참여 방지를 위해 DB Lock을 피하고, "키 확인 -> 시간 설정 -> 완료 마킹" 과정을 완전한 원자적 스크립트로 처리하여 Race Condition을 완벽 차단.
-- **서킷 브레이커(Circuit Breaker) & 지연 처리 폴백(Fallback)**: 트래픽이 `RateLimiter` 한계치를 초과하거나 Redis 장애 시, 에러를 뱉지 않고 **Kafka로 투표 요청을 비동기 큐잉(Queueing)**하여 DB에 안전하고 유연하게 적재.
-- **어뷰징 방지 기반 차단**: Redis Set 구조와 만료(TTL)를 결합, 단일 IP의 비정상적 시도(1분 내 10회 이상) 즉시 차단 및 블랙리스트 로직.
-
----
-
-### 3. 🏆 Ranking Service: ZSet을 활용한 O(log(N)) 실시간 랭킹 산출
-
-초당 수만 건의 득표 현황을 RDBMS의 `ORDER BY`로 매번 계산하는 구조적 불가능을 회피했습니다.
-
-- **Redis Sorted Set (ZSET)**: 수백만 표가 몰려도 `opsForZSet().incrementScore`를 사용하여 O(log(N)) 속도로 실시간 정렬 유지.
-- **실시간 Delta 계산 및 WebSocket 푸시**: 주기적으로 랭킹을 브로드캐스팅할 때, **Redis Hash**를 이용해 이전 점수와 현재 점수를 비교, 등락폭(Delta)을 프론트에 실시간으로 푸시.
-
----
-
-### 4. 🔗 데이터 최종 일관성 (CQRS & Event-Driven Architecture)
-
-Write 부하와 Read 병목 지점을 해결하기 위해 명령/조회를 엄격히 분리하고, 비동기 파이프라인으로 일관성을 유지합니다.
-
-- **시나리오 (검색 시스템 동기화)**: 게시판 작성(MySQL Write) 시, 즉시 `board-post-index-topic` Kafka 이벤트를 발행. `search-service`의 Consumer가 이를 받아 **Elasticsearch**에 Bulk Index(UPSERT) 처리. 무거운 `%LIKE%` 쿼리 없이 ES가 조회(Read)를 전담.
-- **지연(Delay) 극복 전략**: CQRS의 고질적인 'Eventual Consistency' 특성상 발생하는 밀리초 단위 지연감을 상쇄하기 위해, 본인 작성 글은 프론트 단 낙관적 업데이트(Optimistic UI) 또는 1차 DB 조회 방식으로 풀고, 검색 포털 뷰만 지연을 허용하는 형태의 트레이드오프 설계 채택.
-
----
-
-### 5. ⚡ MSA 통신 네트워크 한계 돌파 (Feign vs gRPC 튜닝 시나리오)
-
-채팅 등 극도로 빠른 실시간 응답이 필수인 환경에서, 내부 도메인(`chat-service` -> `user-service` 인가 검증) 간 동기식 API 호출 지연을 타파하기 위한 최적화 과정입니다.
-
-- **문제점 파악 및 성능 비교 (100회 실행, 가상 유저 50명 k6 Load Test)**
-  - `OpenFeign (REST/JSON)`: 평균 571.6ms / TPS 73.8
-  - `gRPC (Binary)`: 평균 272.3ms / TPS 133.4 **(약 2.1배 고속)**
-- **의사 결정 방향 (Trade-off)**: 성능 상으론 압도적인 gRPC 였으나, .proto 작성이라는 러닝 커브와 이진(Binary) 데이터 디버깅이라는 '협업 리스크'를 고려, **기존 OpenFeign의 속도를 한계까지 최적화(Tuning)하는 방안** 선택.
-- **튜닝 내역 및 성과**
-  - **Keep-Alive (연결 재사용)**: `Apache HttpClient 5` 도입으로 3-Way Handshake 비용을 제거 (Stateful 전환).
-  - **GZIP Data Compression**: JSON 공백/중복 문자 압축으로 네트워크 페이로드 대역폭 경량화.
-  - **결과**: `(전) 571ms` -> `(후) 놀라운 Latency 개선`, 기존 통신 속도의 **최대 5배 끌어올리며**, 유지보수성을 포기하지 않고 실시간 성능 최적화를 성공적으로 달성.
+| 분류 | 기술 |
+|---|---|
+| **언어 / 프레임워크** | Java 21, Spring Boot 3.4.1, Spring Cloud 2024.0.0 |
+| **MSA 인프라** | Spring Cloud Gateway (Reactive), Netflix Eureka, OpenFeign HC5, Resilience4j, Bucket4j, ShedLock |
+| **데이터베이스** | MySQL 8 (JPA), MongoDB (채팅), Elasticsearch 8 (Nori 형태소 분석기) |
+| **캐시 / 메시지** | Redis 7 (Pub/Sub, ZSET, Lua, 분산 락, Rate Limiter), Apache Kafka |
+| **통신** | STOMP WebSocket, SSE, gRPC (Protobuf 3.25), REST (OpenFeign) |
+| **프론트엔드** | React 18, TypeScript, Zustand, STOMP.js |
+| **DevOps** | Docker, Docker Compose, GitHub Actions CI/CD (변경 감지 선택적 배포) |
 
 <br/>
 
-## ⚙️ Quick Start
+## 아키텍처
 
-**Prerequisites**: Docker 및 Docker Compose가 필요합니다.
+```
+Client
+  │
+  ▼
+API Gateway (Reactive, JWT 필터, Redis Rate Limiter)
+  │
+  ├─ eureka-server       (서비스 디스커버리)
+  ├─ auth-service        (JWT 발급, Kakao OAuth2, gRPC 인터페이스)
+  ├─ user-service        (유저 프로필, 아이돌/그룹 관리)
+  ├─ chat-service        (STOMP WebSocket, AI 모더레이션, DeepL 번역)
+  ├─ board-service       (게시판, 댓글)
+  ├─ vote-service        (투표, Outbox 패턴, Redis Lua 멱등성)
+  ├─ ranking-service     (Redis ZSET 실시간 랭킹 + WebSocket 브로드캐스트)
+  ├─ reserve-service     (좌석 예매, Redis 분산 락)
+  ├─ payment-service     (Toss Payments PG 연동)
+  ├─ subscription-service (구독 라이프사이클, 자동 갱신)
+  ├─ fanout-service      (알림 팬아웃 워커)
+  ├─ notify-service      (SSE 알림 딜리버리, 멀티탭 지원)
+  └─ search-service      (Elasticsearch 한국어 전문 검색)
+```
 
-1. 저장소를 클론합니다.
-   ```bash
-   git clone https://github.com/your-repo/idol.git
-   cd idol
-   ```
-2. 전체 인프라(DB, Kafka 등) 및 서비스를 백그라운드에서 실행합니다.
-   ```bash
-   docker-compose up -d
-   ```
-3. 서비스 접속:
-   - **Frontend**: `http://localhost:5173`
-   - **API Gateway**: `http://localhost:8000`
-   - **Eureka Dashboard**: `http://localhost:8761`
+**데이터 저장소 분리 전략**
+| 저장소 | 용도 | 선택 이유 |
+|---|---|---|
+| MySQL | 트랜잭션 데이터 (투표, 예매, 결제, 유저) | ACID, 정합성 우선 |
+| MongoDB | 채팅 메시지 (`idolId + _id` 복합 인덱스) | 수평 확장, 스키마 유연성 |
+| Redis | 세션, 분산 락, 캐시, Pub/Sub, ZSET 랭킹 | 인메모리 저지연 |
+| Elasticsearch | 채팅/게시글 한국어 전문 검색 | 역색인, Nori 형태소 분석 |
+
+<br/>
+
+## 핵심 기술 구현
 
 ---
-*© 2026 IDOL Project. Designed for High Availability and Scalable Fandom Configurations.*
+
+### 1. 실시간 채팅 — STOMP + Kafka + Redis Pub/Sub
+
+수만 명이 동시 접속하는 채팅방의 트래픽 폭주와 멀티 서버 브로드캐스팅 문제를 해결했습니다.
+
+**메시지 처리 흐름**
+```
+STOMP 메시지 전송
+  → Redis Rate Limit (userId 기준 1초 5회)
+  → 비속어 필터 (Aho-Corasick)
+  → MongoDB PENDING 저장
+  → Kafka 발행 (idolId를 Key → 동일 파티션 → 순서 보장)
+  → Consumer → Redis Pub/Sub → 전체 WebSocket 서버 브로드캐스팅
+  → 의심 단어 감지 시 별도 토픽으로 비동기 AI 검열
+```
+
+**CQRS 기반 채팅 조회**
+- 최근 50개: Redis List 캐싱 (3일 TTL) → 1ms 이내 응답
+- 키워드 검색: Elasticsearch 위임
+- 원본 저장: MongoDB (`idolId + _id` 복합 인덱스로 커서 페이지네이션)
+- 번역 결과: `ChatMessage.translations: Map<String, String>` 내장 저장 → 동일 메시지 재번역 없음
+
+**Troubleshooting**
+
+> **Q. 채팅방 사람이 몰리면 서버가 터지지 않나요?**
+> Kafka를 버퍼로 사용해 트래픽 폭주를 흡수하고, Redis Pub/Sub으로 다중 서버에 안정적으로 브로드캐스트합니다.
+
+> **Q. AI 검열로 채팅 전송이 느려지지 않나요?**
+> 1차 Aho-Corasick + Leet-speak 정규화(`0→o`, `1→i`, `@→a`)로 의심 메시지만 필터링 후, 별도 Kafka 토픽으로 비동기 OpenAI Moderation API 호출합니다. 채팅 전송 속도에 영향 없음.
+
+---
+
+### 2. 동시성 제어 — 좌석 예매 & 투표
+
+**좌석 예매 — Redis 분산 락 + TTL 만료 방어**
+- `SETNX`로 락 획득, UUID 값으로 소유자 식별
+- DB 트랜잭션 완료 후 `verifyLock`으로 UUID 재확인 → TTL이 느린 처리 중 만료되어 다른 요청이 락 획득하는 엣지케이스 방어
+- 책임 분리: `ReservationService`(락) → `ReservationHandler`(DB 트랜잭션) → `ReservationEventListener`(`AFTER_COMMIT` Kafka 발행)
+
+**투표 중복 방지 — Redis Lua 원자 스크립트**
+- `EXISTS → SET → EXPIRE` 3개 명령을 Lua 스크립트로 단일 라운드트립에 원자 처리 → Race Condition 완전 차단
+- Redis 장애 시 Resilience4j `@CircuitBreaker` → DB 체크 + Kafka 직접 발행으로 폴백
+- 폴백 자체도 `@RateLimiter(name = "vote-db-protection")`으로 DB 과부하 방지
+
+---
+
+### 3. 데이터 일관성 — Outbox 패턴 + AFTER_COMMIT
+
+DB-Kafka 이중 쓰기 문제(DB 저장 후 서버 크래시 → 이벤트 유실)를 두 가지 패턴으로 해결했습니다.
+
+**Transactional Outbox Pattern (vote-service)**
+```
+[castVote 트랜잭션]
+  → vote 데이터 저장
+  → outbox_events 테이블에 이벤트 기록  ← 동일 트랜잭션
+  → 커밋
+
+[OutboxScheduler — 5초 주기]
+  → processed = false 레코드 조회
+  → Kafka 발행
+  → processed = true 업데이트
+  → 발행 실패 시 미처리 유지 → 다음 폴링에서 재시도
+```
+
+**`@TransactionalEventListener(AFTER_COMMIT)`**
+- DB 커밋 성공 후에만 Kafka 이벤트 발행 → 롤백된 트랜잭션의 이벤트 발행 방지
+
+---
+
+### 4. 보안 — 다층 방어
+
+**JWT + Refresh Token Rotation**
+- Refresh Token은 Redis에 저장 (TTL 7일)
+- 재발급 시 Redis 저장 토큰과 불일치 → 탈취로 판단, 해당 userId의 전체 토큰 삭제 → 공격자/피해자 모두 재로그인 강제
+- 로그아웃 시 만료 토큰에서도 `getClaims()`로 userId 추출해 Redis 정리
+
+**API Gateway Redis 유저 상태 확인**
+- 모든 요청에서 JWT 검증 후 `user:info:id::{userId}` Redis 조회
+- SUSPENDED/BANNED 유저는 DB 쿼리 없이 즉시 차단
+- Redis 장애 시 Graceful Fallback으로 트래픽 미차단
+- 다운스트림으로 `X-User-Id`, `X-Role`, `X-Username` 헤더 전파
+
+**이중 Rate Limiting**
+- API Gateway: Spring Cloud Gateway `RequestRateLimiter` (Redis 토큰 버킷)
+  - `/auth/**`: IP 기준 30 req/s, `/votes/**`: userId 기준 50 req/s
+- auth-service: Bucket4j 인메모리 5 req/min (서킷브레이커와 함께 DB 보호)
+
+**브루트포스 방어**
+- `login:fail:{username}` Redis 카운터 → 5회 실패 시 30분 락 + Kafka `LOGIN_FAIL_LOCKED` 알림 이벤트
+
+---
+
+### 5. 실시간 랭킹 — Redis ZSET + ShedLock
+
+초당 수만 건의 득표를 RDBMS `ORDER BY`로 매번 계산하는 방식을 회피했습니다.
+
+- `ZSET.incrementScore`로 O(log N) 실시간 정렬 유지
+- `@Scheduled(fixedRate = 1000)`: 매 1초 ZSET 조회 → Redis Hash의 이전 점수와 Delta 비교 → WebSocket 브로드캐스트
+- 멀티 파드 중복 실행 방지: `@SchedulerLock(lockAtLeastFor = "PT0.5S", lockAtMostFor = "PT0.9S")`
+- 1위 변경 시 `RANKING_CHANGED` Kafka 알림 이벤트 자동 발행
+
+---
+
+### 6. MSA 통신 최적화 — Feign vs gRPC
+
+채팅 인증 경로(`chat-service` → `auth-service` 토큰 검증)의 동기 호출 지연을 타파하기 위한 최적화 과정입니다.
+
+**k6 부하 테스트 결과 (100회, 가상 유저 50명)**
+| | OpenFeign (REST/JSON) | gRPC (Protobuf) |
+|---|---|---|
+| 평균 응답 | 571.6ms | 272.3ms |
+| TPS | 73.8 | 133.4 |
+
+**의사 결정**: gRPC가 약 2.1배 빠르지만 `.proto` 작성 러닝커브와 바이너리 디버깅 협업 리스크를 고려, **OpenFeign 튜닝** 방향 선택
+
+**튜닝 내역**
+- Apache HttpClient 5 도입 → Keep-Alive 연결 재사용 (매 요청 3-Way Handshake 제거)
+- GZIP 압축으로 JSON 페이로드 경량화
+- 결과: 571ms → **최대 5배 성능 향상**, 유지보수성 포기 없이 실시간 성능 달성
+
+---
+
+### 7. 성능 최적화
+
+**결제 트랜잭션 분리 (`PaymentService.confirm`)**
+- ① `validatePayment`: 읽기 전용 트랜잭션
+- ② `tossPgClient.confirm(...)`: **트랜잭션 없음** — 외부 HTTP 호출 중 DB 커넥션 미점유
+- ③ `completePayment`/`markAsFailed`: 짧은 쓰기 트랜잭션
+- 느린 PG API 응답(2~3초)으로 인한 커넥션 풀 고갈 방지
+
+**Kafka 배치 컨슈머 + JdbcTemplate 벌크 업데이트**
+- `List<String>` 배치 수신 후 인메모리 후보 캐시로 N+1 Feign 쿼리 방지
+- 개별 JPA `save` → `JdbcTemplate.batchUpdate`로 투표 수 일괄 반영
+
+---
+
+### 8. DevOps — 변경 감지 선택적 CI/CD
+
+14개 서비스 전체를 매번 빌드하면 CI 시간이 너무 길어집니다.
+
+- `tj-actions/changed-files@v44`로 변경된 서비스 디렉토리 감지
+- 변경된 서비스만 빌드 → Docker Hub push → EC2 SSH 배포
+- `nohup ... &` 백그라운드 실행으로 GitHub Actions SSH timeout 배포 중단 방지
+- 멀티스테이지 Dockerfile: `amazoncorretto:21-jdk AS builder` → JRE runtime만 복사
+- `GRADLE_OPTS="-Xmx512m -XX:MaxMetaspaceSize=256m"` — CI OOM 방지
+
+<br/>
+
+## Quick Start
+
+**Prerequisites**: Docker, Docker Compose
+
+```bash
+git clone https://github.com/olatedis/idol
+cd idol
+docker-compose up -d
+```
+
+| 서비스 | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| API Gateway | http://localhost:8000 |
+| Eureka Dashboard | http://localhost:8761 |
