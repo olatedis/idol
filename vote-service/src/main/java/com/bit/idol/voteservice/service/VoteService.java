@@ -410,6 +410,14 @@ public class VoteService {
         com.bit.idol.voteservice.entity.Candidate candidate = candidateRepository.findById(record.getCandidateId())
                 .orElseThrow(() -> new RuntimeException("후보자를 찾을 수 없습니다."));
 
+        // Redis ZSET 즉시 차감 (WebSocket 실시간 반영용)
+        try {
+            String rankingKey = "vote:ranking:" + voteId;
+            redisTemplate.opsForZSet().incrementScore(rankingKey, String.valueOf(candidate.getNumber()), -1);
+        } catch (Exception e) {
+            log.warn("랭킹 Redis 즉시 차감 실패 (Outbox로 보정 예정): {}", e.getMessage());
+        }
+
         Map<String, Object> payloadMap = new HashMap<>();
         payloadMap.put("voteId", voteId);
         payloadMap.put("userId", userId);
