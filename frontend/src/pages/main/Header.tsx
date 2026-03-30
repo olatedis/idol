@@ -191,8 +191,6 @@ const Header: React.FC = () => {
             "CHAT_IDOL_ONLINE",
             "IDOL_MESSAGE",
             "REPLY_MESSAGE",
-            "LOGIN_NEW_DEVICE",
-            "LOGIN_FAIL_LOCKED",
         ]);
 
         return localTypes.has(notification.type)
