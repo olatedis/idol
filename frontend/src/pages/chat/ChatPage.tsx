@@ -170,11 +170,14 @@ const ChatPage: React.FC = () => {
                                 const isFocusedIdol = selectedIdolId === parsed.idolId;
                                 const isFromIdol = parsed.senderRole === "IDOL";
                                 const unreadIncrement = (!isFocusedIdol && isFromIdol) ? 1 : 0;
-                                
+
                                 return {
                                     ...room,
-                                    lastMessage: parsed.content,
-                                    lastMessageTime: parsed.createdAt,
+                                    // 아이돌 메시지만 lastMessage 업데이트 (팬 메시지 오염 방지)
+                                    ...(isFromIdol && {
+                                        lastMessage: parsed.content,
+                                        lastMessageTime: parsed.createdAt,
+                                    }),
                                     unreadCount: room.unreadCount + unreadIncrement
                                 };
                             }
