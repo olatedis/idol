@@ -28,7 +28,7 @@ public class OutboxScheduler {
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
 
-    @Scheduled(fixedDelay = 5000) // 5초마다 미처리 이벤트 확인
+    @Scheduled(fixedDelay = 500) // 0.5초마다 미처리 이벤트 확인
     @Transactional
     public void processOutboxEvents() {
         List<OutboxEvent> events = outboxRepository.findByProcessedFalseOrderByCreatedAtAsc();
@@ -52,22 +52,17 @@ public class OutboxScheduler {
     private void processEvent(OutboxEvent event) throws Exception {
         if ("VOTE_CANCELLED".equals(event.getEventType())) {
             Map<String, Object> payload = objectMapper.readValue(event.getPayload(), new TypeReference<Map<String, Object>>() {});
-            
+
             int voteId = ((Number) payload.get("voteId")).intValue();
             int userId = ((Number) payload.get("userId")).intValue();
-            int candidateNumber = ((Number) payload.get("candidateNumber")).intValue();
             String redisKey = (String) payload.get("redisKey");
             String processedKey = (String) payload.get("processedKey");
 
-            // 1. Kafka 전송 (랭킹 서비스 ZSET 차감용)
-            String uuid = UUID.randomUUID().toString();
-            String kafkaMessage = uuid + ":" + voteId + ":" + userId + ":-" + candidateNumber;
-            kafkaTemplate.send("vote-complete-topic", kafkaMessage);
-
-            // 2. Redis 키 삭제 (중복 투표 방지 해제)
+            // Redis ZSET 차감은 cancelVote에서 즉시 처리됨 (이중 차감 방지)
+            // Redis 키 삭제 (중복 투표 방지 해제)
             redisTemplate.delete(Arrays.asList(redisKey, processedKey));
-            
-            log.info("VOTE_CANCELLED 이벤트 외부 시스템 전파 완료: voteId={}, userId={}", voteId, userId);
+
+            log.info("VOTE_CANCELLED 이벤트 처리 완료: voteId={}, userId={}", voteId, userId);
         } else if ("VOTE_CAST".equals(event.getEventType())) {
             Map<String, Object> payload = objectMapper.readValue(event.getPayload(), new TypeReference<Map<String, Object>>() {});
             
