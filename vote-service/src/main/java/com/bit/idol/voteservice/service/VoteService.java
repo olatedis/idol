@@ -389,6 +389,9 @@ public class VoteService {
 
         VoteRecord record = recordOpt.get();
 
+        // Redis key 즉시 삭제 (hasVoted 체크 즉시 반영)
+        redisTemplate.delete(redisVoteKey);
+
         // DB 차감: 기록 삭제, 후보자 득표수 감소, 투표 전체 참여자수 감소
         voteRecordRepository.delete(record);
         voteRecordRepository.flush();
