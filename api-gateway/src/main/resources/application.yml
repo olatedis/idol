@@ -84,10 +84,15 @@ spring:
                 redis-rate-limiter.burstCapacity: 100
                 key-resolver: "#{@userIdKeyResolver}"
 
+        - id: ranking-service-ws
+          uri: lb:ws://RANKING-SERVICE
+          predicates:
+            - Path=/ws-ranking/**
+
         - id: ranking-service
           uri: lb://RANKING-SERVICE
           predicates:
-            - Path=/ws-ranking/**, /rankings/**
+            - Path=/rankings/**
 
         - id: concert-service
           uri: lb://CONCERT-SERVICE

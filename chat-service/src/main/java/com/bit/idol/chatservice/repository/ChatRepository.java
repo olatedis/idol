@@ -51,4 +51,8 @@ public interface ChatRepository extends MongoRepository<ChatMessage, String> {
 
     // 전체 읽음 수 초기화 대응 쿼리
     long countByIdolIdAndSenderRole(Long idolId, String senderRole);
+
+    // 채팅방 목록 미리보기용 - 아이돌 메시지만 조회
+    @Query(value = "{ 'idolId': ?0, 'senderRole': 'IDOL' }", sort = "{ '_id': -1 }")
+    List<ChatMessage> findLatestIdolMessageByIdolId(Long idolId, Pageable pageable);
 }

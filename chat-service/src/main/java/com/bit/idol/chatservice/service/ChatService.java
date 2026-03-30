@@ -281,17 +281,19 @@ public class ChatService {
             redisTemplate.expire(cacheKey, Duration.ofDays(3));
         }
 
-        // 3-1. Redis 미리보기 캐싱 (TTL 적용)
-        String previewKey = "chat:preview:" + messageDto.getIdolId();
-        Map<String, Object> previewData = new HashMap<>();
-        previewData.put("content", messageDto.getContent());
-        previewData.put("sender", messageDto.getSenderNickname());
-        previewData.put("time", LocalDateTime.now().toString());
-        previewData.put("type", messageDto.getType());
-        try {
-            redisTemplate.opsForValue().set(previewKey, previewData, Duration.ofDays(7));
-        } catch (Exception e) {
-            log.warn("미리보기 캐싱 실패: {}", e.getMessage());
+        // 3-1. Redis 미리보기 캐싱 (아이돌 메시지만 - 팬 간 preview 오염 방지)
+        if ("IDOL".equals(messageDto.getSenderRole())) {
+            String previewKey = "chat:preview:" + messageDto.getIdolId();
+            Map<String, Object> previewData = new HashMap<>();
+            previewData.put("content", messageDto.getContent());
+            previewData.put("sender", messageDto.getSenderNickname());
+            previewData.put("time", LocalDateTime.now().toString());
+            previewData.put("type", messageDto.getType());
+            try {
+                redisTemplate.opsForValue().set(previewKey, previewData, Duration.ofDays(7));
+            } catch (Exception e) {
+                log.warn("미리보기 캐싱 실패: {}", e.getMessage());
+            }
         }
 
         // --- 3-2. 총 메시지 수 증가 (읽음 처리용) ---
@@ -375,7 +377,7 @@ public class ChatService {
         }
 
         Pageable pageable = PageRequest.of(0, 1);
-        List<ChatMessage> messages = chatRepository.findByIdolIdOrderByIdDesc(idolId, pageable);
+        List<ChatMessage> messages = chatRepository.findLatestIdolMessageByIdolId(idolId, pageable);
 
         if (!messages.isEmpty()) {
             ChatMessage lastMsg = messages.get(0);
