@@ -205,18 +205,4 @@ DB-Kafka 이중 쓰기 문제(DB 저장 후 서버 크래시 → 이벤트 유�
 
 <br/>
 
-## Quick Start
 
-**Prerequisites**: Docker, Docker Compose
-
-```bash
-git clone https://github.com/olatedis/idol
-cd idol
-docker-compose up -d
-```
-
-| 서비스 | URL |
-|---|---|
-| Frontend | http://localhost:5173 |
-| API Gateway | http://localhost:8000 |
-| Eureka Dashboard | http://localhost:8761 |
