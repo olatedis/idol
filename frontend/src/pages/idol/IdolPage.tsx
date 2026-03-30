@@ -278,7 +278,7 @@ const IdolPage: React.FC = () => {
         <div className="min-h-screen bg-idol-bg">
             <Header />
 
-            <main className="pt-[80px] px-4 sm:px-6 pb-12">
+            <main className="pt-[80px] px-6 pb-12">
 
                 {/* 아이돌 구독 페이지로 이동 */}
                 {user?.role==="USER" ?

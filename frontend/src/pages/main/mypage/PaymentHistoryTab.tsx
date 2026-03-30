@@ -6,12 +6,17 @@ type PaymentDto = {
     id: number;
     userId: number;
     amount: number;
-    pointAmount: number;
+    targetId: number; // 결제 대상 ID(콘서트, 구독)
     status: string; // REQUESTED, APPROVING, COMPLETED, FAILED, CANCELED
-    paymentMethod: string;
+    domain: string; // CONCERT, SUBSCRIPTION, SUBSCRIPTION_RENEWAL, SUBSCRIPTION_RENEWAL_BILLING_KEY
     orderId: string;
     paymentKey: string;
     completedAt: string;
+};
+
+type ProductInfo = {
+    name: string;
+    details?: string;
 };
 
 const formatKstDateTime = (dateString?: string) => {
@@ -29,6 +34,7 @@ const PaymentHistoryTab: React.FC = () => {
     const [payments, setPayments] = useState<PaymentDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [productInfoMap, setProductInfoMap] = useState<Record<number, ProductInfo>>({});
 
     useEffect(() => {
         const fetchPayments = async () => {
@@ -44,6 +50,9 @@ const PaymentHistoryTab: React.FC = () => {
                 );
 
                 setPayments(sortedData);
+                
+                // 각 결제에 대한 상품 정보 조회
+                await fetchProductInfos(sortedData);
             } catch (err: any) {
                 setError(err.message || "오류가 발생했습니다.");
             } finally {
@@ -55,6 +64,47 @@ const PaymentHistoryTab: React.FC = () => {
             fetchPayments();
         }
     }, [accessToken]);
+
+    const fetchProductInfos = async (paymentList: PaymentDto[]) => {
+        const infoMap: Record<number, ProductInfo> = {};
+
+        await Promise.all(
+            paymentList.map(async (payment) => {
+                try {
+                    if (payment.domain === "CONCERT") {
+                        // 콘서트 정보 조회
+                        const concertRes = await api.get(`/concerts/${payment.targetId}`);
+                        infoMap[payment.id] = {
+                            name: concertRes.data.title || "콘서트",
+                            details: "콘서트 예약"
+                        };
+                    } else if (payment.domain === "SUBSCRIPTION" || payment.domain === "SUBSCRIPTION_RENEWAL" || payment.domain === "SUBSCRIPTION_RENEWAL_BILLING_KEY") {
+                        // 아이돌 정보 조회
+                        const idolRes = await api.get(`/idols/${payment.targetId}`);
+                        const groupName = idolRes.data.groupName || "";
+                        const stageName = idolRes.data.stageName || "아이돌";
+                        infoMap[payment.id] = {
+                            name: `${groupName} ${stageName}`.trim(),
+                            details: "아이돌 구독"
+                        };
+                    } else {
+                        infoMap[payment.id] = {
+                            name: "상품",
+                            details: payment.domain
+                        };
+                    }
+                } catch (err: any) {
+                    console.error(`결제 ID ${payment.id}의 상품 정보 조회 실패:`, err);
+                    infoMap[payment.id] = {
+                        name: "상품 정보 조회 실패",
+                        details: payment.domain
+                    };
+                }
+            })
+        );
+
+        setProductInfoMap(infoMap);
+    };
 
     if (loading) return <div className="text-gray-500 py-8 text-center">불러오는 중...</div>;
     if (error) return <div className="text-red-500 py-8 text-center">{error}</div>;
@@ -105,6 +155,7 @@ const PaymentHistoryTab: React.FC = () => {
                     <thead className="bg-gray-50">
                         <tr>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">주문번호</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">상품</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">결제금액</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">상태</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">결제일시</th>
@@ -114,7 +165,11 @@ const PaymentHistoryTab: React.FC = () => {
                         {payments.map((payment) => (
                             <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                                    {payment.orderId.substring(0, 13)}...
+                                    {payment.orderId.substring(0, 8)}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-900">
+                                    <div className="font-medium">{productInfoMap[payment.id]?.name || "로딩 중..."}</div>
+                                    <div className="text-xs text-gray-500">{productInfoMap[payment.id]?.details}</div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold tabular-nums">
                                     {(payment?.amount || 0).toLocaleString()} <span className="text-gray-500 font-normal">원</span>
