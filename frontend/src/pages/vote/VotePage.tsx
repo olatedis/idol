@@ -266,7 +266,8 @@ const VotePage: React.FC = () => {
             setHasVoted(true);
             // WebSocket이 업데이트해주므로 fetchVoteDetail 호출 안 함
         } catch (error: any) {
-            showErrorToast(error.response?.data || "투표 실패");
+            const msg = error.response?.data?.message || (typeof error.response?.data === 'string' ? error.response.data : null) || "투표 실패";
+            showErrorToast(msg);
         } finally {
             setIsSubmitting(false);
         }
@@ -291,7 +292,8 @@ const VotePage: React.FC = () => {
                 fetchData(0, 'MY');
             }
         } catch (error: any) {
-            showErrorToast(error.response?.data || "취소 실패");
+            const msg = error.response?.data?.message || (typeof error.response?.data === 'string' ? error.response.data : null) || "취소 실패";
+            showErrorToast(msg);
         } finally {
             setIsSubmitting(false);
         }

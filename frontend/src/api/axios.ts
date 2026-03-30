@@ -114,12 +114,13 @@ api.interceptors.response.use(
             }
         }
 
-        // 5xx 서버 오류 또는 네트워크 연결 오류 처리
+        // 5xx 서버 오류 또는 네트워크 연결 오류 처리 (4xx는 각 페이지에서 직접 처리)
         if (axiosError.response?.status && axiosError.response.status >= 500) {
+            const serverMessage = (axiosError.response?.data as any)?.message;
             Swal.fire({
                 icon: 'error',
                 title: '서버 오류',
-                text: '서버와 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.',
+                text: serverMessage || '서버와 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.',
                 confirmButtonColor: '#FF9292'
             });
         } else if (!axiosError.response) {
