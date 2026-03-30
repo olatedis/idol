@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,6 +28,9 @@ public class OutboxScheduler {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+
+    @Value("${spring.kafka.topic.vote}")
+    private String voteTopic;
 
     @Scheduled(fixedDelay = 500) // 0.5초마다 미처리 이벤트 확인
     @Transactional
@@ -71,9 +75,9 @@ public class OutboxScheduler {
             int userId = ((Number) payload.get("userId")).intValue();
             int candidateNumber = ((Number) payload.get("candidateNumber")).intValue();
 
-            // Kafka 전송 (vote-service-topic -> VoteConsumer가 수신)
+            // Kafka 전송 (VoteConsumer가 수신)
             String kafkaMessage = uuid + ":" + voteId + ":" + userId + ":" + candidateNumber;
-            kafkaTemplate.send("vote-service-topic", kafkaMessage);
+            kafkaTemplate.send(voteTopic, kafkaMessage);
             
             log.info("VOTE_CAST 이벤트 외부 시스템 전파 완료: voteId={}, userId={}", voteId, userId);
         }
