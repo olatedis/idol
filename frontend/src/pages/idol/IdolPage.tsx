@@ -55,8 +55,6 @@ const IdolPage: React.FC = () => {
     const [showRight, setShowRight] = useState(false);
     const [cardsPerView, setCardsPerView] = useState(4);
     const [cardWidth, setCardWidth] = useState(0);
-    const [touchStart, setTouchStart] = useState(0);
-    const [touchEnd, setTouchEnd] = useState(0);
 
     // 모달 상태
     const [isSignupOpen, setIsSignupOpen] = useState(false);
@@ -205,28 +203,7 @@ const IdolPage: React.FC = () => {
         }
     };
 
-    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-        setTouchStart(e.targetTouches[0].clientX);
-    };
 
-    const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-        setTouchEnd(e.changedTouches[0].clientX);
-        handleTouchSwipe(e);
-    };
-
-    const handleTouchSwipe = (e: React.TouchEvent<HTMLDivElement>) => {
-        if (!touchStart || !touchEnd) return;
-
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > 50; // 50px 이상 왼쪽 스와이프
-        const isRightSwipe = distance < -50; // 50px 이상 오른쪽 스와이프
-
-        if (isLeftSwipe) {
-            scrollRight();
-        } else if (isRightSwipe) {
-            scrollLeft();
-        }
-    };
 
     const handleClick = (group: GroupDto) => {
         navigate(`/group/${group.groupId}`);
@@ -319,8 +296,6 @@ const IdolPage: React.FC = () => {
                                 ref={scrollRef}
                                 onScroll={checkOverflow}
                                 onLoad={checkOverflow}
-                                onTouchStart={handleTouchStart}
-                                onTouchEnd={handleTouchEnd}
                                 className="flex gap-8 overflow-hidden py-4 scroll-smooth cursor-grab active:cursor-grabbing"
                             >
                                 {user?.role === "AGENCY" ? (
