@@ -151,7 +151,7 @@ const Header: React.FC = () => {
         });
     };
 
-    const formatNotificationTimeToKST = (value?: string | null) => {
+    const formatLocalNotificationTimeToKST = (value?: string | null) => {
         if (!value) return "";
 
         const date = new Date(value);
@@ -169,7 +169,7 @@ const Header: React.FC = () => {
     };
 
     // 추가: 로그인 알림 전용 UTC -> KST 변환
-    const formatNewLoginNotificationTimeToKST = (value?: string | null) => {
+    const formatUtcNotificationTimeToKST = (value?: string | null) => {
         if (!value) return "";
 
         const utcDate = new Date(`${value}Z`);
@@ -185,6 +185,20 @@ const Header: React.FC = () => {
             hour12: false,
         }).format(utcDate);
     };
+
+    const formatNotificationTime = (notification: NotificationItem) => {
+        const localTypes = new Set([
+            "CHAT_IDOL_ONLINE",
+            "IDOL_MESSAGE",
+            "REPLY_MESSAGE",
+            "LOGIN_NEW_DEVICE",
+            "LOGIN_FAIL_LOCKED",
+        ]);
+
+        return localTypes.has(notification.type)
+            ? formatLocalNotificationTimeToKST(notification.occurredAt)
+            : formatUtcNotificationTimeToKST(notification.occurredAt);
+    }
 
     const parseIdolId = (notification: NotificationItem) => {
         const idolIdFromArgs = notification.args?.idolId;
@@ -768,7 +782,7 @@ const Header: React.FC = () => {
                                                                                         아이돌 채팅
                                                                                     </span>
                                                                                         <span className="text-[9px] sm:text-[11px] text-gray-400 shrink-0">
-                                                                                        {formatNotificationTimeToKST(
+                                                                                        {formatLocalNotificationTimeToKST(
                                                                                             stack.lastOccurredAt
                                                                                         )}
                                                                                     </span>
@@ -814,10 +828,7 @@ const Header: React.FC = () => {
                                                                                     {getNotificationLabel(notification)}
                                                                                 </span>
                                                                                 <span className="text-[9px] sm:text-[11px] text-gray-400 shrink-0">
-                                                                                    {notification.type === "LOGIN_NEW_DEVICE" ||
-                                                                                    notification.type === "LOGIN_FAIL_LOCKED"
-                                                                                    ? formatNewLoginNotificationTimeToKST(notification.occurredAt)
-                                                                                    : formatNotificationTimeToKST(notification.occurredAt)}
+                                                                                    {formatNotificationTime(notification)}
                                                                                 </span>
                                                                             </div>
 
