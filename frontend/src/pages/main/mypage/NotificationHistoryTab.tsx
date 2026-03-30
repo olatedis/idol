@@ -61,10 +61,18 @@ const NotificationHistoryTab: React.FC = () => {
         loadInitial();
     }, []);
 
-    const formatNotificationTimeToKST = (value?: string | null) => {
+경    const localTypes = new Set([
+        "CHAT_IDOL_ONLINE",
+        "IDOL_MESSAGE",
+        "REPLY_MESSAGE",
+    ]);
+
+    const formatNotificationTimeToKST = (value?: string | null, type?: string) => {
         if (!value) return "";
 
-        const date = new Date(value);
+        const date = localTypes.has(type ?? "")
+            ? new Date(value)        // chat-service: 로컬(KST) 시간으로 전송
+            : new Date(`${value}Z`); // 그 외 서비스: UTC로 전송
 
         if (Number.isNaN(date.getTime())) return value;
 
@@ -637,7 +645,7 @@ const NotificationHistoryTab: React.FC = () => {
                                             {getNotificationLabel(notification)}
                                         </span>
                                         <span className="shrink-0 text-[11px] text-gray-400">
-                                            {formatNotificationTimeToKST(notification.occurredAt)}
+                                            {formatNotificationTimeToKST(notification.occurredAt, notification.type)}
                                         </span>
                                     </div>
 
