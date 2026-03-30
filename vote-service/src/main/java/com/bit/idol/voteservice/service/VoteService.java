@@ -364,14 +364,30 @@ public class VoteService {
 
     @Transactional
     public void cancelVote(int voteId, int userId) {
-        VoteRecord record = voteRecordRepository.findByVoteIdAndUserId(voteId, userId)
-                .orElseThrow(() -> new RuntimeException("투표 이력이 없습니다."));
+        Optional<VoteRecord> recordOpt = voteRecordRepository.findByVoteIdAndUserId(voteId, userId);
+
+        String redisVoteKey = "vote:" + voteId + ":user:" + userId;
+        boolean redisKeyExists = Boolean.TRUE.equals(redisTemplate.hasKey(redisVoteKey));
+
+        if (recordOpt.isEmpty() && !redisKeyExists) {
+            throw new RuntimeException("투표 이력이 없습니다.");
+        }
 
         VoteInfo voteInfo = voteReader.getVoteInfo(voteId);
-
         if (LocalDateTime.now().isAfter(voteInfo.getEndDate())) {
             throw new RuntimeException("이미 종료된 투표는 취소할 수 없습니다.");
         }
+
+        // Kafka consumer가 아직 vote_record를 쓰지 않은 레이스 컨디션 처리
+        if (recordOpt.isEmpty()) {
+            String idempotencyKey = "processed:vote:" + voteId + ":user:" + userId;
+            redisTemplate.opsForValue().set(idempotencyKey, "cancelled", Duration.ofMinutes(10));
+            redisTemplate.delete(redisVoteKey);
+            log.info("투표 취소 처리 (consumer 미처리 상태): voteId={}, userId={}", voteId, userId);
+            return;
+        }
+
+        VoteRecord record = recordOpt.get();
 
         // DB 차감: 기록 삭제, 후보자 득표수 감소, 투표 전체 참여자수 감소
         voteRecordRepository.delete(record);
