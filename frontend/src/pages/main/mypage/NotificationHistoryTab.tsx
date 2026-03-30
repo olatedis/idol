@@ -61,7 +61,7 @@ const NotificationHistoryTab: React.FC = () => {
         loadInitial();
     }, []);
 
-경    const localTypes = new Set([
+    const localTypes = new Set([
         "CHAT_IDOL_ONLINE",
         "IDOL_MESSAGE",
         "REPLY_MESSAGE",
