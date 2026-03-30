@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class VoteReader {
     private final VoteRepository voteRepository;
     private final VoteRecordRepository voteRecordRepository;
     private final CandidateRepository candidateRepository;
+    private final RedisTemplate<String, String> redisTemplate;
 
     // 투표 정보 조회 (캐싱 적용, sync=true로 Cache Stampede 방지)
     @Cacheable(value = "voteInfo", key = "#voteId", sync = true)
@@ -82,8 +84,12 @@ public class VoteReader {
         return detailDto;
     }
 
-    // 투표 참여 여부 확인
+    // 투표 참여 여부 확인 (Redis 먼저 확인 → DB fallback)
     public boolean hasVoted(int voteId, int userId) {
+        String redisKey = "vote:" + voteId + ":user:" + userId;
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(redisKey))) {
+            return true;
+        }
         return voteRecordRepository.existsByVoteIdAndUserId(voteId, userId);
     }
 }
