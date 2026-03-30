@@ -2,7 +2,6 @@ package com.bit.reserveservice.application;
 
 import com.bit.reserveservice.domain.entity.Reservation;
 import com.bit.reserveservice.domain.enumtype.ReservationStatus;
-import com.bit.reserveservice.infra.redis.SeatLockRepository;
 import com.bit.reserveservice.infra.repository.ReservationRepository;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import lombok.RequiredArgsConstructor;
@@ -10,8 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,7 +30,7 @@ public class ReservationExpirationScheduler {
         log.info("예약 만료 체크 시작... (cutoff: {}분 전)", expireMinutes);
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(expireMinutes);
         
-        // 트랜잭션 없이 조회 (OSIV 껐으므로 안전)
+        // 트랜잭션 없이 조회
         List<Reservation> expired = reservationRepository.findByStatusAndCreatedAtBefore(ReservationStatus.PENDING, cutoff);
         
         log.info("만료된 예약 조회 결과: {}건 (cutoff: {})", expired.size(), cutoff);
@@ -66,18 +63,3 @@ public class ReservationExpirationScheduler {
     }
 }
 
-@RestController
-class ReservationExpirationController {
-    
-    private final ReservationExpirationScheduler scheduler;
-    
-    ReservationExpirationController(ReservationExpirationScheduler scheduler) {
-        this.scheduler = scheduler;
-    }
-    
-    @GetMapping("/admin/expire-reservations")
-    public String expireReservations() {
-        scheduler.expirePendingReservationsManual();
-        return "예약 만료 처리 실행됨";
-    }
-}

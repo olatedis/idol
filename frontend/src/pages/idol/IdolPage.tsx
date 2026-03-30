@@ -55,6 +55,8 @@ const IdolPage: React.FC = () => {
     const [showRight, setShowRight] = useState(false);
     const [cardsPerView, setCardsPerView] = useState(4);
     const [cardWidth, setCardWidth] = useState(0);
+    const [touchStart, setTouchStart] = useState(0);
+    const [touchEnd, setTouchEnd] = useState(0);
 
     // 모달 상태
     const [isSignupOpen, setIsSignupOpen] = useState(false);
@@ -154,11 +156,10 @@ const IdolPage: React.FC = () => {
     // 캐러셀 버튼 제어
     const calculateCardsPerView = () => {
         const width = window.innerWidth;
-        if (width < 640) return 2;      // sm 이하: 2개
-        if (width < 768) return 3;      // sm-md: 3개
-        if (width < 1024) return 4;     // md-lg: 4개
-        if (width < 1280) return 5;     // lg-xl: 5개
-        return 6;                        // xl 이상: 6개
+        if (width < 640) return 3;      // sm 이하: 3개
+        if (width < 768) return 4;      // sm-md: 4개
+        if (width < 1024) return 5;     // md-lg: 5개
+        return 6;                        // lg 이상: 6개
     };
 
     useEffect(() => {
@@ -201,6 +202,29 @@ const IdolPage: React.FC = () => {
                 left: cardWidth + 32, // gap-8 = 32px
                 behavior: "smooth" 
             });
+        }
+    };
+
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+        setTouchEnd(e.changedTouches[0].clientX);
+        handleTouchSwipe(e);
+    };
+
+    const handleTouchSwipe = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (!touchStart || !touchEnd) return;
+
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > 50; // 50px 이상 왼쪽 스와이프
+        const isRightSwipe = distance < -50; // 50px 이상 오른쪽 스와이프
+
+        if (isLeftSwipe) {
+            scrollRight();
+        } else if (isRightSwipe) {
+            scrollLeft();
         }
     };
 
@@ -254,7 +278,7 @@ const IdolPage: React.FC = () => {
         <div className="min-h-screen bg-idol-bg">
             <Header />
 
-            <main className="pt-[80px] px-4 sm:px-6 pb-12">
+            <main className="pt-[80px] px-6 pb-12">
 
                 {/* 아이돌 구독 페이지로 이동 */}
                 {user?.role==="USER" ?
@@ -276,7 +300,7 @@ const IdolPage: React.FC = () => {
                             {showLeft && (
                                 <button
                                     onClick={scrollLeft}
-                                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 text-white
                                                bg-idol-point shadow-md rounded-full w-10 h-10">
                                     ◀
                                 </button>
@@ -285,7 +309,7 @@ const IdolPage: React.FC = () => {
                             {showRight && (
                                 <button
                                     onClick={scrollRight}
-                                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 text-white
                                                shadow-md rounded-full w-10 h-10 bg-idol-point">
                                     ▶
                                 </button>
@@ -295,7 +319,9 @@ const IdolPage: React.FC = () => {
                                 ref={scrollRef}
                                 onScroll={checkOverflow}
                                 onLoad={checkOverflow}
-                                className="flex gap-8 overflow-hidden py-4 scroll-smooth"
+                                onTouchStart={handleTouchStart}
+                                onTouchEnd={handleTouchEnd}
+                                className="flex gap-8 overflow-hidden py-4 scroll-smooth cursor-grab active:cursor-grabbing"
                             >
                                 {user?.role === "AGENCY" ? (
                                     carouselItems.length > 0 ? (
