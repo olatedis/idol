@@ -265,6 +265,10 @@ public class VoteService {
 
     @RateLimiter(name = "vote-db-protection", fallbackMethod = "rateLimitFallback")
     public String castVoteFallback(int voteId, int userId, int candidateNumber, String clientIp, Throwable t) {
+        // 정상적인 중복 투표 방지 예외는 Redis 장애가 아니므로 그대로 던짐
+        if (t.getMessage() != null && t.getMessage().contains("이미 투표에 참여하였습니다")) {
+            throw new RuntimeException("이미 투표에 참여하였습니다.");
+        }
         log.warn("Redis 장애 감지! DB 기반 투표로 전환합니다. Error: {}", t.getMessage());
 
         VoteInfo vote = voteReader.getVoteInfo(voteId);
@@ -284,13 +288,22 @@ public class VoteService {
         return "투표가 완료되었습니다. (지연 처리)";
     }
 
-    // RateLimiter Fallback 메서드 (파라미터 일치시킴)
+    // RateLimiter Fallback — castVoteFallback이 Throwable을 하나 가지므로 Resilience4j가 Throwable 2개짜리 시그니처를 탐색
+    public String rateLimitFallback(int voteId, int userId, int candidateNumber, String clientIp, Throwable t1, Throwable t2) {
+        Throwable cause = t2 != null ? t2 : t1;
+        if (cause instanceof RequestNotPermitted) {
+            log.error("DB 보호를 위해 투표 요청 거절: userId={}", userId);
+            throw new RuntimeException("현재 투표량이 많아 잠시 후 다시 시도해주세요.");
+        }
+        throw new RuntimeException(cause);
+    }
+
+    // 단일 Throwable 시그니처도 유지 (다른 경로에서 직접 호출될 경우 대비)
     public String rateLimitFallback(int voteId, int userId, int candidateNumber, String clientIp, Throwable t) {
         if (t instanceof RequestNotPermitted) {
             log.error("DB 보호를 위해 투표 요청 거절: userId={}", userId);
             throw new RuntimeException("현재 투표량이 많아 잠시 후 다시 시도해주세요.");
         }
-        // 다른 예외는 그대로 던짐
         throw new RuntimeException(t);
     }
 
