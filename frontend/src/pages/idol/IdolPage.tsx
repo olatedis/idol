@@ -53,7 +53,6 @@ const IdolPage: React.FC = () => {
     const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
     const [showLeft, setShowLeft] = useState(false);
     const [showRight, setShowRight] = useState(false);
-    const [cardsPerView, setCardsPerView] = useState(4);
     const [cardWidth, setCardWidth] = useState(0);
 
     // 모달 상태
@@ -163,7 +162,6 @@ const IdolPage: React.FC = () => {
     useEffect(() => {
         const handleResize = () => {
             const newCardsPerView = calculateCardsPerView();
-            setCardsPerView(newCardsPerView);
             
             if (scrollRef.current) {
                 const containerWidth = scrollRef.current.clientWidth;
