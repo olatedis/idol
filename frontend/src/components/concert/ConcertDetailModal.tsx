@@ -89,7 +89,7 @@ export const ConcertDetailModal: React.FC<Props> = ({
                             <img
                                 src={concert.img}
                                 alt={concert.title}
-                                className="w-full max-h-48 sm:max-h-64 object-cover rounded-xl"
+                                className="w-full h-full object-cover rounded-xl"
                             />
                         </div>
                     )}
