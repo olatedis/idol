@@ -318,6 +318,10 @@ const Header: React.FC = () => {
             return "새로운 기기에서 로그인했습니다.";
         }
 
+        if (notification.type === "PASSWORD_CHANGED") {
+            return "비밀번호가 변경되었습니다.";
+        }
+
         if (notification.type === "LOGIN_FAIL_LOCKED") {
             return "로그인 실패가 누적되어 계정이 30분간 잠겼습니다.";
         }
