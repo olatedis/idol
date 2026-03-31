@@ -71,6 +71,16 @@ public class GroupService {
                 .collect(Collectors.toList());
     }
 
+    // 그룹에 추가 가능한 아이돌 목록 (해당 소속사 소속 + 미소속 아이돌)
+    public List<IdolDto> getAvailableIdolsForGroup(int groupId) {
+        Group group = groupRepository.findByIdWithAgency(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+        return idolRepository.findAvailableIdolsByAgencyId(group.getAgency().getId())
+                .stream()
+                .map(idol -> IdolDto.fromEntity(idol))
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public void addMemberToGroup(int groupId, int idolId) {
         Group group = groupRepository.findById(groupId)
