@@ -18,4 +18,6 @@ public interface VoteRecordRepository extends JpaRepository<VoteRecord, Integer>
     // 내 투표 ID 목록만 조회 (투표 목록용 - 성능 최적화)
     @Query("SELECT vr.voteId FROM VoteRecord vr WHERE vr.userId = :userId")
     List<Integer> findVoteIdsByUserId(@Param("userId") Integer userId);
+
+    void deleteByVoteId(Integer voteId);
 }
