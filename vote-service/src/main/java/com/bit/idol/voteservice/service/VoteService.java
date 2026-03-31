@@ -445,4 +445,22 @@ public class VoteService {
     public List<MyVoteRecordDto> getMyVoteRecords(int userId, Long groupId) {
         return voteRecordRepository.findMyVoteRecords(userId, groupId);
     }
+
+    @Transactional
+    public void deleteVote(int voteId) {
+        Vote vote = voteRepository.findById(voteId)
+                .orElseThrow(() -> new RuntimeException("투표를 찾을 수 없습니다."));
+
+        // Redis 키 정리
+        String rankingKey = "vote:ranking:" + voteId;
+        String prevScoreKey = "vote:prev-score:" + voteId;
+        redisTemplate.delete(rankingKey);
+        redisTemplate.delete(prevScoreKey);
+        redisTemplate.delete("vote:title:" + voteId);
+        redisTemplate.delete("vote:group:" + voteId);
+        redisTemplate.opsForSet().remove("vote:active-list", String.valueOf(voteId));
+
+        voteRepository.delete(vote);
+        log.info("투표 삭제 완료: voteId={}", voteId);
+    }
 }
