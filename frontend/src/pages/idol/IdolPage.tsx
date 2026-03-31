@@ -167,7 +167,7 @@ const IdolPage: React.FC = () => {
             
             if (scrollRef.current) {
                 const containerWidth = scrollRef.current.clientWidth;
-                const calculatedCardWidth = (containerWidth - (cardsPerView - 1) * 32) / cardsPerView; // gap-8 = 32px
+                const calculatedCardWidth = (containerWidth - (newCardsPerView - 1) * 32) / newCardsPerView; // gap-8 = 32px
                 setCardWidth(calculatedCardWidth);
             }
         };
