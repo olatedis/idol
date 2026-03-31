@@ -129,4 +129,19 @@ public class VoteController {
         voteService.cancelVote(voteId, userId);
         return ResponseEntity.ok("투표가 취소되었습니다.");
     }
+
+    // 투표 삭제 (ADMIN, AGENCY, IDOL 만 가능)
+    @DeleteMapping("/{voteId}")
+    public ResponseEntity<?> deleteVote(
+            @PathVariable int voteId,
+            @RequestHeader("X-Role") String role) {
+
+        if (!"ADMIN".equals(role) && !"AGENCY".equals(role) && !"IDOL".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("투표 삭제 권한이 없습니다.");
+        }
+
+        voteService.deleteVote(voteId);
+        return ResponseEntity.ok("투표가 삭제되었습니다.");
+    }
 }

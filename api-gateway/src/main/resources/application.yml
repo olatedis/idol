@@ -6,7 +6,10 @@ server:
 spring:
   application:
     name: apigateway-service
-  
+
+  codec:
+    max-in-memory-size: 20MB
+
   data:
     redis:
       host: localhost

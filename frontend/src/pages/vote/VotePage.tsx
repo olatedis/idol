@@ -299,6 +299,24 @@ const VotePage: React.FC = () => {
         }
     };
 
+    // 투표 삭제
+    const handleDeleteVote = async () => {
+        if (!selectedVote) return;
+
+        const confirmed = await showConfirm("투표 삭제", "정말 이 투표를 삭제하시겠습니까? 삭제 후 복구할 수 없습니다.");
+        if (!confirmed) return;
+
+        try {
+            await api.delete(`/votes/${selectedVote.id}`);
+            showSuccessToast("투표가 삭제되었습니다.");
+            setSelectedVote(null);
+            fetchData(0, activeTab);
+        } catch (error: any) {
+            const msg = error.response?.data?.message || (typeof error.response?.data === 'string' ? error.response.data : null) || "삭제 실패";
+            showErrorToast(msg);
+        }
+    };
+
     // 이미지 업로드
     const handleImageUpload = async (index: number, file: File) => {
         const formData = new FormData();
@@ -591,7 +609,12 @@ const VotePage: React.FC = () => {
                                         })()}</span>
                                     </div>
                                 </div>
-                                <button onClick={() => setSelectedVote(null)} className="p-2 -mr-2 sm:-mr-0 bg-gray-100 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition shrink-0">✕</button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {canCreateVote && (
+                                        <button onClick={handleDeleteVote} className="p-2 bg-red-50 rounded-full text-red-400 hover:bg-red-100 hover:text-red-600 transition" title="투표 삭제">🗑</button>
+                                    )}
+                                    <button onClick={() => setSelectedVote(null)} className="p-2 -mr-2 sm:-mr-0 bg-gray-100 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition">✕</button>
+                                </div>
                             </div>
 
                             <div className="p-5 sm:p-8 overflow-y-auto custom-scrollbar flex-1 bg-gradient-to-b from-transparent to-gray-50/50">

@@ -21,6 +21,11 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
     open-in-view: false # OSIV 끄기
 
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
   kafka:
     bootstrap-servers: localhost:9092
     producer:
