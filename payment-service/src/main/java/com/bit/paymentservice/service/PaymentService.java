@@ -48,6 +48,10 @@ public class PaymentService {
                 if (candidate.deserializeReservationIds().equals(request.getReservationIds())) {
                     log.info("중복 결제 준비 감지: 기존 orderId 재사용. userId={}, targetId={}, reservationIds={}",
                             request.getUserId(), request.getTargetId(), request.getReservationIds());
+                    if (candidate.getAgencyId() == 0 && request.getAgencyId() != 0) {
+                        candidate.setAgencyId(request.getAgencyId());
+                        paymentRepository.save(candidate);
+                    }
                     return new PaymentCreateResponse(candidate.getOrderId(), candidate.getAmount());
                 }
             }
