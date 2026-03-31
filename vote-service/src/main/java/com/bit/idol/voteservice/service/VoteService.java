@@ -460,6 +460,7 @@ public class VoteService {
         redisTemplate.delete("vote:group:" + voteId);
         redisTemplate.opsForSet().remove("vote:active-list", String.valueOf(voteId));
 
+        voteRecordRepository.deleteByVoteId(voteId);
         voteRepository.delete(vote);
         log.info("투표 삭제 완료: voteId={}", voteId);
     }
