@@ -78,13 +78,21 @@ public class SubscriptionService {
 
         String orderId = UUID.randomUUID().toString(); // 주문번호 생성
 
+        int agencyId = 0;
+        try {
+            IdolResponse idol = userServiceClient.getIdol(request.getIdolId());
+            if (idol != null) agencyId = idol.getAgencyId();
+        } catch (Exception e) {
+            log.warn("아이돌 소속사 조회 실패 (agencyId=0으로 처리): idolId={}, error={}", request.getIdolId(), e.getMessage());
+        }
+
         PaymentEvent event = new PaymentEvent(
                 userId,
                 orderId, // 생성된 주문번호 전달
                 com.bit.subscriptionservice.enumtype.PaymentDomain.SUBSCRIPTION,
                 subscription.getId(),
                 request.getPlan().getAmount(),
-                0, // agencyId
+                agencyId,
                 null, // reservationIds
                 null  // seatIds
         );

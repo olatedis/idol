@@ -54,6 +54,21 @@ public class GroupController {
         return ResponseEntity.ok(groupService.getIdolsByGroup(groupId));
     }
 
+    // 그룹에 추가 가능한 아이돌 목록 (해당 소속사 소속 + 그룹 미소속)
+    @GetMapping("/{groupId}/available-idols")
+    public ResponseEntity<List<IdolDto>> getAvailableIdolsForGroup(
+            @RequestHeader("X-User-Id") int userId,
+            @RequestHeader(value = "X-Role", defaultValue = "USER") String role,
+            @PathVariable int groupId) {
+        if (!"AGENCY".equals(role)) {
+            return ResponseEntity.status(403).build();
+        }
+        if (!internalValidationService.canAgencyManageGroup(userId, groupId)) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(groupService.getAvailableIdolsForGroup(groupId));
+    }
+
     @PostMapping("/{groupId}/members")
     public ResponseEntity<Void> addMemberToGroup(
             @RequestHeader("X-User-Id") int userId,

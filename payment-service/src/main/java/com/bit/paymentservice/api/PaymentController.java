@@ -128,10 +128,13 @@ public class PaymentController {
         if (!"ADMIN".equals(role) && !"AGENCY".equals(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        long total = paymentRepository.sumAmountByAgencyIdAndStatusCompleted(agencyId);
+        long total = paymentRepository.sumAmountByAgencyIdAndStatusCompleted(agencyId,
+                com.bit.paymentservice.domain.enumtype.PaymentStatus.COMPLETED);
         long concert = paymentRepository.sumAmountByAgencyIdAndStatusCompletedAndDomain(agencyId,
+                com.bit.paymentservice.domain.enumtype.PaymentStatus.COMPLETED,
                 com.bit.paymentservice.domain.enumtype.PaymentDomain.CONCERT);
         long subscription = paymentRepository.sumAmountByAgencyIdAndStatusCompletedAndDomain(agencyId,
+                com.bit.paymentservice.domain.enumtype.PaymentStatus.COMPLETED,
                 com.bit.paymentservice.domain.enumtype.PaymentDomain.SUBSCRIPTION);
 
         AgencyRevenueDto dto = new AgencyRevenueDto(agencyId, total, concert, subscription);

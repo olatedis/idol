@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class IdolResponse {
     private int idolId;
+    private int agencyId;
     private Integer groupId;
     private String groupName;
 }

@@ -25,7 +25,7 @@ interface AgencyGroupTabProps {
 
 const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
     const [groups, setGroups] = useState<Group[]>([]);
-    const [allIdols, setAllIdols] = useState<Idol[]>([]);
+    const [availableIdols, setAvailableIdols] = useState<Idol[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -63,12 +63,6 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
 
                 setGroups(groupsWithMembers);
 
-                // 아이돌 전체 목록 조회 (추가 모달에서 선택을 위함)
-                const idolsResponse = await api.get('/idols');
-                // 소속사의 아이돌만 필터링 (선택적)
-                const myAgencyIdols = idolsResponse.data.filter((i: any) => i.agencyId === agencyId);
-                setAllIdols(myAgencyIdols);
-
             } catch (err: any) {
                 console.error("데이터 조회 실패:", err);
                 setError("데이터를 불러오는데 실패했습니다.");
@@ -91,7 +85,7 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
             await api.post(`/groups/${selectedGroupId}/members?idolId=${newMemberIdolId}`);
             
             // 성공 시 로컬 상태 업데이트
-            const idolInfo = allIdols.find(i => i.idolId === Number(newMemberIdolId));
+            const idolInfo = availableIdols.find(i => i.idolId === Number(newMemberIdolId));
             if (idolInfo) {
                 setGroups(prevGroups => prevGroups.map(g => {
                     if (g.groupId === selectedGroupId) {
@@ -219,10 +213,17 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedGroupId(group.groupId);
                                         setIsAddMemberModalOpen(true);
                                         setActionError('');
+                                        setNewMemberIdolId('');
+                                        try {
+                                            const res = await api.get(`/groups/${group.groupId}/available-idols`);
+                                            setAvailableIdols(res.data);
+                                        } catch {
+                                            setAvailableIdols([]);
+                                        }
                                     }}
                                     className="px-4 py-2 bg-idol hover:bg-idol-hover text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
                                 >
@@ -295,7 +296,10 @@ const AgencyGroupTab: React.FC<AgencyGroupTabProps> = ({ agencyId }) => {
                                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-idol/20 focus:border-idol outline-none text-sm transition-all text-gray-700"
                                     >
                                         <option value="">-- 아이돌 선택 --</option>
-                                        {allIdols.map(idol => (
+                                        {availableIdols.length === 0 && (
+                                            <option disabled value="">추가 가능한 아이돌이 없습니다</option>
+                                        )}
+                                        {availableIdols.map(idol => (
                                             <option key={idol.idolId} value={idol.idolId}>
                                                 {idol.stageName} (ID: {idol.idolId})
                                             </option>
