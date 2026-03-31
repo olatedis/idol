@@ -94,6 +94,8 @@ const PaymentPage: React.FC = () => {
                 // 저장: 결제 완료/실패 시 사용할 대기중 예약 정보
                 try { sessionStorage.setItem('pendingReservations', JSON.stringify({ reservationIds })); } catch (e) { /* ignore */ }
 
+                console.log('[DEBUG] concert 객체:', concert);
+                console.log('[DEBUG] concert.agencyId:', concert.agencyId, typeof concert.agencyId);
                 const ready = await createPaymentReady({
                     userId,
                     amount: totalPrice,
