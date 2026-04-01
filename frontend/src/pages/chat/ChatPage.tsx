@@ -654,10 +654,12 @@ const ChatPage: React.FC = () => {
                                     {currentRoom?.stageName || "멤버"}
                                     {isOtherIdolRoom && <span className="ml-2 text-xs font-normal text-red-500 bg-red-50 px-2 py-0.5 rounded-full">읽기 전용</span>}
                                 </h3>
-                                <p className={`text-xs flex items-center mt-0.5 ${isIdolOnline ? 'text-green-500' : 'text-gray-400'}`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isIdolOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
-                                    {isIdolOnline ? '온라인' : '오프라인'}
-                                </p>
+                                {user?.role !== 'IDOL' && (
+                                    <p className={`text-xs flex items-center mt-0.5 ${isIdolOnline ? 'text-green-500' : 'text-gray-400'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isIdolOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                                        {isIdolOnline ? '온라인' : '오프라인'}
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <button onClick={() => setIsSearchOpen(!isSearchOpen)} className={`p-2 ml-2 rounded-full transition-colors active:scale-95 ${isSearchOpen ? 'bg-[var(--color-idol)] text-white' : 'text-gray-500 hover:text-[var(--color-idol)] hover:bg-gray-100'}`}>

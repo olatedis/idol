@@ -26,7 +26,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const { login } = useAuthStore();
+    const { login: _login } = useAuthStore();
 
     // 이메일 인증번호 전송
     const handleSendEmail = async () => {
@@ -93,30 +93,18 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
                 password,
                 nickname,
                 email,
-                verificationToken, // 인증 토큰 포함
+                verificationToken,
                 role: 'USER'
             });
 
-            // 2. 가입 성공 후 자동 로그인
-            const loginRes = await api.post('/auth/login', { username, password });
-            const { accessToken, refreshToken } = loginRes.data;
-
-            // 3. 내 정보 조회
-            const userRes = await api.get('/users/me', {
-                headers: { Authorization: `Bearer ${accessToken}` }
-            });
-
-            // 4. Store 저장 및 모달 닫기
-            login(userRes.data, accessToken, refreshToken);
-            onClose();
-            window.scrollTo(0, 0);
-            // alert('회원가입을 환영합니다! 🎉');
-            Swal.fire({
+            // 2. 회원가입 완료 안내 후 로그인 모달로 전환
+            await Swal.fire({
                 icon: 'success',
-                title: '환영합니다!',
-                text: '회원가입을 환영합니다! 🎉',
+                title: '회원가입 완료!',
+                text: '가입이 완료되었습니다. 로그인해주세요.',
                 confirmButtonColor: '#FF9292'
             });
+            onSwitchToLogin();
 
         } catch (err: any) {
             console.error(err);
@@ -205,11 +193,11 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                             disabled={isEmailVerified}
-                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-idol-point outline-none disabled:bg-gray-100"
+                                            className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-idol-point outline-none disabled:bg-gray-100"
                                             placeholder="example@email.com"
                                             required
                                         />
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex-shrink-0 flex flex-col items-end gap-1">
                                             <button
                                                 type="button"
                                                 onClick={handleSendEmail}
