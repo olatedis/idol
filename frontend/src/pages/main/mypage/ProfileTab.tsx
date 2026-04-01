@@ -161,7 +161,9 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
 
                 <div className="flex-1 text-center sm:text-left">
                     <h2 className="text-2xl font-bold text-gray-900">{userInfo.nickname}</h2>
-                    <p className="text-gray-500 mt-1">{userInfo.email}</p>
+                    <p className="text-gray-500 mt-1">
+                        {userInfo.provider === "KAKAO" ? "카카오 로그인 계정입니다" : userInfo.email}
+                    </p>
                     <div className="mt-3 flex items-center justify-center sm:justify-start space-x-2">
                         <span className="px-3 py-1 bg-idol/10 text-idol text-xs font-bold rounded border border-idol/20">
                             {userInfo.role}
@@ -264,7 +266,9 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ userInfo, onRefresh }) => {
                         </div>
                         <div>
                             <p className="text-xs text-gray-400 font-semibold mb-1">이메일</p>
-                            <p className="text-gray-900 font-medium">{userInfo.email}</p>
+                            <p className="text-gray-900 font-medium">
+                                {userInfo.provider === "KAKAO" ? "카카오 로그인 계정입니다" : userInfo.email}
+                            </p>
                         </div>
                         <div>
                             <p className="text-xs text-gray-400 font-semibold mb-1">연락처</p>
