@@ -297,7 +297,7 @@ const MainPage: React.FC = () => {
                                         </p>
                                         <p>
                                             <span className="font-semibold text-idol">Notion:</span>
-                                            <a href="https://www.notion.so/2e031fe5bfa680ecb6c4eb870f741392?source=copy_link"> https://www.notion.so</a>
+                                            <a href="https://marble-devourer-a02.notion.site/DolChat-Project-2e031fe5bfa680539bc9fc7606282e8e"> https://www.notion.so</a>
                                         </p>
                                     </div>
 
