@@ -526,6 +526,7 @@ public class PostService {
         CommentResponse res = new CommentResponse();
         res.setCommentId(c.getCommentId());
         res.setAuthorId(c.getAuthorId());
+        res.setAuthorNickname(c.getAuthorNickname());
 
         boolean deleted = Boolean.TRUE.equals(c.getIsDeleted());
         res.setIsDeleted(deleted);
