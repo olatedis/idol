@@ -94,12 +94,22 @@ const MainPage: React.FC = () => {
                 error?.response?.data ||
                 "";
 
-            if (typeof message === "string" && message.includes("잠겼습니다")) {
-                showErrorToast("로그인 실패가 누적되어 계정이 30분간 잠겼습니다.");
-                return;
+            if (typeof message === "string") {
+                if (message.includes("잠겼습니다")) {
+                    showErrorToast("비밀번호 5회 오류로 계정이 30분간 잠겼습니다.");
+                    return;
+                }
+                if (message.includes("영구 정지")) {
+                    showErrorToast("계정이 영구 정지된 상태입니다. 고객센터에 문의해주세요.");
+                    return;
+                }
+                if (message.includes("일시 정지")) {
+                    showErrorToast("계정이 일시 정지된 상태입니다. 고객센터에 문의해주세요.");
+                    return;
+                }
             }
 
-            showErrorToast("아이디 또는 비밀번호를 확인해주세요.");
+            showErrorToast("아이디 혹은 비밀번호를 확인해주세요.");
         }
     };
 
