@@ -75,10 +75,29 @@ public class CommentService {
 
         requireReadSubscription(post, userId, role);
 
-        return commentRepository.findByPost_PostIdOrderByCreatedAtDesc(postId)
-                .stream()
-                .map(this::toResponse)
+        List<Comment> comments = commentRepository.findByPost_PostIdOrderByCreatedAtDesc(postId);
+        List<CommentResponse> responses = comments.stream()
+                .map(this::toBaseResponse)
                 .collect(Collectors.toList());
+
+        // 닉네임 배치 조회
+        List<Integer> authorIds = responses.stream()
+                .map(CommentResponse::getAuthorId)
+                .distinct()
+                .collect(Collectors.toList());
+        try {
+            var userMap = userInternalClient.getUsersByIds(authorIds);
+            for (CommentResponse res : responses) {
+                var user = userMap.get(res.getAuthorId());
+                if (user != null) {
+                    res.setAuthorNickname(user.getNickname());
+                }
+            }
+        } catch (Exception e) {
+            // 배치 조회 실패 시 저장된 닉네임 유지 (toBaseResponse에서 이미 세팅됨)
+        }
+
+        return responses;
     }
 
     // 댓글 수정
@@ -208,23 +227,26 @@ public class CommentService {
         return false;
     }
 
-    // Comment -> CommentResponse 변환
+    // Comment -> CommentResponse 변환 (단건 작성 후 응답용 - user-service 실시간 조회)
     private CommentResponse toResponse(Comment c) {
-        CommentResponse res = new CommentResponse();
-        res.setCommentId(c.getCommentId());
-        res.setAuthorId(c.getAuthorId());
-        
-        // 닉네임 실시간 조회 (user-service 기준)
+        CommentResponse res = toBaseResponse(c);
         try {
             var userMap = userInternalClient.getUsersByIds(List.of(c.getAuthorId()));
             if (userMap.containsKey(c.getAuthorId())) {
                 res.setAuthorNickname(userMap.get(c.getAuthorId()).getNickname());
-            } else {
-                res.setAuthorNickname(c.getAuthorNickname()); // 없으면 백업
             }
         } catch (Exception e) {
-            res.setAuthorNickname(c.getAuthorNickname());
+            // 실패 시 toBaseResponse에서 세팅한 저장 닉네임 유지
         }
+        return res;
+    }
+
+    // 저장된 닉네임 기반 기본 변환 (목록 배치 조회용)
+    private CommentResponse toBaseResponse(Comment c) {
+        CommentResponse res = new CommentResponse();
+        res.setCommentId(c.getCommentId());
+        res.setAuthorId(c.getAuthorId());
+        res.setAuthorNickname(c.getAuthorNickname());
 
         boolean deleted = Boolean.TRUE.equals(c.getIsDeleted());
         res.setIsDeleted(deleted);
