@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../../api/axios.ts";
+import {useAuthStore} from "../../../stores/authStore.ts";
 
 type BoardKind = "official" | "fan";
 
@@ -61,6 +62,9 @@ const IdolBoardPage: React.FC = () => {
 
     const sort = sp.get("sort") || "latest";
     const q = sp.get("q") || "";
+
+    const {user} = useAuthStore();
+
 
     const [posts, setPosts] = useState<PostListResponse[]>([]);
     const [loading, setLoading] = useState(false);
@@ -500,19 +504,21 @@ const IdolBoardPage: React.FC = () => {
                     ↑
                 </button>
 
-                <button
-                    onClick={onClickWrite}
-                    className="
-                    px-5 py-3 rounded-2xl
-                    bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)]
-                    text-white text-sm font-semibold
-                    shadow-md shadow-[var(--color-idol-point)]/20
-                    hover:brightness-90 active:scale-[0.99]
-                    transition
-                "
-                >
-                    글쓰기
-                </button>
+                {user?.role !== 'USER' && (
+                    <button
+                        onClick={onClickWrite}
+                        className="
+            px-5 py-3 rounded-2xl
+            bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)]
+            text-white text-sm font-semibold
+            shadow-md shadow-[var(--color-idol-point)]/20
+            hover:brightness-90 active:scale-[0.99]
+            transition
+        "
+                    >
+                        글쓰기
+                    </button>
+                )}
             </div>
         </div>
     );

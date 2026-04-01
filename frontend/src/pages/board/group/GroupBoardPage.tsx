@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useAuthStore } from "../../../stores/authStore.ts";
-import { api } from "../../../api/axios.ts";
-import { showErrorToast } from "../../../utils/alert";
+import React, {useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate, useParams, useSearchParams} from "react-router-dom";
+import {useAuthStore} from "../../../stores/authStore.ts";
+import {api} from "../../../api/axios.ts";
+import {showErrorToast} from "../../../utils/alert";
 
 type BoardKind = "official" | "fan";
 
@@ -65,11 +65,11 @@ const formatDateToKST = (dateString: string) => {
 };
 
 const GroupBoardPage: React.FC = () => {
-    const { groupId } = useParams();
+    const {groupId} = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
 
-    const { accessToken, user } = useAuthStore();
+    const {accessToken, user} = useAuthStore();
 
     // URL 상태 (필터/정렬/검색만 유지)
     const board = (sp.get("type") as BoardKind) || "official";
@@ -103,8 +103,8 @@ const GroupBoardPage: React.FC = () => {
     // 필터 버튼
     const leftFilters = useMemo(() => {
         return [
-            { label: "그룹 공식", type: "official" as BoardKind },
-            { label: "그룹 팬", type: "fan" as BoardKind },
+            {label: "그룹 공식", type: "official" as BoardKind},
+            {label: "그룹 팬", type: "fan" as BoardKind},
         ];
     }, []);
 
@@ -168,7 +168,7 @@ const GroupBoardPage: React.FC = () => {
         // search-service 연동: keyword가 있을 때만 전달 (서버 파라미터명: keyword)
         if (q && q.trim()) params.keyword = q.trim();
 
-        const res = await api.get("/board/posts", { params });
+        const res = await api.get("/board/posts", {params});
         const data = res.data as any;
         const content = (data.content ?? []) as PostListResponse[];
 
@@ -287,7 +287,7 @@ const GroupBoardPage: React.FC = () => {
 
                 setPage((prev) => prev + 1);
             },
-            { root: null, rootMargin: "200px", threshold: 0 }
+            {root: null, rootMargin: "200px", threshold: 0}
         );
 
         io.observe(el);
@@ -307,7 +307,7 @@ const GroupBoardPage: React.FC = () => {
         return () => document.removeEventListener("mousedown", onDocDown);
     }, [idolOpen]);
 
-    const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+    const scrollTop = () => window.scrollTo({top: 0, behavior: "smooth"});
 
     const requireLoginOrStop = () => {
         if (accessToken) return true;
@@ -510,7 +510,8 @@ const GroupBoardPage: React.FC = () => {
             {/* 게시글 리스트 */}
             <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
                 {/* 데스크탑 헤더 */}
-                <div className="hidden sm:grid grid-cols-[70px_1fr_110px_130px_80px_80px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
+                <div
+                    className="hidden sm:grid grid-cols-[70px_1fr_110px_130px_80px_80px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-50 border-b border-gray-200">
                     <div className="text-left">번호</div>
                     <div className="text-left">제목</div>
                     <div className="text-left">작성자</div>
@@ -565,7 +566,8 @@ const GroupBoardPage: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
-                                <div className="text-sm text-gray-700 truncate min-w-0">{p.authorNickname || p.authorId}</div>
+                                <div
+                                    className="text-sm text-gray-700 truncate min-w-0">{p.authorNickname || p.authorId}</div>
                                 <div className="text-sm text-gray-600">{formatDateToKST(p.createdAt)}</div>
                                 <div className="text-sm text-gray-700 text-right tabular-nums">{p.viewCount}</div>
                                 <div className="text-sm text-gray-700 text-right tabular-nums">{p.likeCount}</div>
@@ -575,7 +577,7 @@ const GroupBoardPage: React.FC = () => {
             </div>
 
             {/* 무한스크롤 sentinel */}
-            <div ref={sentinelRef} className="h-10" />
+            <div ref={sentinelRef} className="h-10"/>
 
             {loadingMore && <div className="text-sm text-gray-600">더 불러오는 중...</div>}
             {!loading && !loadingMore && posts.length > 0 && !hasMore && (
@@ -599,20 +601,24 @@ const GroupBoardPage: React.FC = () => {
                     ↑
                 </button>
 
-                {(!(board === 'official') || (user?.role === 'IDOL' || user?.role === 'AGENCY' || user?.role === 'ADMIN')) && (
+                {(
+                    user?.role === 'ADMIN' ||
+                    (user?.role === 'USER' && board !== 'official') ||
+                    ((user?.role === 'IDOL' || user?.role === 'AGENCY') && board === 'official')
+                ) && (
                     <button
                         type="button"
                         onClick={onClickWrite}
                         disabled={user?.status?.toUpperCase() === 'RESTRICTED'}
                         className={`
-                    px-5 py-3 rounded-2xl
-                    text-white text-sm font-semibold
-                    shadow-md shadow-[var(--color-idol-point)]/20
-                    transition active:scale-[0.99]
-                    ${user?.status?.toUpperCase() === 'RESTRICTED'
-                                ? 'bg-gray-400 cursor-not-allowed opacity-70'
-                                : 'bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] hover:brightness-90'}
-                `}
+            px-5 py-3 rounded-2xl
+            text-white text-sm font-semibold
+            shadow-md shadow-[var(--color-idol-point)]/20
+            transition active:scale-[0.99]
+            ${user?.status?.toUpperCase() === 'RESTRICTED'
+                            ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                            : 'bg-gradient-to-r from-[var(--color-idol)] to-[var(--color-idol-dark)] hover:brightness-90'}
+        `}
                     >
                         글쓰기
                     </button>
