@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../../api/axios.ts";
+import {useAuthStore} from "../../../stores/authStore.ts";
 
 type BoardKind = "official" | "fan";
 
@@ -61,6 +62,9 @@ const IdolBoardPage: React.FC = () => {
 
     const sort = sp.get("sort") || "latest";
     const q = sp.get("q") || "";
+
+    const {user} = useAuthStore();
+
 
     const [posts, setPosts] = useState<PostListResponse[]>([]);
     const [loading, setLoading] = useState(false);
