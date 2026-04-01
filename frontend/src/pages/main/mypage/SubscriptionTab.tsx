@@ -179,8 +179,6 @@ const SubscriptionTab: React.FC = () => {
                     <div className="text-right">
                         {sub.autoRenew ? (
                             <>
-                                <div className="text-sm font-semibold text-gray-900">{(sub?.price || 0).toLocaleString()} 원</div>
-                                <div className="text-xs text-gray-500">/ 월 단위 결제</div>
                             </>
                         ) : (
                             <div className="text-xs font-semibold text-red-500">
