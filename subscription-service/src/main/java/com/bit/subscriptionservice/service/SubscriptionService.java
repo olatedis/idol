@@ -88,9 +88,9 @@ public class SubscriptionService {
 
         PaymentEvent event = new PaymentEvent(
                 userId,
-                orderId, // 생성된 주문번호 전달
+                orderId,
                 com.bit.subscriptionservice.enumtype.PaymentDomain.SUBSCRIPTION,
-                subscription.getId(),
+                request.getIdolId(),
                 request.getPlan().getAmount(),
                 agencyId,
                 null, // reservationIds

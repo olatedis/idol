@@ -115,9 +115,9 @@ public class SubscriptionRenewalScheduler {
             // 결제 성공 이벤트 발행 (선택사항)
             PaymentEvent event = new PaymentEvent(
                     subscription.getUserId(),
-                    orderId, // null 대신 생성된 orderId 전달
+                    orderId,
                     com.bit.subscriptionservice.enumtype.PaymentDomain.SUBSCRIPTION_RENEWAL_BILLING_KEY,
-                    subscription.getId(),
+                    subscription.getIdolId(),
                     amount,
                     0, // dummy agencyId
                     null, // reservationIds
@@ -140,7 +140,7 @@ public class SubscriptionRenewalScheduler {
                 subscription.getUserId(),
                 null,
                 com.bit.subscriptionservice.enumtype.PaymentDomain.SUBSCRIPTION_RENEWAL,
-                subscription.getId(),
+                subscription.getIdolId(),
                 subscription.getPlan().getAmount(),
                 0, // dummy agencyId
                 null, // reservationIds
