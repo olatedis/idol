@@ -23,7 +23,7 @@ const PaymentComplete: React.FC = () => {
         const amount = Number(amountStr);
         const authKey = qs.get('authKey') || qs.get('auth_key') || '';
         // 이전 페이지에서 저장한 대기중 구독 정보를 사용 (sessionStorage)
-        let pendingLocal: { idolId?: number; plan?: string; customerKey?: string; subscriptionId?: number } | null = null;
+        let pendingLocal: { idolId?: number; plan?: string; customerKey?: string; subscriptionId?: number; orderId?: string } | null = null;
         try {
             const raw = sessionStorage.getItem('pendingSubscription');
             if (raw) pendingLocal = JSON.parse(raw);
