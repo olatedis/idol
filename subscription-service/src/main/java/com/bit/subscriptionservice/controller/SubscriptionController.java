@@ -14,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/subscriptions")
@@ -147,12 +146,11 @@ public class SubscriptionController {
         }
 
         try {
-            String customerKey = UUID.randomUUID().toString();
             BillingKey billingKey = billingKeyService.issueBillingKey(
                     request.getAuthKey(),
                     userId,
                     request.getIdolId(),
-                    customerKey);
+                    request.getCustomerKey());
 
             log.info("빌링키 발급 성공: userId={}, idolId={}, plan={}",
                     userId, request.getIdolId(), request.getPlan());
