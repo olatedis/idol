@@ -137,7 +137,7 @@ public class TossBillingKeyClient {
         HttpHeaders headers = new HttpHeaders();
         String auth = "Basic " + Base64.getEncoder().encodeToString((secretKey + ":").getBytes());
         headers.set("Authorization", auth);
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setContentType(MediaType.APPLICATION_JSON);
         return headers;
     }
 }

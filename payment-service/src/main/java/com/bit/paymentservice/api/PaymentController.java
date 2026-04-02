@@ -128,6 +128,9 @@ public class PaymentController {
     @PostMapping("/internal/billing-complete")
     public ResponseEntity<Void> billingComplete(@RequestBody BillingCompleteRequest req) {
         try {
+            if (req.getOrderId() == null || req.getPaymentKey() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
             paymentService.billingComplete(req.getOrderId(), req.getPaymentKey(), req.getAmount());
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {

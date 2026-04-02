@@ -184,13 +184,6 @@ public class SubscriptionController {
                 }
             }
 
-            // PENDING 구독 활성화
-            try {
-                subscriptionService.activatePendingSubscription(userId, request.getIdolId());
-            } catch (Exception e) {
-                log.warn("빌링키 발급 후 구독 활성화 실패: {}", e.getMessage());
-            }
-
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new BillingKeyAuthResponse(
                             billingKey.getId(),
