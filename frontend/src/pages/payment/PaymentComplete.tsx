@@ -64,14 +64,14 @@ const PaymentComplete: React.FC = () => {
 
         if (type === 'billing') {
             // 빌링키 발급 처리
-            const pendingIdolId = pending?.idolId;
-            const customerKey = pending?.customerKey;
+            const pendingIdolId = pendingLocal?.idolId;
+            const customerKey = pendingLocal?.customerKey;
             if (!authKey || !pendingIdolId || !customerKey) {
                 setStatus('failed');
                 return;
             }
 
-            authorizeBillingKey({ idolId: pendingIdolId, authKey, plan: 'MONTHLY', customerKey })
+            authorizeBillingKey({ idolId: pendingIdolId as number, authKey, plan: 'MONTHLY', customerKey })
                 .then(() => {
                     // 처리 후 세션청소
                     try { sessionStorage.removeItem('pendingSubscription'); } catch { }

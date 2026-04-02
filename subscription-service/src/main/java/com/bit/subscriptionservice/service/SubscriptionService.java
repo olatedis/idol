@@ -156,12 +156,12 @@ public class SubscriptionService {
             return;
         }
 
-        int subscriptionId = event.getTargetId();
+        int idolId = event.getTargetId();
 
         Subscription subscription = subscriptionRepository
-                .findByIdAndUserIdAndStatus(
-                        subscriptionId,
+                .findByUserIdAndIdolIdAndStatus(
                         event.getUserId(),
+                        idolId,
                         SubscriptionStatus.PENDING)
                 .orElseThrow();
 
