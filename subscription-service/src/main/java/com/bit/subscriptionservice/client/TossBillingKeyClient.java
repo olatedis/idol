@@ -1,6 +1,7 @@
 package com.bit.subscriptionservice.client;
 
 import com.bit.subscriptionservice.dto.BillingKeyResponse;
+import com.bit.subscriptionservice.dto.TossBillingPaymentResponse;
 import com.bit.subscriptionservice.entity.BillingKey;
 import com.bit.subscriptionservice.repository.BillingKeyRepository;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +62,7 @@ public class TossBillingKeyClient {
      * orderId: 주문번호
      * orderName: 주문명
      */
-    public String processBillingPayment(
+    public TossBillingPaymentResponse processBillingPayment(
             int userId,
             int idolId,
             int amount,
@@ -85,7 +86,7 @@ public class TossBillingKeyClient {
     /**
      * 실제 정기결제 API 호출 (내부용)
      */
-    private String processBillingPaymentInternal(
+    private TossBillingPaymentResponse processBillingPaymentInternal(
             String billingKey,
             String customerKey,
             int amount,
@@ -104,8 +105,9 @@ public class TossBillingKeyClient {
         HttpEntity<String> request = new HttpEntity<>(body, headers);
 
         try {
-            String response = restTemplate.postForObject(url, request, String.class);
-            log.info("정기결제 처리 성공: billingKey={}, amount={}, orderId={}", billingKey, amount, orderId);
+            TossBillingPaymentResponse response = restTemplate.postForObject(url, request, TossBillingPaymentResponse.class);
+            log.info("정기결제 처리 성공: billingKey={}, amount={}, orderId={}, paymentKey={}",
+                    billingKey, amount, orderId, response != null ? response.getPaymentKey() : null);
             return response;
         } catch (Exception e) {
             log.error("정기결제 처리 실패 - billingKey: {}, amount: {}, orderId: {}, error: {}",

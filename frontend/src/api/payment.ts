@@ -28,7 +28,7 @@ export const getIdol = (idolId: number) => {
     return api.get(`/idols/${idolId}`).then(r => r.data);
 };
 
-export const authorizeBillingKey = (body: { idolId: number; authKey: string; plan: string; customerKey: string }) => {
+export const authorizeBillingKey = (body: { idolId: number; authKey: string; plan: string; customerKey: string; orderId?: string }) => {
     return api.post('/subscriptions/billing/authorize', body).then(r => r.data);
 }
 

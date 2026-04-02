@@ -16,13 +16,15 @@ public class BillingKeyAuthRequest {
     
     @NotNull
     private int idolId;
-    
+
     @NotBlank
     private String authKey;
-    
+
     @NotBlank
     private String plan; // MONTHLY or ANNUAL
-    
+
     @NotBlank
     private String customerKey; // Toss에서 사용하는 고객 식별자
+
+    private String orderId; // 결제 주문번호 (READY 결제 완료 처리용)
 }
