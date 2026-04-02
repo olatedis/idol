@@ -27,7 +27,8 @@ const OAuthKakao: React.FC = () => {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 });
                 
-                const user = userRes.data;
+                const userRaw = userRes.data;
+                const user = { ...userRaw, userId: userRaw.id };
 
                 // 3. Zustand Store에 저장
                 login(user, accessToken, refreshToken);

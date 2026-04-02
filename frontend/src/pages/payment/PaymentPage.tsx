@@ -82,7 +82,7 @@ const PaymentPage: React.FC = () => {
             }
 
             const toss = TossPayments(clientKey);
-            const userId = Number(localStorage.getItem('userId'));
+            const userId = user.userId;
             console.log('[DEBUG] toss 객체 준비 완료, userId:', userId);
 
             if (domain === 'CONCERT') {
