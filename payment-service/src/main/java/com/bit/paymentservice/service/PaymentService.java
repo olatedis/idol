@@ -135,6 +135,23 @@ public class PaymentService {
         }
     }
 
+    /**
+     * 빌링키 결제 완료 처리 (외부 Toss 호출 없이 바로 COMPLETED 전환)
+     * subscription-service에서 빌링 결제 성공 후 호출
+     */
+    @Transactional
+    public void billingComplete(String orderId, String paymentKey, int amount) {
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문 없음: orderId=" + orderId));
+
+        if (payment.getStatus() != com.bit.paymentservice.domain.enumtype.PaymentStatus.READY) {
+            throw new IllegalArgumentException("이미 처리된 주문: " + orderId);
+        }
+
+        paymentTransactionService.completePayment((long) payment.getId(), paymentKey);
+        log.info("빌링 결제 완료 처리: orderId={}, paymentKey={}", orderId, paymentKey);
+    }
+
     @Transactional(readOnly = true)
     public List<Payment> findMyPayments(int userId) {
         log.info("결제 내역 조회: userId={}", userId);

@@ -135,7 +135,7 @@ const PaymentPage: React.FC = () => {
                     : `user-${userId}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
                 
                 console.log('[DEBUG] customerKey 생성 완료:', customerKey);
-                try { sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId, plan, subscriptionId, customerKey })); } catch (e) {}
+                try { sessionStorage.setItem('pendingSubscription', JSON.stringify({ idolId, plan, subscriptionId, customerKey, orderId })); } catch (e) {}
 
                 if (plan === 'MONTHLY') {
                     console.log('[DEBUG] MONTHLY(정기결제) - requestBillingAuth 호출 시도...');

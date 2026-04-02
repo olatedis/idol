@@ -1,9 +1,11 @@
 package com.bit.subscriptionservice.controller;
 
-import com.bit.subscriptionservice.dto.*;
+import com.bit.subscriptionservice.client.PaymentServiceClient;
+import com.bit.subscriptionservice.client.TossBillingKeyClient;
 import com.bit.subscriptionservice.dto.*;
 import com.bit.subscriptionservice.entity.BillingKey;
 import com.bit.subscriptionservice.entity.Role;
+import com.bit.subscriptionservice.entity.SubscriptionPlan;
 import com.bit.subscriptionservice.service.BillingKeyService;
 import com.bit.subscriptionservice.service.SubscriptionService;
 import jakarta.validation.Valid;
@@ -23,6 +25,8 @@ public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
     private final BillingKeyService billingKeyService;
+    private final TossBillingKeyClient tossBillingKeyClient;
+    private final PaymentServiceClient paymentServiceClient;
 
     // 개인(아이돌) 구독하기
     @PostMapping
@@ -152,10 +156,35 @@ public class SubscriptionController {
                     request.getIdolId(),
                     request.getCustomerKey());
 
-            log.info("빌링키 발급 성공: userId={}, idolId={}, plan={}",
-                    userId, request.getIdolId(), request.getPlan());
+            log.info("빌링키 발급 성공: userId={}, idolId={}, plan={}", userId, request.getIdolId(), request.getPlan());
 
-            // 정기 결제으로 처리되는 경우, 이미 PENDING 상태로 생성된 구독이 있을 수 있음
+            // 첫 결제 즉시 실행
+            if (request.getOrderId() != null && !request.getOrderId().isBlank()) {
+                try {
+                    int amount = SubscriptionPlan.MONTHLY.getAmount();
+                    String orderName = "아이돌 월정기 구독";
+                    TossBillingPaymentResponse billingResult = tossBillingKeyClient.processBillingPayment(
+                            userId, request.getIdolId(), amount, request.getOrderId(), orderName);
+
+                    if (billingResult != null && billingResult.getPaymentKey() != null) {
+                        // payment-service에 결제 완료 통보
+                        java.util.Map<String, Object> completeReq = new java.util.HashMap<>();
+                        completeReq.put("orderId", request.getOrderId());
+                        completeReq.put("paymentKey", billingResult.getPaymentKey());
+                        completeReq.put("amount", amount);
+                        try {
+                            paymentServiceClient.billingComplete(completeReq);
+                            log.info("빌링 결제 완료 통보 성공: orderId={}", request.getOrderId());
+                        } catch (Exception e) {
+                            log.warn("빌링 결제 완료 통보 실패 (결제는 성공): orderId={}, error={}", request.getOrderId(), e.getMessage());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("첫 빌링 결제 실패: userId={}, idolId={}, error={}", userId, request.getIdolId(), e.getMessage());
+                }
+            }
+
+            // PENDING 구독 활성화
             try {
                 subscriptionService.activatePendingSubscription(userId, request.getIdolId());
             } catch (Exception e) {

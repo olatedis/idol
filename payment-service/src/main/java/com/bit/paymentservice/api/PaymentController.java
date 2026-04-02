@@ -121,6 +121,24 @@ public class PaymentController {
         }
     }
 
+    /**
+     * 빌링키 결제 완료 처리 (서비스 내부 전용, 외부 노출 X)
+     * subscription-service가 빌링 결제 후 paymentKey를 전달해 READY → COMPLETED 전환
+     */
+    @PostMapping("/internal/billing-complete")
+    public ResponseEntity<Void> billingComplete(@RequestBody BillingCompleteRequest req) {
+        try {
+            paymentService.billingComplete(req.getOrderId(), req.getPaymentKey(), req.getAmount());
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("빌링 완료 처리 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            log.error("빌링 완료 처리 오류: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @GetMapping("/agency/{agencyId}/revenue")
     public ResponseEntity<AgencyRevenueDto> getAgencyRevenue(
             @RequestHeader(value = "X-Role", required = false) String role,
